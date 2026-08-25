@@ -1,0 +1,46 @@
+# CMake / build trees
+/build/
+/build-*/
+/out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+*.ninja
+.ninja_deps
+.ninja_log
+
+# CLion
+cmake-build-*/
+.idea/
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.vcxproj.user
+*.sln.docstates
+
+# Compilers / objects
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.map
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Agent / local scratch
+.superpowers/sdd/
+*.diff

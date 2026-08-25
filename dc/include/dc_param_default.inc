@@ -1,0 +1,36 @@
+/* Explicit factory defaults only. Omit an item to fill n*b bytes with 0xFF. */
+
+#define PARAM_ITEM_DEFAULTS(X) \
+    X(PARAM_SEASON_SWTIME) \
+    X(PARAM_DAY_SWTIME) \
+    X(PARAM_FEE_SWTIME) \
+    X(PARAM_LADDER_SWTIME) \
+    X(PARAM_HOLIDAY_DATA)
+
+static const uint8_t PARAM_SEASON_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF
+};
+static const uint8_t PARAM_DAY_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF
+};
+static const uint8_t PARAM_FEE_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF
+};
+static const uint8_t PARAM_LADDER_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF
+};
+
+#define PARAM_FF6 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+
+static const uint8_t PARAM_HOLIDAY_DATA_def[] = {
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6,
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6,
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6,
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6,
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6,
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6,
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6,
+    PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6, PARAM_FF6
+};
+
+#undef PARAM_FF6
