@@ -11,6 +11,10 @@
 #include <stddef.h>
 #include <string.h>
 
+#ifdef DC_TEST
+#include "dc_test_variable.h"
+#endif
+
 typedef struct
 {
     uint32_t head_a;
@@ -562,3 +566,56 @@ int16_t WriteVariableData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen
 {
     return var_xfer(genre, 0, dataPtr, usLen, type, 1);
 }
+
+#ifdef DC_TEST
+
+void DcTestVarReset(void)
+{
+    memset(&s_var_ram, 0, sizeof s_var_ram);
+    s_var_inited = 0u;
+    s_b_dirty = 0u;
+    s_a_pwr_on_sec = 0u;
+    s_b_pwr_on_sec = 0u;
+    s_pwr_dwn_sec = 0u;
+}
+
+void DcTestVarCorruptMagic(dc_test_var_zone_t zone)
+{
+    if (zone == DC_TEST_VAR_ZONE_A)
+    {
+        s_var_ram.head_a = 0u;
+        s_var_ram.tail_a = 0u;
+    }
+    else
+    {
+        s_var_ram.head_b = 0u;
+        s_var_ram.tail_b = 0u;
+    }
+}
+
+void DcTestVarCorruptCrc(dc_test_var_zone_t zone)
+{
+    if (zone == DC_TEST_VAR_ZONE_A)
+    {
+        s_var_ram.body_a.crc = 0u;
+    }
+    else
+    {
+        s_var_ram.body_b.crc = 0u;
+    }
+}
+
+void DcTestVarInvalidateAll(dc_test_var_zone_t zone)
+{
+    DcTestVarCorruptMagic(zone);
+    DcTestVarCorruptCrc(zone);
+}
+
+void DcTestVarResetBackupTimers(void)
+{
+    s_a_pwr_on_sec = 0u;
+    s_b_pwr_on_sec = 0u;
+    s_pwr_dwn_sec = 0u;
+}
+
+#endif /* DC_TEST */
