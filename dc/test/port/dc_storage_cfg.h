@@ -1,9 +1,18 @@
-/* Copy to product port/ as dc_storage_cfg.h and customize address bases. */
+/* Unified non-volatile storage for datacenter modules (EE / Flash / file). */
 #ifndef DC_STORAGE_CFG_H
 #define DC_STORAGE_CFG_H
 
 #include <stdint.h>
 
+/*
+ * Product unified address map (override in project cfg if needed).
+ * DcCfgStorageRead/Write receive absolute addresses; product dispatches by range:
+ *   [DC_STORAGE_BASE_EE, DC_STORAGE_BASE_FLASH)     -> EEPROM driver
+ *   [DC_STORAGE_BASE_FLASH, DC_STORAGE_BASE_FILE)   -> Flash driver
+ *   [DC_STORAGE_BASE_FILE, ...)                     -> host file backend (sim/PC)
+ *
+ * Module cfgs (e.g. VAR_EEPROM_BASE) pick origins inside this space.
+ */
 #ifndef DC_STORAGE_BASE_EE
 #define DC_STORAGE_BASE_EE    (0x00001000u)
 #endif

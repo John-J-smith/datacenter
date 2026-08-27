@@ -3,35 +3,43 @@ cmake_minimum_required(VERSION 3.16)
 # Standalone: open/build this directory. As subdirectory of the repo root,
 # skip project() so the parent project name wins.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(dc_meter_fw C)
+    project(dc_meter_fw C CXX)
     set(CMAKE_C_STANDARD 99)
     set(CMAKE_C_STANDARD_REQUIRED ON)
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
+
+# Product port directory: copy templates from port/ and customize.
+set(DC_PORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/port" CACHE PATH
+    "Port cfg headers and generated layout (storage cfg, variable cfg, *_layout.h)")
+
+set(DC_VARIABLE_LAYOUT_H ${DC_PORT_DIR}/dc_variable_layout.h)
+set(DC_PARAM_LAYOUT_H ${DC_PORT_DIR}/dc_param_layout.h)
 
 add_executable(dc_variable_pack tools/dc_variable_pack.c)
 set_property(TARGET dc_variable_pack PROPERTY C_STANDARD 99)
 target_include_directories(dc_variable_pack PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/port
+    ${DC_PORT_DIR}
 )
-
-set(DC_VARIABLE_LAYOUT_H ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable_layout.h)
 
 add_custom_target(dc_variable_layout ALL
     COMMAND $<TARGET_FILE:dc_variable_pack> "${DC_VARIABLE_LAYOUT_H}"
     DEPENDS dc_variable_pack
-            ${CMAKE_CURRENT_SOURCE_DIR}/port/dc_variable_cfg.h
+            ${DC_PORT_DIR}/dc_variable_cfg.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_types.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_variable_pack.c
-    COMMENT "Generating dc_variable_layout.h"
+    BYPRODUCTS ${DC_VARIABLE_LAYOUT_H}
+    COMMENT "Generating dc_variable_layout.h in port dir"
     VERBATIM
 )
 
 add_custom_target(dc_variable_dump
     COMMAND $<TARGET_FILE:dc_variable_pack> --dump
     DEPENDS dc_variable_pack
-            ${CMAKE_CURRENT_SOURCE_DIR}/port/dc_variable_cfg.h
+            ${DC_PORT_DIR}/dc_variable_cfg.h
     COMMENT "Dump variable layout (host only)"
     VERBATIM
 )
@@ -40,8 +48,6 @@ add_executable(dc_param_pack tools/dc_param_pack.c)
 set_property(TARGET dc_param_pack PROPERTY C_STANDARD 99)
 target_include_directories(dc_param_pack PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-set(DC_PARAM_LAYOUT_H ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_layout.h)
-
 add_custom_target(dc_param_layout ALL
     COMMAND $<TARGET_FILE:dc_param_pack> "${DC_PARAM_LAYOUT_H}"
     DEPENDS dc_param_pack
@@ -49,7 +55,8 @@ add_custom_target(dc_param_layout ALL
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_default.inc
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_param_pack.c
-    COMMENT "Generating dc_param_layout.h"
+    BYPRODUCTS ${DC_PARAM_LAYOUT_H}
+    COMMENT "Generating dc_param_layout.h in port dir"
     VERBATIM
 )
 
@@ -64,24 +71,15 @@ add_library(dc_meter_fw
 )
 target_include_directories(dc_meter_fw
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-           ${CMAKE_CURRENT_SOURCE_DIR}/port
+           ${DC_PORT_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 add_dependencies(dc_meter_fw dc_param_layout dc_variable_layout)
 set_source_files_properties(src/dc_param.c PROPERTIES OBJECT_DEPENDS ${DC_PARAM_LAYOUT_H})
 set_source_files_properties(src/dc_variable.c PROPERTIES OBJECT_DEPENDS ${DC_VARIABLE_LAYOUT_H})
 
-add_library(dc_storage_cfg_default port/dc_storage_cfg_default.c)
-target_include_directories(dc_storage_cfg_default PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/port
-)
-
-add_executable(dc_fw_example main.c)
-target_link_libraries(dc_fw_example PRIVATE dc_meter_fw dc_storage_cfg_default)
-
-add_executable(dc_param_test test_param.c)
-target_link_libraries(dc_param_test PRIVATE dc_meter_fw)
-
-add_executable(dc_variable_test test_variable.c)
-target_link_libraries(dc_variable_test PRIVATE dc_meter_fw)
+option(DC_BUILD_TESTS "Build Google Test suite" ON)
+if(DC_BUILD_TESTS)
+    include(CTest)
+    add_subdirectory(test)
+endif()

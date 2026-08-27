@@ -44,3 +44,9 @@ Desktop.ini
 # Agent / local scratch
 .superpowers/sdd/
 *.diff
+
+# Generated layout headers (built into test/port or product port)
+dc/test/port/dc_variable_layout.h
+dc/test/port/dc_param_layout.h
+
+dc/build
