@@ -27,15 +27,15 @@
 #endif
 
 #define VAR_LIST_A(X) \
-    X(VARIABLE_DATE_TIME, 0x4000u, 1u, 7u)
+    X(VARIABLE_DATE_TIME, 1u, 7u)
 
 #define VAR_LIST_B(X) \
-    X(VARIABLE_USED_MONTH, 0x2031u, 1u, 4u)
+    X(VARIABLE_USED_MONTH, 1u, 4u)
 
 #define VAR_LIST_C(X) \
-    X(VARIABLE_RMS_VOLTAGE, 0x2000u, 3u, 2u)
+    X(VARIABLE_RMS_VOLTAGE, 3u, 2u)
 
 #define VAR_LIST_D(X) \
-    X(VARIABLE_MTWORK_EVTKEY, 0xE100u, 1u, 8u)
+    X(VARIABLE_MTWORK_EVTKEY, 1u, 8u)
 
 #endif

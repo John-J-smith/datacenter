@@ -3,6 +3,7 @@
 
 #include "dc_storage_cfg.h"
 #include "dc_variable_cfg.h"
+#include "dc_variable_layout.h"
 #include <stdint.h>
 
 #define VAR_CRC_BYTES_BLOCK (2u)
@@ -30,18 +31,6 @@ typedef enum {
     VAR_EE_SLOT_D_DATA,
     VAR_EE_SLOT_COUNT
 } E_VARIABLE_EE_SLOT;
-
-#define VAR_ENUM_ROW(tok, id, n, b) tok = (id),
-
-typedef enum {
-    VAR_LIST_A(VAR_ENUM_ROW)
-    VAR_LIST_B(VAR_ENUM_ROW)
-    VAR_LIST_C(VAR_ENUM_ROW)
-    VAR_LIST_D(VAR_ENUM_ROW)
-    VARIABLE_ID_SENTINEL = 0
-} E_VARIABLE_ID;
-
-#undef VAR_ENUM_ROW
 
 typedef struct {
     uint16_t eVariableType;

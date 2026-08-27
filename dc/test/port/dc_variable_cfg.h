@@ -26,39 +26,41 @@
 #define VAR_PWR_DWN_INTERVAL_SEC 720u
 #endif
 
+/* Subclass IDs are assigned 0..N-1 by dc_variable_pack (A, then B, C, D). */
+
 #define VAR_LIST_A(X) \
-    X(VARIABLE_DATE_TIME,     0x4000u, 1u, 7u) \
-    X(VARIABLE_RUN_TIME,      0xE000u, 4u, 4u) \
-    X(VARIABLE_WORK_TIME_BAT, 0x2013u, 1u, 4u)
+    X(VARIABLE_DATE_TIME,     1u, 7u) \
+    X(VARIABLE_RUN_TIME,      4u, 4u) \
+    X(VARIABLE_WORK_TIME_BAT, 1u, 4u)
 
 #define VAR_LIST_B(X) \
-    X(VARIABLE_USED_MONTH,    0x2031u, 1u, 4u) \
-    X(VARIABLE_ENERGY_DEC,    0xE007u, 1u, 16u) \
-    X(VARIABLE_INTVENY_DEC,   0xE008u, 1u, 8u)
+    X(VARIABLE_USED_MONTH,    1u, 4u) \
+    X(VARIABLE_ENERGY_DEC,    1u, 16u) \
+    X(VARIABLE_INTVENY_DEC,   1u, 8u)
 
 #define VAR_LIST_C(X) \
-    X(VARIABLE_RMS_VOLTAGE,      0x2000u, 3u, 2u) \
-    X(VARIABLE_RMS_CURRENT,      0x2001u, 5u, 4u) \
-    X(VARIABLE_VOLT_ANGLE,       0x2002u, 3u, 2u) \
-    X(VARIABLE_PHASE_ANGLE,      0x2003u, 3u, 2u) \
-    X(VARIABLE_ACTIVE_POWER,     0x2004u, 4u, 4u) \
-    X(VARIABLE_REACTIVE_POWER,   0x2005u, 4u, 4u) \
-    X(VARIABLE_APPARENT_POWER,   0x2006u, 4u, 4u) \
-    X(VARIABLE_ACTPOW_PERMIN,    0x2007u, 4u, 4u) \
-    X(VARIABLE_REACTPOW_PERMIN,  0x2008u, 4u, 4u) \
-    X(VARIABLE_POWER_FACT,       0x200Au, 4u, 2u) \
-    X(VARIABLE_POWER_FREQ,       0x200Fu, 1u, 2u) \
-    X(VARIABLE_METER_TMP,        0x2010u, 1u, 2u) \
-    X(VARIABLE_VOLT_BATTIM,      0x2011u, 1u, 2u) \
-    X(VARIABLE_VOLT_BATDIS,      0x2012u, 1u, 2u) \
-    X(VARIABLE_STAWDS_METER,     0x2014u, 7u, 2u) \
-    X(VARIABLE_STAWDS_FLRPT,     0x2015u, 1u, 4u) \
-    X(VARIABLE_DEMAND_ACTIVE,    0x2017u, 1u, 4u) \
-    X(VARIABLE_DEMAND_REACTIVE,  0x2018u, 1u, 4u) \
-    X(VARIABLE_WORK_FEENO,       0xE003u, 1u, 1u) \
-    X(VARIABLE_RTC_SECMIN,       0xE205u, 2u, 4u)
+    X(VARIABLE_RMS_VOLTAGE,      3u, 2u) \
+    X(VARIABLE_RMS_CURRENT,      5u, 4u) \
+    X(VARIABLE_VOLT_ANGLE,       3u, 2u) \
+    X(VARIABLE_PHASE_ANGLE,      3u, 2u) \
+    X(VARIABLE_ACTIVE_POWER,     4u, 4u) \
+    X(VARIABLE_REACTIVE_POWER,   4u, 4u) \
+    X(VARIABLE_APPARENT_POWER,   4u, 4u) \
+    X(VARIABLE_ACTPOW_PERMIN,    4u, 4u) \
+    X(VARIABLE_REACTPOW_PERMIN,  4u, 4u) \
+    X(VARIABLE_POWER_FACT,       4u, 2u) \
+    X(VARIABLE_POWER_FREQ,       1u, 2u) \
+    X(VARIABLE_METER_TMP,        1u, 2u) \
+    X(VARIABLE_VOLT_BATTIM,      1u, 2u) \
+    X(VARIABLE_VOLT_BATDIS,      1u, 2u) \
+    X(VARIABLE_STAWDS_METER,     7u, 2u) \
+    X(VARIABLE_STAWDS_FLRPT,     1u, 4u) \
+    X(VARIABLE_DEMAND_ACTIVE,    1u, 4u) \
+    X(VARIABLE_DEMAND_REACTIVE,  1u, 4u) \
+    X(VARIABLE_WORK_FEENO,       1u, 1u) \
+    X(VARIABLE_RTC_SECMIN,       2u, 4u)
 
 #define VAR_LIST_D(X) \
-    X(VARIABLE_MTWORK_EVTKEY, 0xE100u, 1u, 8u)
+    X(VARIABLE_MTWORK_EVTKEY, 1u, 8u)
 
 #endif

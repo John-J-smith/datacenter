@@ -37,16 +37,11 @@ static void var_ensure_init(void);
 
 static const ST_DC_VARIABLE_TABLE *var_find_row(uint16_t subclass)
 {
-    uint16_t i;
-
-    for (i = 0u; i < tVariableApiTableCount; i++)
+    if (subclass >= tVariableApiTableCount)
     {
-        if (tVariableApiTable[i].eVariableType == subclass)
-        {
-            return &tVariableApiTable[i];
-        }
+        return 0;
     }
-    return 0;
+    return &tVariableApiTable[subclass];
 }
 
 static int var_a_sram_ok(void)
