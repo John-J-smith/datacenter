@@ -10,8 +10,8 @@
 #define DC_RET_UNSUPPORTED   ((int16_t)-2)
 #define DC_RET_PARAM_ERR     ((int16_t)-3)
 
-int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_alias(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
 void var_backup_tick(uint16_t elapsed_sec);
 void var_backup_power_down(void);

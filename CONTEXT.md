@@ -86,7 +86,7 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 
 ### 别名入口
 
-- `ReadAliasData` / `WriteAliasData`（`dc_alias.c`）按大类分派；变量、参变量已实现；电量/需量/列表/记录等仍返回 `DC_RET_UNSUPPORTED` 或 `DC_RET_ALIAS_ERR`
+- `dc_read_alias` / `dc_write_alias`（`dc_alias.c`）按大类分派；变量、参变量已实现；电量/需量/列表/记录等仍返回 `DC_RET_UNSUPPORTED` 或 `DC_RET_ALIAS_ERR`
 
 ### 构建与测试
 

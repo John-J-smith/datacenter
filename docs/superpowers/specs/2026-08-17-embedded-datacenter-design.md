@@ -29,7 +29,7 @@
 | 介质 | 统一块设备端口（`read` / `write` / `erase`） |
 | 格式转换 | 走 core API 主路径（始终带 `type`） |
 | 架构 | 扁平注册表 + 策略引擎 |
-| 旧 API | **不兼容**；meter 使用 `alias`（不用 `genre`） |
+| 旧 API | **不兼容**；meter 使用 `alias`（不用 `alias`） |
 | RAM 镜像完整性 | 除**变量类**外：载荷末尾 **2 字节校验** + **noinit**；校验失败则从非易失存储器恢复 |
 
 ## 3. 包划分
@@ -278,7 +278,7 @@ Meter 将更丰富的 `METER_SYS_*` 映射到上述调用；core 不内嵌电表
 | `dc_meter_init(sys_state)` | 按需映射到 `dc_init` / `dc_powerdown` |
 | `dc_meter_tick(void)` | 内部调用 `dc_tick(period_ms)` |
 
-库内不提供 `ReadAliasData` / `WriteAliasData` / `genre` 等旧名或兼容宏。
+库内不提供 `dc_read_alias` / `dc_write_alias` / `alias` 等旧名或兼容宏。
 
 ### 7.2 Alias 编码
 
@@ -364,7 +364,7 @@ Meter 将更丰富的 `METER_SYS_*` 映射到上述调用；core 不内嵌电表
 1. 六大类均有可编译路径与最小表模板
 2. 上文 Meter API 在 stub 上端到端打通
 3. 按类裁剪宏可排除对应代码
-4. 无旧 `genre` / 旧 API 名
+4. 无旧 `alias` / 旧 API 名
 5. 变量类块未启用 `RAM_CRC16`；其余带 RAM 镜像的大类已启用
 
 **可维护性**
@@ -389,7 +389,7 @@ Meter 将更丰富的 `METER_SYS_*` 映射到上述调用；core 不内嵌电表
 | 1 | 静态表产品可完成 init / read / write / tick / powerdown | ✅ | `test_api_rw`（init/tick/read/write + RAM CRC 恢复读）；`test_api_powerdown`（powerdown 后写拒绝）；`examples/minimal` 端到端 |
 | 2 | 五种策略各至少一条自动化用例 | ✅ | `policy_none`、`policy_mirror`、`policy_periodic`（含 ON_CHANGE）、`wear_ring`；五种策略在 `test_policy_periodic` 中 ON_CHANGE 与 PERIODIC 分测 |
 | 3 | 三种锁模式均可编译；MUTEX 在 host 多线程冒烟 | ✅ | MinGW 分别 `-DDC_LOCK=NONE/CRITICAL/MUTEX` 构建成功；`test_lock_none` + `test_lock_mutex_pthread`（build-mutex，14/14 通过） |
-| 4 | 无动态分配；公开头文件无电表符号 | ✅ | `src/` 无 `malloc`/`calloc`/`realloc`；`include/dc/*.h` 无 meter/genre 符号 |
+| 4 | 无动态分配；公开头文件无电表符号 | ✅ | `src/` 无 `malloc`/`calloc`/`realloc`；`include/dc/*.h` 无 meter/alias 符号 |
 | 5 | `RAM_CRC16` 块：破坏 noinit CRC 后从假介质恢复；失败返回 `DC_ERR_CRC` | ✅ | `test_ram_crc_recover`；`test_api_rw` 破坏 RAM 后 `dc_read` 自动恢复 |
 
 **Host 测试（2026-08-17）：**

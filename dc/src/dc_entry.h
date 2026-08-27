@@ -3,21 +3,21 @@
 
 #include <stdint.h>
 
-int16_t ReadEnergyData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_energy(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadDemandData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteDemandData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_demand(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_demand(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadParamData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteParamData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_param(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_param(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadVariableData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteVariableData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_variable(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_variable(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadListParamData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteListParamData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_list(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_list(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadRecordData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteRecordData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_record(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_record(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
 #endif

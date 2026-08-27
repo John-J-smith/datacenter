@@ -276,7 +276,7 @@ static int var_b_backup_allowed(void)
  * @brief 检查A区数据是否被篡改
  *   head/tail OK → 直接访问
  *   head/tail 错 → 查 body CRC
- *    CRC 错  → 从 EE 备份区恢复（PWR_ON，不用掉电区）
+ *    CRC 错  → 从 EE 备份区恢复（PWR_ON_0/1，不用掉电区）
  *    CRC 对  → 只补 magic
  *   恢复失败 → DC_RET_PARAM_ERR
  * 
@@ -324,7 +324,7 @@ static void var_backup_a_pwr_on(void)
     {
         return;
     }
-    memcpy(&snap, &s_var_ram.body_a, sizeof snap);
+    memcpy(&snap, &s_var_ram.body_a, sizeof(snap));
     var_a_crc_fill(&snap);
     VariableEeWriteSlot(VAR_EE_SLOT_A_PWR_ON_0, (const uint8_t *)&snap, VAR_A_END_ADDR);
 #if (VAR_EE_BACKUP_BANKS >= 2)
@@ -340,7 +340,7 @@ static void var_backup_b_pwr_on(void)
     {
         return;
     }
-    memcpy(&snap, &s_var_ram.body_b, sizeof snap);
+    memcpy(&snap, &s_var_ram.body_b, sizeof(snap));
     var_b_crc_fill(&snap);
     VariableEeWriteSlot(VAR_EE_SLOT_B_PWR_ON_0, (const uint8_t *)&snap, VAR_B_END_ADDR);
 #if (VAR_EE_BACKUP_BANKS >= 2)
@@ -356,7 +356,7 @@ static void var_backup_a_pwr_dwn(void)
     {
         return;
     }
-    memcpy(&snap, &s_var_ram.body_a, sizeof snap);
+    memcpy(&snap, &s_var_ram.body_a, sizeof(snap));
     var_a_crc_fill(&snap);
     VariableEeWriteSlot(VAR_EE_SLOT_A_PWR_DWN, (const uint8_t *)&snap, VAR_A_END_ADDR);
 }
@@ -369,11 +369,16 @@ static void var_backup_b_pwr_dwn(void)
     {
         return;
     }
-    memcpy(&snap, &s_var_ram.body_b, sizeof snap);
+    memcpy(&snap, &s_var_ram.body_b, sizeof(snap));
     var_b_crc_fill(&snap);
     VariableEeWriteSlot(VAR_EE_SLOT_B_PWR_DWN, (const uint8_t *)&snap, VAR_B_END_ADDR);
 }
 
+/**
+ * @brief 定时备份A/B区数据
+ * 
+ * @param elapsed_sec
+ */
 void var_backup_tick(uint16_t elapsed_sec)
 {
     var_ensure_init();
@@ -382,17 +387,22 @@ void var_backup_tick(uint16_t elapsed_sec)
     s_b_pwr_on_sec = (uint16_t)(s_b_pwr_on_sec + elapsed_sec);
     s_pwr_dwn_sec = (uint16_t)(s_pwr_dwn_sec + elapsed_sec);
 
+    // A区定时备份到 PWR_ON_0->PWR_ON_1
     if (s_a_pwr_on_sec >= VAR_A_BACKUP_INTERVAL_SEC)
     {
         s_a_pwr_on_sec = 0u;
         var_backup_a_pwr_on();
     }
+
+    // B区如果脏数据，定时备份到 PWR_ON_0->PWR_ON_1
     if ((s_b_dirty != 0u) && (s_b_pwr_on_sec >= VAR_B_BACKUP_INTERVAL_SEC))
     {
         s_b_pwr_on_sec = 0u;
         s_b_dirty = 0u;
         var_backup_b_pwr_on();
     }
+
+    // 掉电区定时备份到 PWR_DWN
     if (s_pwr_dwn_sec >= VAR_PWR_DWN_INTERVAL_SEC)
     {
         s_pwr_dwn_sec = 0u;
@@ -401,6 +411,10 @@ void var_backup_tick(uint16_t elapsed_sec)
     }
 }
 
+/**
+ * @brief 掉电备份A/B区数据，只写掉电区
+ * 
+ */
 void var_backup_power_down(void)
 {
     var_ensure_init();
@@ -483,7 +497,7 @@ static int16_t var_storage_xfer(const ST_DC_VARIABLE_TABLE *row, uint8_t *rw,
     return DC_STORAGE_READ(addr, rw, nbytes);
 }
 
-static int16_t var_xfer(uint32_t genre, uint8_t *rw, const uint8_t *ro,
+static int16_t var_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
                         uint16_t usLen, uint8_t type, int writing)
 {
     const ST_DC_VARIABLE_TABLE *row;
@@ -500,13 +514,13 @@ static int16_t var_xfer(uint32_t genre, uint8_t *rw, const uint8_t *ro,
         return 0;
     }
 
-    row = var_find_row(ParaAliasToType(genre));
+    row = var_find_row(ParaAliasToType(alias));
     if (row == 0)
     {
         return DC_RET_ALIAS_ERR;
     }
 
-    index = GetAliasIndex(genre);
+    index = GetAliasIndex(alias);
     if ((uint16_t)index + usLen > (uint16_t)row->ucIndexNum)
     {
         return DC_RET_PARAM_ERR;
@@ -557,14 +571,14 @@ static int16_t var_xfer(uint32_t genre, uint8_t *rw, const uint8_t *ro,
     return (int16_t)nbytes;
 }
 
-int16_t ReadVariableData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_variable(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    return var_xfer(genre, dataPtr, 0, usLen, type, 0);
+    return var_xfer(alias, dataPtr, 0, usLen, type, 0);
 }
 
-int16_t WriteVariableData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_write_variable(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    return var_xfer(genre, 0, dataPtr, usLen, type, 1);
+    return var_xfer(alias, 0, dataPtr, usLen, type, 1);
 }
 
 #ifdef DC_TEST

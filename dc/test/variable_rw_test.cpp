@@ -79,7 +79,7 @@ TEST_F(VariableTestBase, InvalidAlias)
 {
     uint8_t buf[4];
 
-    // 1. 用无效 type id 调用 ReadAliasData，断言 DC_RET_ALIAS_ERR
+    // 1. 用无效 type id 调用 dc_read_alias，断言 DC_RET_ALIAS_ERR
     EXPECT_EQ(ReadVar(0xFFFFu, 0, buf, 1u), DC_RET_ALIAS_ERR);
 }
 
@@ -108,8 +108,8 @@ TEST_F(VariableTestBase, ZeroLength)
 // 测试内容：dataPtr==NULL 且 usLen!=0 返回 DC_RET_PARAM_ERR（alias 层）
 TEST_F(VariableTestBase, NullBufferWithLength)
 {
-    // 1. ReadAliasData(NULL, usLen=1)，断言 DC_RET_PARAM_ERR
-    EXPECT_EQ(ReadAliasData(VarAliasBuild(VARIABLE_DATE_TIME, 0), nullptr, 1u, 0u),
+    // 1. dc_read_alias(NULL, usLen=1)，断言 DC_RET_PARAM_ERR
+    EXPECT_EQ(dc_read_alias(VarAliasBuild(VARIABLE_DATE_TIME, 0), nullptr, 1u, 0u),
               DC_RET_PARAM_ERR);
 }
 

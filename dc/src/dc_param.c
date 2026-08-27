@@ -104,7 +104,7 @@ static int16_t param_xfer_link(const STR_PARAMETER_TABLE *item, uint8_t *rw,
     return (int16_t)copied;
 }
 
-static int16_t param_xfer(uint32_t genre, uint8_t *rw, const uint8_t *ro,
+static int16_t param_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
                           uint16_t usLen, uint8_t type, int writing)
 {
     const STR_PARAMETER_TABLE *item;
@@ -120,7 +120,7 @@ static int16_t param_xfer(uint32_t genre, uint8_t *rw, const uint8_t *ro,
         return 0;
     }
 
-    item = param_find_item(ParaAliasToType(genre));
+    item = param_find_item(ParaAliasToType(alias));
     if (item == 0)
     {
         return DC_RET_ALIAS_ERR;
@@ -132,7 +132,7 @@ static int16_t param_xfer(uint32_t genre, uint8_t *rw, const uint8_t *ro,
         return DC_RET_ALIAS_ERR;
     }
 
-    index = GetAliasIndex(genre);
+    index = GetAliasIndex(alias);
     if (index == PARAM_INDEX_ALL)
     {
         index = 0u;
@@ -168,12 +168,12 @@ static int16_t param_xfer(uint32_t genre, uint8_t *rw, const uint8_t *ro,
     return (int16_t)nbytes;
 }
 
-int16_t ReadParamData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_param(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    return param_xfer(genre, dataPtr, 0, usLen, type, 0);
+    return param_xfer(alias, dataPtr, 0, usLen, type, 0);
 }
 
-int16_t WriteParamData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_write_param(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    return param_xfer(genre, 0, dataPtr, usLen, type, 1);
+    return param_xfer(alias, 0, dataPtr, usLen, type, 1);
 }

@@ -80,12 +80,12 @@ inline void FillVarWritePattern(uint8_t *buf, uint16_t nbytes, uint16_t row, uin
 
 inline int16_t ReadVar(uint16_t type_id, uint8_t index, uint8_t *buf, uint16_t len)
 {
-    return ReadAliasData(VarAliasBuild(type_id, index), buf, len, 0u);
+    return dc_read_alias(VarAliasBuild(type_id, index), buf, len, 0u);
 }
 
 inline int16_t WriteVar(uint16_t type_id, uint8_t index, const uint8_t *buf, uint16_t len)
 {
-    return WriteAliasData(VarAliasBuild(type_id, index), buf, len, 0u);
+    return dc_write_alias(VarAliasBuild(type_id, index), buf, len, 0u);
 }
 
 inline void InitVariableModule(void)

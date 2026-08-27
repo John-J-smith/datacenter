@@ -12,7 +12,7 @@
 
 在 `dc/` 下新建一套**电表专用**数据中心骨架，对外按别名读写，对内按大类分发。第一期只交付：
 
-1. `ReadAliasData` / `WriteAliasData` 及大类索引表
+1. `dc_read_alias` / `dc_write_alias` 及大类索引表
 2. 各大类空入口（写路径无电量）
 3. 变量类参数表（X-macro 单一维护点，对齐详细设计 7.4.2 的表意）
 
@@ -38,16 +38,16 @@
 
 ```text
 应用
-  └─ ReadAliasData / WriteAliasData     （dc_alias.c）
-        ├─ ReadEnergyData                 （空）
-        ├─ Read/WriteDemandData           （空）
-        ├─ Read/WriteParamData            （空）
-        ├─ Read/WriteVariableData         （空；表在 dc_variable_table.inc）
-        ├─ Read/WriteListParamData        （空）
-        └─ Read/WriteRecordData           （空）
+  └─ dc_read_alias / dc_write_alias     （dc_alias.c）
+        ├─ dc_read_energy                 （空）
+        ├─ Read/dc_write_demand           （空）
+        ├─ Read/dc_write_param            （空）
+        ├─ Read/dc_write_variable         （空；表在 dc_variable_table.inc）
+        ├─ Read/dc_write_list        （空）
+        └─ Read/dc_write_record           （空）
 ```
 
-写表不含电量：电量别名走 `WriteAliasData` 时大类未命中，返回 `DC_RET_ALIAS_ERR`。
+写表不含电量：电量别名走 `dc_write_alias` 时大类未命中，返回 `DC_RET_ALIAS_ERR`。
 
 ## 4. 目录
 
@@ -74,8 +74,8 @@ CMake 独立目标（建议名 `dc_meter_fw`），不链接现有 `dc_core`。Ho
 ## 5. 对外接口
 
 ```c
-int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_alias(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 ```
 
 - 写缓冲为 `const uint8_t *`（对齐模板 3.2.2）
@@ -102,7 +102,7 @@ int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, u
 
 ### 5.2 分发表
 
-线性查找 `ucClassId == GetAliasClass(genre)`，命中则调用 `entry`。不把大类号直接当数组下标。
+线性查找 `ucClassId == GetAliasClass(alias)`，命中则调用 `entry`。不把大类号直接当数组下标。
 
 ```c
 typedef struct {
@@ -148,7 +148,7 @@ X(TOKEN, subclass_u16, member_count, bytes_per_member)
 
 A/B 在各项之后另有 **2 字节 CRC 槽**（不是小类）。C 无 CRC 槽。D 不进入 A/B/C 的 SRAM 布局，自身偏移从 0 起。
 
-第一期**不**实例化 `STR_VARIABLE_RAM`，**不**做备份标志。`ReadVariableData` / `WriteVariableData` 返回 `DC_RET_UNSUPPORTED`。表本身编译进库，测试直接读 `tVariableApiTable` 与生成的 `ADDR`/`LEN`。
+第一期**不**实例化 `STR_VARIABLE_RAM`，**不**做备份标志。`dc_read_variable` / `dc_write_variable` 返回 `DC_RET_UNSUPPORTED`。表本身编译进库，测试直接读 `tVariableApiTable` 与生成的 `ADDR`/`LEN`。
 
 ### 6.1 占位宽度
 
@@ -221,7 +221,7 @@ Host 测试，只链 `dc_meter_fw`。
 **分发**
 
 - 未知大类 → `DC_RET_ALIAS_ERR`
-- `WriteAliasData(电量别名, …)` → `DC_RET_ALIAS_ERR`
+- `dc_write_alias(电量别名, …)` → `DC_RET_ALIAS_ERR`
 - 变量/需量等已注册入口 → `DC_RET_UNSUPPORTED`
 - `dataPtr == NULL` 且 `usLen != 0` → `DC_RET_PARAM_ERR`
 
@@ -242,4 +242,4 @@ Host 测试，只链 `dc_meter_fw`。
 ## 9. 风险与后续
 
 - 占位宽度与将来电量/日历结构不一致：只改 `dc_types.h` 常量，偏移自动变。
-- 下一期实现 `Read/WriteVariableData` 时：按小类查 `tVariableApiTable`，`usLen` 转字节，再碰存储。
+- 下一期实现 `Read/dc_write_variable` 时：按小类查 `tVariableApiTable`，`usLen` 转字节，再碰存储。

@@ -4,7 +4,7 @@
 
 **Goal:** 在 `dc/` 下落地电表专用数据中心骨架：别名读/写分发（空大类入口）+ 由 X-macro 生成的变量参数表；不碰现有 `dc_core` / `dc_meter`。
 
-**Architecture:** `ReadAliasData` / `WriteAliasData` 只做线性查表；各大类独立 `.c` 返回 `DC_RET_UNSUPPORTED`。变量小类、长度、偏移、映射表全部由 `dc/include/dc_variable_table.inc` 展开（偏移用 packed 布局 + `offsetof`）。CMake 目标 `dc_meter_fw` 与旧库并存。
+**Architecture:** `dc_read_alias` / `dc_write_alias` 只做线性查表；各大类独立 `.c` 返回 `DC_RET_UNSUPPORTED`。变量小类、长度、偏移、映射表全部由 `dc/include/dc_variable_table.inc` 展开（偏移用 packed 布局 + `offsetof`）。CMake 目标 `dc_meter_fw` 与旧库并存。
 
 **Tech Stack:** C99、CMake、Host `assert` 测试（不链接 `dc_core`）。
 
@@ -15,7 +15,7 @@
 - 新代码只出现在 `dc/` 与 `tests/host/test_fw_*.c`；不修改 `meter/`、`src/`、`include/dc/` 业务逻辑
 - 函数名跟模板；标量用 `stdint.h`；返回 `int16_t`；成功本意为字节数，第一期空入口返回负码
 - 别名 `[大类 8 | 小类 16 | 分项 8]`
-- `usLen` = 成员个数；`WriteAliasData` 的 `dataPtr` 为 `const uint8_t *`
+- `usLen` = 成员个数；`dc_write_alias` 的 `dataPtr` 为 `const uint8_t *`
 - 写表无电量；电量写 → `DC_RET_ALIAS_ERR`（-1）
 - 空入口不写缓冲，返回 `DC_RET_UNSUPPORTED`（-2）
 - `dataPtr == NULL && usLen != 0` → `DC_RET_PARAM_ERR`（-3），在查表之前判定
@@ -28,12 +28,12 @@
 |------|------|
 | `dc/include/dc_types.h` | 占位宽度常量 |
 | `dc/include/dc_alias.h` | 大类枚举、别名宏 |
-| `dc/include/datacenter.h` | 错误码、Read/WriteAliasData |
+| `dc/include/datacenter.h` | 错误码、Read/dc_write_alias |
 | `dc/include/dc_variable_table.inc` | 四个 `VAR_LIST_*` X-macro |
 | `dc/include/dc_variable.h` | 小类枚举、映射表类型与 `extern` |
 | `dc/src/dc_entry.h` | 各大类入口声明（内部） |
-| `dc/src/dc_alias.c` | 分发表与 Read/WriteAliasData |
-| `dc/src/dc_energy.c` | `ReadEnergyData` |
+| `dc/src/dc_alias.c` | 分发表与 Read/dc_write_alias |
+| `dc/src/dc_energy.c` | `dc_read_energy` |
 | `dc/src/dc_demand.c` | 需量读/写 |
 | `dc/src/dc_param.c` | 参变量读/写 |
 | `dc/src/dc_variable.c` | 变量读/写空实现 + 映射表与 CRC 地址常量 |
@@ -180,8 +180,8 @@ typedef enum {
 #define DC_RET_UNSUPPORTED   ((int16_t)-2)
 #define DC_RET_PARAM_ERR     ((int16_t)-3)
 
-int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_alias(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
 #endif
 ```
@@ -191,18 +191,18 @@ int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, u
 ```c
 #include "datacenter.h"
 
-int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_alias(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    (void)genre;
+    (void)alias;
     (void)dataPtr;
     (void)usLen;
     (void)type;
     return DC_RET_UNSUPPORTED;
 }
 
-int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    (void)genre;
+    (void)alias;
     (void)dataPtr;
     (void)usLen;
     (void)type;
@@ -256,7 +256,7 @@ git commit -m "feat: add dc_meter_fw headers and alias macros"
 - Create: `dc/src/dc_energy.c`
 - Create: `dc/src/dc_demand.c`
 - Create: `dc/src/dc_param.c`
-- Create: `dc/src/dc_variable.c`（仅空 Read/WriteVariableData；表在 Task 3）
+- Create: `dc/src/dc_variable.c`（仅空 Read/dc_write_variable；表在 Task 3）
 - Create: `dc/src/dc_list.c`
 - Create: `dc/src/dc_record.c`
 - Modify: `dc/src/dc_alias.c`
@@ -265,8 +265,8 @@ git commit -m "feat: add dc_meter_fw headers and alias macros"
 - Modify: `tests/host/CMakeLists.txt`
 
 **Interfaces:**
-- Consumes: Task 1 的 `ReadAliasData` / `WriteAliasData` 原型与 `*AliasBuild`
-- Produces: 分发表；内部 `ReadEnergyData`、`ReadDemandData`、`WriteDemandData`、`ReadParamData`、`WriteParamData`、`ReadVariableData`、`WriteVariableData`、`ReadListParamData`、`WriteListParamData`、`ReadRecordData`、`WriteRecordData`
+- Consumes: Task 1 的 `dc_read_alias` / `dc_write_alias` 原型与 `*AliasBuild`
+- Produces: 分发表；内部 `dc_read_energy`、`dc_read_demand`、`dc_write_demand`、`dc_read_param`、`dc_write_param`、`dc_read_variable`、`dc_write_variable`、`dc_read_list`、`dc_write_list`、`dc_read_record`、`dc_write_record`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -293,37 +293,37 @@ int main(void)
     variable = VarAliasBuild(0x2000u, 0u);
     demand = DemandAliasBuild(0x0001u, 0u);
 
-    ret = ReadAliasData(unknown, buf, 1u, 0u);
+    ret = dc_read_alias(unknown, buf, 1u, 0u);
     assert(ret == DC_RET_ALIAS_ERR);
 
-    ret = WriteAliasData(unknown, buf, 1u, 0u);
+    ret = dc_write_alias(unknown, buf, 1u, 0u);
     assert(ret == DC_RET_ALIAS_ERR);
 
-    ret = WriteAliasData(energy, buf, 1u, 0u);
+    ret = dc_write_alias(energy, buf, 1u, 0u);
     assert(ret == DC_RET_ALIAS_ERR);
 
-    ret = ReadAliasData(energy, buf, 1u, 0u);
+    ret = dc_read_alias(energy, buf, 1u, 0u);
     assert(ret == DC_RET_UNSUPPORTED);
 
-    ret = ReadAliasData(variable, buf, 1u, 0u);
+    ret = dc_read_alias(variable, buf, 1u, 0u);
     assert(ret == DC_RET_UNSUPPORTED);
 
-    ret = WriteAliasData(variable, buf, 1u, 0u);
+    ret = dc_write_alias(variable, buf, 1u, 0u);
     assert(ret == DC_RET_UNSUPPORTED);
 
-    ret = ReadAliasData(demand, buf, 1u, 0u);
+    ret = dc_read_alias(demand, buf, 1u, 0u);
     assert(ret == DC_RET_UNSUPPORTED);
 
-    ret = WriteAliasData(demand, buf, 1u, 0u);
+    ret = dc_write_alias(demand, buf, 1u, 0u);
     assert(ret == DC_RET_UNSUPPORTED);
 
-    ret = ReadAliasData(variable, NULL, 1u, 0u);
+    ret = dc_read_alias(variable, NULL, 1u, 0u);
     assert(ret == DC_RET_PARAM_ERR);
 
-    ret = WriteAliasData(variable, NULL, 1u, 0u);
+    ret = dc_write_alias(variable, NULL, 1u, 0u);
     assert(ret == DC_RET_PARAM_ERR);
 
-    ret = ReadAliasData(unknown, NULL, 0u, 0u);
+    ret = dc_read_alias(unknown, NULL, 0u, 0u);
     assert(ret == DC_RET_ALIAS_ERR);
 
     printf("fw_alias ok\n");
@@ -347,7 +347,7 @@ cmake --build build-fw --target test_fw_alias
 ctest --test-dir build-fw -R fw_alias --output-on-failure
 ```
 
-Expected: FAIL — `ReadAliasData` 对未知大类仍返回 `DC_RET_UNSUPPORTED`（Task 1 桩），assert 在 `DC_RET_ALIAS_ERR` 处失败。
+Expected: FAIL — `dc_read_alias` 对未知大类仍返回 `DC_RET_UNSUPPORTED`（Task 1 桩），assert 在 `DC_RET_ALIAS_ERR` 处失败。
 
 - [ ] **Step 3: Implement dispatch and empty entries**
 
@@ -359,22 +359,22 @@ Expected: FAIL — `ReadAliasData` 对未知大类仍返回 `DC_RET_UNSUPPORTED`
 
 #include <stdint.h>
 
-int16_t ReadEnergyData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_energy(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadDemandData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteDemandData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_demand(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_demand(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadParamData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteParamData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_param(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_param(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadVariableData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteVariableData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_variable(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_variable(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadListParamData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteListParamData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_list(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_list(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-int16_t ReadRecordData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
-int16_t WriteRecordData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_read_record(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
+int16_t dc_write_record(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
 #endif
 ```
@@ -385,9 +385,9 @@ Each empty `.c` follows the same pattern. `dc/src/dc_energy.c`:
 #include "dc_entry.h"
 #include "datacenter.h"
 
-int16_t ReadEnergyData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_energy(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    (void)genre;
+    (void)alias;
     (void)dataPtr;
     (void)usLen;
     (void)type;
@@ -401,18 +401,18 @@ int16_t ReadEnergyData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t
 #include "dc_entry.h"
 #include "datacenter.h"
 
-int16_t ReadDemandData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_demand(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    (void)genre;
+    (void)alias;
     (void)dataPtr;
     (void)usLen;
     (void)type;
     return DC_RET_UNSUPPORTED;
 }
 
-int16_t WriteDemandData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_write_demand(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    (void)genre;
+    (void)alias;
     (void)dataPtr;
     (void)usLen;
     (void)type;
@@ -420,7 +420,7 @@ int16_t WriteDemandData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, 
 }
 ```
 
-Copy the same two-function body for `dc_param.c` (`ReadParamData` / `WriteParamData`), `dc_variable.c` (`ReadVariableData` / `WriteVariableData`), `dc_list.c` (`ReadListParamData` / `WriteListParamData`), `dc_record.c` (`ReadRecordData` / `WriteRecordData`). Do not write to `dataPtr`.
+Copy the same two-function body for `dc_param.c` (`dc_read_param` / `dc_write_param`), `dc_variable.c` (`dc_read_variable` / `dc_write_variable`), `dc_list.c` (`dc_read_list` / `dc_write_list`), `dc_record.c` (`dc_read_record` / `dc_write_record`). Do not write to `dataPtr`.
 
 Replace `dc/src/dc_alias.c` entirely:
 
@@ -439,23 +439,23 @@ typedef struct {
 } STR_ALIAS_WSTORAGE_TABLE;
 
 static const STR_ALIAS_RSTORAGE_TABLE readAliasDataTable[] = {
-    { (uint8_t)ALIAS_CLASS_ENERGY,    ReadEnergyData },
-    { (uint8_t)ALIAS_CLASS_DEMAND,    ReadDemandData },
-    { (uint8_t)ALIAS_CLASS_PARAMETER, ReadParamData },
-    { (uint8_t)ALIAS_CLASS_VARIABLE,  ReadVariableData },
-    { (uint8_t)ALIAS_CLASS_LISTPARAM, ReadListParamData },
-    { (uint8_t)ALIAS_CLASS_RECORD,    ReadRecordData },
+    { (uint8_t)ALIAS_CLASS_ENERGY,    dc_read_energy },
+    { (uint8_t)ALIAS_CLASS_DEMAND,    dc_read_demand },
+    { (uint8_t)ALIAS_CLASS_PARAMETER, dc_read_param },
+    { (uint8_t)ALIAS_CLASS_VARIABLE,  dc_read_variable },
+    { (uint8_t)ALIAS_CLASS_LISTPARAM, dc_read_list },
+    { (uint8_t)ALIAS_CLASS_RECORD,    dc_read_record },
 };
 
 static const STR_ALIAS_WSTORAGE_TABLE writeAliasDataTable[] = {
-    { (uint8_t)ALIAS_CLASS_DEMAND,    WriteDemandData },
-    { (uint8_t)ALIAS_CLASS_PARAMETER, WriteParamData },
-    { (uint8_t)ALIAS_CLASS_VARIABLE,  WriteVariableData },
-    { (uint8_t)ALIAS_CLASS_LISTPARAM, WriteListParamData },
-    { (uint8_t)ALIAS_CLASS_RECORD,    WriteRecordData },
+    { (uint8_t)ALIAS_CLASS_DEMAND,    dc_write_demand },
+    { (uint8_t)ALIAS_CLASS_PARAMETER, dc_write_param },
+    { (uint8_t)ALIAS_CLASS_VARIABLE,  dc_write_variable },
+    { (uint8_t)ALIAS_CLASS_LISTPARAM, dc_write_list },
+    { (uint8_t)ALIAS_CLASS_RECORD,    dc_write_record },
 };
 
-int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_alias(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
     uint8_t class_id;
     uint8_t i;
@@ -464,16 +464,16 @@ int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t 
         return DC_RET_PARAM_ERR;
     }
 
-    class_id = GetAliasClass(genre);
+    class_id = GetAliasClass(alias);
     for (i = 0u; i < (uint8_t)(sizeof(readAliasDataTable) / sizeof(readAliasDataTable[0])); i++) {
         if (class_id == readAliasDataTable[i].ucClassId) {
-            return readAliasDataTable[i].entry(genre, dataPtr, usLen, type);
+            return readAliasDataTable[i].entry(alias, dataPtr, usLen, type);
         }
     }
     return DC_RET_ALIAS_ERR;
 }
 
-int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
     uint8_t class_id;
     uint8_t i;
@@ -482,10 +482,10 @@ int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, u
         return DC_RET_PARAM_ERR;
     }
 
-    class_id = GetAliasClass(genre);
+    class_id = GetAliasClass(alias);
     for (i = 0u; i < (uint8_t)(sizeof(writeAliasDataTable) / sizeof(writeAliasDataTable[0])); i++) {
         if (class_id == writeAliasDataTable[i].ucClassId) {
-            return writeAliasDataTable[i].entry(genre, dataPtr, usLen, type);
+            return writeAliasDataTable[i].entry(alias, dataPtr, usLen, type);
         }
     }
     return DC_RET_ALIAS_ERR;
@@ -825,18 +825,18 @@ const uint16_t VAR_B_END_ADDR = (uint16_t)(sizeof(var_layout_b_t) + 2u);
 const uint16_t VAR_C_END_ADDR = (uint16_t)sizeof(var_layout_c_t);
 const uint16_t VAR_D_END_ADDR = (uint16_t)sizeof(var_layout_d_t);
 
-int16_t ReadVariableData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_variable(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    (void)genre;
+    (void)alias;
     (void)dataPtr;
     (void)usLen;
     (void)type;
     return DC_RET_UNSUPPORTED;
 }
 
-int16_t WriteVariableData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_write_variable(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
-    (void)genre;
+    (void)alias;
     (void)dataPtr;
     (void)usLen;
     (void)type;
@@ -862,7 +862,7 @@ cmake --build build-fw --target test_fw_macro --target test_fw_alias --target te
 ctest --test-dir build-fw -R fw_ --output-on-failure
 ```
 
-Expected: 三个 `fw_*` 测试 PASS。`ReadAliasData(VarAliasBuild(VARIABLE_RMS_VOLTAGE, 0), …)` 仍为 `DC_RET_UNSUPPORTED`。
+Expected: 三个 `fw_*` 测试 PASS。`dc_read_alias(VarAliasBuild(VARIABLE_RMS_VOLTAGE, 0), …)` 仍为 `DC_RET_UNSUPPORTED`。
 
 - [ ] **Step 5: Commit**
 
