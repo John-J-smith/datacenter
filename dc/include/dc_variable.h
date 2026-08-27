@@ -19,12 +19,17 @@ typedef enum {
 
 typedef enum {
     VAR_EE_SLOT_A_PWR_ON_0 = 0,
-    VAR_EE_SLOT_A_PWR_ON_1 = 1,
-    VAR_EE_SLOT_A_PWR_DWN = 2,
-    VAR_EE_SLOT_B_PWR_ON_0 = 3,
-    VAR_EE_SLOT_B_PWR_ON_1 = 4,
-    VAR_EE_SLOT_B_PWR_DWN = 5,
-    VAR_EE_SLOT_D_DATA = 6
+#if (VAR_EE_BACKUP_BANKS >= 2)
+    VAR_EE_SLOT_A_PWR_ON_1,
+#endif
+    VAR_EE_SLOT_A_PWR_DWN,
+    VAR_EE_SLOT_B_PWR_ON_0,
+#if (VAR_EE_BACKUP_BANKS >= 2)
+    VAR_EE_SLOT_B_PWR_ON_1,
+#endif
+    VAR_EE_SLOT_B_PWR_DWN,
+    VAR_EE_SLOT_D_DATA,
+    VAR_EE_SLOT_COUNT
 } E_VARIABLE_EE_SLOT;
 
 #define VAR_ENUM_ROW(tok, id, n, b) tok = (id),
@@ -63,14 +68,20 @@ extern const uint32_t VAR_B_EEPROM_BASE;
 extern const uint32_t VAR_D_EEPROM_BASE;
 
 extern const uint16_t VAR_A_EE_BANK_SIZE;
+extern const uint16_t VAR_A_EE_PWR_ON_COUNT;
 extern const uint16_t VAR_A_EE_PWR_ON_0;
+#if (VAR_EE_BACKUP_BANKS >= 2)
 extern const uint16_t VAR_A_EE_PWR_ON_1;
+#endif
 extern const uint16_t VAR_A_EE_PWR_DWN;
 extern const uint16_t VAR_A_EE_TOTAL;
 
 extern const uint16_t VAR_B_EE_BANK_SIZE;
+extern const uint16_t VAR_B_EE_PWR_ON_COUNT;
 extern const uint16_t VAR_B_EE_PWR_ON_0;
+#if (VAR_EE_BACKUP_BANKS >= 2)
 extern const uint16_t VAR_B_EE_PWR_ON_1;
+#endif
 extern const uint16_t VAR_B_EE_PWR_DWN;
 extern const uint16_t VAR_B_EE_TOTAL;
 
@@ -80,5 +91,8 @@ extern const uint16_t VAR_EE_TOTAL;
 uint32_t VariableEeSlotAddr(E_VARIABLE_EE_SLOT slot);
 int16_t VariableEeReadSlot(E_VARIABLE_EE_SLOT slot, uint8_t *buf, uint16_t len);
 int16_t VariableEeWriteSlot(E_VARIABLE_EE_SLOT slot, const uint8_t *buf, uint16_t len);
+
+void VariableBackupTick(uint16_t elapsed_sec);
+void VariableBackupPowerDown(void);
 
 #endif

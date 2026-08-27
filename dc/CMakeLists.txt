@@ -12,7 +12,7 @@ add_executable(dc_variable_pack tools/dc_variable_pack.c)
 set_property(TARGET dc_variable_pack PROPERTY C_STANDARD 99)
 target_include_directories(dc_variable_pack PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/cfg
+    ${CMAKE_CURRENT_SOURCE_DIR}/port
 )
 
 set(DC_VARIABLE_LAYOUT_H ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable_layout.h)
@@ -20,7 +20,7 @@ set(DC_VARIABLE_LAYOUT_H ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable_layout.
 add_custom_target(dc_variable_layout ALL
     COMMAND $<TARGET_FILE:dc_variable_pack> "${DC_VARIABLE_LAYOUT_H}"
     DEPENDS dc_variable_pack
-            ${CMAKE_CURRENT_SOURCE_DIR}/cfg/dc_variable_cfg.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/port/dc_variable_cfg.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_types.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_variable_pack.c
@@ -31,7 +31,7 @@ add_custom_target(dc_variable_layout ALL
 add_custom_target(dc_variable_dump
     COMMAND $<TARGET_FILE:dc_variable_pack> --dump
     DEPENDS dc_variable_pack
-            ${CMAKE_CURRENT_SOURCE_DIR}/cfg/dc_variable_cfg.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/port/dc_variable_cfg.h
     COMMENT "Dump variable layout (host only)"
     VERBATIM
 )
@@ -64,17 +64,17 @@ add_library(dc_meter_fw
 )
 target_include_directories(dc_meter_fw
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
-           ${CMAKE_CURRENT_SOURCE_DIR}/cfg
+           ${CMAKE_CURRENT_SOURCE_DIR}/port
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 add_dependencies(dc_meter_fw dc_param_layout dc_variable_layout)
 set_source_files_properties(src/dc_param.c PROPERTIES OBJECT_DEPENDS ${DC_PARAM_LAYOUT_H})
 set_source_files_properties(src/dc_variable.c PROPERTIES OBJECT_DEPENDS ${DC_VARIABLE_LAYOUT_H})
 
-add_library(dc_storage_cfg_default cfg/dc_storage_cfg_default.c)
+add_library(dc_storage_cfg_default port/dc_storage_cfg_default.c)
 target_include_directories(dc_storage_cfg_default PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/cfg
+    ${CMAKE_CURRENT_SOURCE_DIR}/port
 )
 
 add_executable(dc_fw_example main.c)

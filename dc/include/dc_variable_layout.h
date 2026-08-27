@@ -93,12 +93,14 @@ const uint16_t VAR_D_END_ADDR = (uint16_t)sizeof(var_layout_d_t);
 
 /* Contiguous EE map: one origin, A then B then D. */
 const uint16_t VAR_A_EE_BANK_SIZE = VAR_A_END_ADDR;
+const uint16_t VAR_A_EE_PWR_ON_COUNT = 2u;
 const uint16_t VAR_A_EE_PWR_ON_0 = 0u;
 const uint16_t VAR_A_EE_PWR_ON_1 = VAR_A_END_ADDR;
 const uint16_t VAR_A_EE_PWR_DWN = (uint16_t)(2u * VAR_A_END_ADDR);
 const uint16_t VAR_A_EE_TOTAL = (uint16_t)(3u * VAR_A_END_ADDR);
 
 const uint16_t VAR_B_EE_BANK_SIZE = VAR_B_END_ADDR;
+const uint16_t VAR_B_EE_PWR_ON_COUNT = 2u;
 const uint16_t VAR_B_EE_PWR_ON_0 = 0u;
 const uint16_t VAR_B_EE_PWR_ON_1 = VAR_B_END_ADDR;
 const uint16_t VAR_B_EE_PWR_DWN = (uint16_t)(2u * VAR_B_END_ADDR);

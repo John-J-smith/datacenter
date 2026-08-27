@@ -2,8 +2,36 @@
 #ifndef DC_VARIABLE_CFG_H
 #define DC_VARIABLE_CFG_H
 
-/* Single EE origin; A/B/D regions are laid out contiguously from here. */
-#define VAR_EEPROM_BASE (0x00001000u)
+#include "dc_storage_cfg.h"
+
+/* Default VAR_EEPROM_BASE follows unified EE origin unless overridden. */
+#ifndef VAR_EEPROM_BASE
+#define VAR_EEPROM_BASE DC_STORAGE_BASE_EE
+#endif
+
+/*
+ * Timed EE backup banks for A/B (design 7.4.2.1):
+ *   1 = single: one PWR_ON bank + one PWR_DWN bank per class
+ *   2 = dual:   two PWR_ON banks (written together) + one PWR_DWN bank
+ */
+#ifndef VAR_EE_BACKUP_BANKS
+#define VAR_EE_BACKUP_BANKS 2
+#endif
+
+#if (VAR_EE_BACKUP_BANKS != 1) && (VAR_EE_BACKUP_BANKS != 2)
+#error VAR_EE_BACKUP_BANKS must be 1 (single) or 2 (dual)
+#endif
+
+/* Periodic backup intervals (seconds). */
+#ifndef VAR_A_BACKUP_INTERVAL_SEC
+#define VAR_A_BACKUP_INTERVAL_SEC 600u
+#endif
+#ifndef VAR_B_BACKUP_INTERVAL_SEC
+#define VAR_B_BACKUP_INTERVAL_SEC 600u
+#endif
+#ifndef VAR_PWR_DWN_INTERVAL_SEC
+#define VAR_PWR_DWN_INTERVAL_SEC 720u
+#endif
 
 #define VAR_LIST_A(X) \
     X(VARIABLE_DATE_TIME,     0x4000u, 1u, DC_VAR_CALENDAR_BYTES) \

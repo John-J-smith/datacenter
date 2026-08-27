@@ -206,6 +206,38 @@ static void dump_items(const var_item_t *items, unsigned nitems, uint8_t stor,
     }
 }
 
+static unsigned var_ee_banks_per_class(void)
+{
+#if (VAR_EE_BACKUP_BANKS >= 2)
+    return 3u;
+#else
+    return 2u;
+#endif
+}
+
+static void emit_ee_class_map(const char *cls, const char *end_sym)
+{
+    oputs("const uint16_t ");
+    oprintf("%s_EE_BANK_SIZE = %s;\n", cls, end_sym);
+    oprintf("const uint16_t %s_EE_PWR_ON_COUNT = %uu;\n", cls,
+            (unsigned)VAR_EE_BACKUP_BANKS);
+    oputs("const uint16_t ");
+    oprintf("%s_EE_PWR_ON_0 = 0u;\n", cls);
+#if (VAR_EE_BACKUP_BANKS >= 2)
+    oputs("const uint16_t ");
+    oprintf("%s_EE_PWR_ON_1 = %s;\n", cls, end_sym);
+    oputs("const uint16_t ");
+    oprintf("%s_EE_PWR_DWN = (uint16_t)(2u * %s);\n", cls, end_sym);
+    oputs("const uint16_t ");
+    oprintf("%s_EE_TOTAL = (uint16_t)(3u * %s);\n\n", cls, end_sym);
+#else
+    oputs("const uint16_t ");
+    oprintf("%s_EE_PWR_DWN = %s;\n", cls, end_sym);
+    oputs("const uint16_t ");
+    oprintf("%s_EE_TOTAL = (uint16_t)(2u * %s);\n\n", cls, end_sym);
+#endif
+}
+
 static void dump_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     uint16_t a_end;
@@ -221,12 +253,15 @@ static void dump_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
     b_end = (uint16_t)(class_data_len(s_b, nb) + 2u);
     c_end = class_data_len(s_c, nc);
     d_end = class_data_len(s_d, nd);
-    a_ee_total = (uint16_t)(3u * a_end);
-    b_ee_total = (uint16_t)(3u * b_end);
+    a_ee_total = (uint16_t)(a_end * var_ee_banks_per_class());
+    b_ee_total = (uint16_t)(b_end * var_ee_banks_per_class());
     ee_total = (uint16_t)(a_ee_total + b_ee_total + d_end);
     ee_base = (uint32_t)VAR_EEPROM_BASE;
 
     printf("=== variable layout (host dump) ===\n");
+    printf("=== EE backup: %s (%u PWR_ON + 1 PWR_DWN per A/B) ===\n",
+           (VAR_EE_BACKUP_BANKS >= 2) ? "dual" : "single",
+           (unsigned)VAR_EE_BACKUP_BANKS);
     printf("=== SRAM block sizes ===\n");
     printf("  A: end=%u crc@%u (+ head/tail wrap in firmware)\n",
            (unsigned)a_end, (unsigned)(a_end - 2u));
@@ -323,17 +358,8 @@ int main(int argc, char **argv)
     oputs("const uint16_t VAR_D_END_ADDR = (uint16_t)sizeof(var_layout_d_t);\n\n");
 
     oputs("/* Contiguous EE map: one origin, A then B then D. */\n");
-    oputs("const uint16_t VAR_A_EE_BANK_SIZE = VAR_A_END_ADDR;\n");
-    oputs("const uint16_t VAR_A_EE_PWR_ON_0 = 0u;\n");
-    oputs("const uint16_t VAR_A_EE_PWR_ON_1 = VAR_A_END_ADDR;\n");
-    oputs("const uint16_t VAR_A_EE_PWR_DWN = (uint16_t)(2u * VAR_A_END_ADDR);\n");
-    oputs("const uint16_t VAR_A_EE_TOTAL = (uint16_t)(3u * VAR_A_END_ADDR);\n\n");
-
-    oputs("const uint16_t VAR_B_EE_BANK_SIZE = VAR_B_END_ADDR;\n");
-    oputs("const uint16_t VAR_B_EE_PWR_ON_0 = 0u;\n");
-    oputs("const uint16_t VAR_B_EE_PWR_ON_1 = VAR_B_END_ADDR;\n");
-    oputs("const uint16_t VAR_B_EE_PWR_DWN = (uint16_t)(2u * VAR_B_END_ADDR);\n");
-    oputs("const uint16_t VAR_B_EE_TOTAL = (uint16_t)(3u * VAR_B_END_ADDR);\n\n");
+    emit_ee_class_map("VAR_A", "VAR_A_END_ADDR");
+    emit_ee_class_map("VAR_B", "VAR_B_END_ADDR");
 
     oputs("const uint16_t VAR_D_EE_SIZE = VAR_D_END_ADDR;\n\n");
 
