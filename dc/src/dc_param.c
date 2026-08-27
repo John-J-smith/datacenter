@@ -5,7 +5,6 @@
 #define DC_PARAM_LAYOUT_DEFINE
 #include "dc_param_layout.h"
 
-#include <stdio.h>
 #include <string.h>
 
 static uint8_t s_param_inited;
@@ -155,82 +154,4 @@ int16_t ReadParamData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t 
 int16_t WriteParamData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
     return param_xfer(genre, 0, dataPtr, usLen, type, 1);
-}
-
-#define PARAM_NAME_ROW(tok, id, dt, n, b, fl) #tok,
-
-static const char *const s_param_item_names[] = {
-    PARAM_ITEM_LIST(PARAM_NAME_ROW)
-};
-
-#undef PARAM_NAME_ROW
-
-static const char *param_dtype_name(uint8_t dtype)
-{
-    switch ((E_PARAM_STORAGE_DATATYPE)dtype) {
-    case DATATYPE_INT:
-        return "INT";
-    case DATATYPE_ARRAY:
-        return "ARRAY";
-    case DATATYPE_STRUCT:
-        return "STRUCT";
-    case DATATYPE_LIST:
-        return "LIST";
-    case DATATYPE_LINKARRAY:
-        return "LINKARRAY";
-    default:
-        return "?";
-    }
-}
-
-void ParamDumpLayout(void)
-{
-    uint16_t i;
-    uint16_t bi;
-
-    param_ensure_init();
-
-    printf("=== param blocks (%u) ===\n", (unsigned)tParamBlockTableCount);
-    for (bi = 0u; bi < tParamBlockTableCount; bi++) {
-        printf("  block %u: ram=%p len=%u flags=0x%02X rom=%p\n",
-               (unsigned)tParamBlockTable[bi].eBlockName,
-               (void *)tParamBlockTable[bi].ram,
-               (unsigned)tParamBlockTable[bi].ucBlockLen,
-               (unsigned)tParamBlockTable[bi].ucFlag,
-               (const void *)tParamBlockTable[bi].ucPtr);
-    }
-
-    printf("=== param items (%u) ===\n", (unsigned)tParamApiTableCount);
-    for (i = 0u; i < tParamApiTableCount; i++) {
-        const STR_PARAMETER_TABLE *row = &tParamApiTable[i];
-        const char *name = (i < (uint16_t)(sizeof s_param_item_names /
-                                            sizeof s_param_item_names[0]))
-                               ? s_param_item_names[i]
-                               : "?";
-
-        printf("  %-22s id=0x%04X blk=%u off=%u len=%u type=%s n=%u b=%u",
-               name,
-               (unsigned)row->eParamType,
-               (unsigned)row->eBlockName,
-               (unsigned)row->uParamOffset,
-               (unsigned)row->ucParamLen,
-               param_dtype_name(row->ucDataType),
-               (unsigned)row->ucIndexNum,
-               (unsigned)row->ucBytes);
-
-        if (row->ucDataType == (uint8_t)DATATYPE_LINKARRAY && row->ucBytes != 0u) {
-            uint8_t per_page =
-                (uint8_t)(PARAM_BLOCK_PAYLOAD_MAX / (uint16_t)row->ucBytes);
-            uint8_t pages;
-
-            if (per_page != 0u) {
-                pages = (uint8_t)((row->ucIndexNum + per_page - 1u) / per_page);
-                printf("  pages=%u blk%u..%u",
-                       (unsigned)pages,
-                       (unsigned)row->eBlockName,
-                       (unsigned)(row->eBlockName + pages - 1u));
-            }
-        }
-        printf("\n");
-    }
 }

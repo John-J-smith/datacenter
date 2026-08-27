@@ -60,6 +60,15 @@ add_custom_target(dc_param_layout ALL
     VERBATIM
 )
 
+add_custom_target(dc_param_dump
+    COMMAND $<TARGET_FILE:dc_param_pack> --dump
+    DEPENDS dc_param_pack
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_table.inc
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_default.inc
+    COMMENT "Dump param layout (host only)"
+    VERBATIM
+)
+
 add_library(dc_meter_fw
     src/dc_alias.c
     src/dc_energy.c

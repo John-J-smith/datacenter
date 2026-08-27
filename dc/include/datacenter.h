@@ -14,9 +14,6 @@
 int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-void ParamDumpLayout(void);
-void DcDumpLayout(void);
-
 void VariableBackupTick(uint16_t elapsed_sec);
 void VariableBackupPowerDown(void);
 

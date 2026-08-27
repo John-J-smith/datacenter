@@ -55,6 +55,4 @@ extern const uint16_t tParamBlockTableCount;
 extern const STR_PARAMETER_TABLE tParamApiTable[];
 extern const uint16_t tParamApiTableCount;
 
-void ParamDumpLayout(void);
-
 #endif

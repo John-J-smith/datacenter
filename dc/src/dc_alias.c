@@ -63,8 +63,3 @@ int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, u
     }
     return DC_RET_ALIAS_ERR;
 }
-
-void DcDumpLayout(void)
-{
-    ParamDumpLayout();
-}
