@@ -8,6 +8,34 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CMAKE_C_STANDARD_REQUIRED ON)
 endif()
 
+add_executable(dc_variable_pack tools/dc_variable_pack.c)
+set_property(TARGET dc_variable_pack PROPERTY C_STANDARD 99)
+target_include_directories(dc_variable_pack PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/cfg
+)
+
+set(DC_VARIABLE_LAYOUT_H ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable_layout.h)
+
+add_custom_target(dc_variable_layout ALL
+    COMMAND $<TARGET_FILE:dc_variable_pack> "${DC_VARIABLE_LAYOUT_H}"
+    DEPENDS dc_variable_pack
+            ${CMAKE_CURRENT_SOURCE_DIR}/cfg/dc_variable_cfg.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_types.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_variable_pack.c
+    COMMENT "Generating dc_variable_layout.h"
+    VERBATIM
+)
+
+add_custom_target(dc_variable_dump
+    COMMAND $<TARGET_FILE:dc_variable_pack> --dump
+    DEPENDS dc_variable_pack
+            ${CMAKE_CURRENT_SOURCE_DIR}/cfg/dc_variable_cfg.h
+    COMMENT "Dump variable layout (host only)"
+    VERBATIM
+)
+
 add_executable(dc_param_pack tools/dc_param_pack.c)
 set_property(TARGET dc_param_pack PROPERTY C_STANDARD 99)
 target_include_directories(dc_param_pack PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -36,13 +64,24 @@ add_library(dc_meter_fw
 )
 target_include_directories(dc_meter_fw
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+           ${CMAKE_CURRENT_SOURCE_DIR}/cfg
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-add_dependencies(dc_meter_fw dc_param_layout)
+add_dependencies(dc_meter_fw dc_param_layout dc_variable_layout)
 set_source_files_properties(src/dc_param.c PROPERTIES OBJECT_DEPENDS ${DC_PARAM_LAYOUT_H})
+set_source_files_properties(src/dc_variable.c PROPERTIES OBJECT_DEPENDS ${DC_VARIABLE_LAYOUT_H})
+
+add_library(dc_storage_cfg_default cfg/dc_storage_cfg_default.c)
+target_include_directories(dc_storage_cfg_default PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/cfg
+)
 
 add_executable(dc_fw_example main.c)
-target_link_libraries(dc_fw_example PRIVATE dc_meter_fw)
+target_link_libraries(dc_fw_example PRIVATE dc_meter_fw dc_storage_cfg_default)
 
 add_executable(dc_param_test test_param.c)
 target_link_libraries(dc_param_test PRIVATE dc_meter_fw)
+
+add_executable(dc_variable_test test_variable.c)
+target_link_libraries(dc_variable_test PRIVATE dc_meter_fw)

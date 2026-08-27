@@ -15,7 +15,6 @@ int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t 
 int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
 void ParamDumpLayout(void);
-void VariableDumpLayout(void);
 void DcDumpLayout(void);
 
 #endif

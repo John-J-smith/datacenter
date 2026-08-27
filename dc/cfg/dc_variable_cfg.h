@@ -1,3 +1,10 @@
+/* Product variable catalog and EE layout. Edit per meter project. */
+#ifndef DC_VARIABLE_CFG_H
+#define DC_VARIABLE_CFG_H
+
+/* Single EE origin; A/B/D regions are laid out contiguously from here. */
+#define VAR_EEPROM_BASE (0x00001000u)
+
 #define VAR_LIST_A(X) \
     X(VARIABLE_DATE_TIME,     0x4000u, 1u, DC_VAR_CALENDAR_BYTES) \
     X(VARIABLE_RUN_TIME,      0xE000u, 4u, 4u) \
@@ -32,3 +39,5 @@
 
 #define VAR_LIST_D(X) \
     X(VARIABLE_MTWORK_EVTKEY, 0xE100u, 1u, DC_VAR_KEY_BYTES)
+
+#endif

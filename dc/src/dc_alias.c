@@ -67,5 +67,4 @@ int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, u
 void DcDumpLayout(void)
 {
     ParamDumpLayout();
-    VariableDumpLayout();
 }
