@@ -71,6 +71,7 @@ add_custom_target(dc_param_dump
 
 add_library(dc_meter_fw
     src/dc_alias.c
+    src/dc_crc16.c
     src/dc_energy.c
     src/dc_demand.c
     src/dc_param.c

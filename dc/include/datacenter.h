@@ -13,7 +13,7 @@
 int16_t ReadAliasData(uint32_t genre, uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 int16_t WriteAliasData(uint32_t genre, const uint8_t *dataPtr, uint16_t usLen, uint8_t type);
 
-void VariableBackupTick(uint16_t elapsed_sec);
-void VariableBackupPowerDown(void);
+void var_backup_tick(uint16_t elapsed_sec);
+void var_backup_power_down(void);
 
 #endif

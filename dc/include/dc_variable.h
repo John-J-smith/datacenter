@@ -46,13 +46,13 @@ typedef enum {
 typedef struct {
     uint16_t eVariableType;
     uint16_t eVariableAddr;
-    uint16_t ucLenth;
+    uint16_t ucLength;
     uint8_t  ucIndexNum;
     uint8_t  ucBytes;
     uint8_t  ucType;
-} STR_VARIABLE_API_TABLE;
+} ST_DC_VARIABLE_TABLE;
 
-extern const STR_VARIABLE_API_TABLE tVariableApiTable[];
+extern const ST_DC_VARIABLE_TABLE tVariableApiTable[];
 extern const uint16_t tVariableApiTableCount;
 
 extern const uint16_t VAR_A_CRC_ADDR;
@@ -91,7 +91,7 @@ uint32_t VariableEeSlotAddr(E_VARIABLE_EE_SLOT slot);
 int16_t VariableEeReadSlot(E_VARIABLE_EE_SLOT slot, uint8_t *buf, uint16_t len);
 int16_t VariableEeWriteSlot(E_VARIABLE_EE_SLOT slot, const uint8_t *buf, uint16_t len);
 
-void VariableBackupTick(uint16_t elapsed_sec);
-void VariableBackupPowerDown(void);
+void var_backup_tick(uint16_t elapsed_sec);
+void var_backup_power_down(void);
 
 #endif

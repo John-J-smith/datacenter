@@ -117,20 +117,38 @@ static void emit_fields(const var_item_t *items, unsigned nitems)
     }
 }
 
+static const char *stor_type_enum(uint8_t stor)
+{
+    switch (stor) {
+    case 0u:
+        return "VARIABLE_TYPEA";
+    case 1u:
+        return "VARIABLE_TYPEB";
+    case 2u:
+        return "VARIABLE_TYPEC";
+    case 3u:
+        return "VARIABLE_TYPED";
+    default:
+        return "VARIABLE_TYPEA";
+    }
+}
+
 static void emit_api_rows(const var_item_t *items, unsigned nitems,
                           const char *layout, uint8_t stor)
 {
     unsigned i;
+    const char *type_enum;
 
+    type_enum = stor_type_enum(stor);
     for (i = 0u; i < nitems; i++) {
-        oprintf("    { 0x%04Xu, (uint16_t)offsetof(%s, %s), %uu, %uu, %uu, %uu }",
+        oprintf("    { 0x%04Xu, (uint16_t)offsetof(%s, %s), %uu, %uu, %uu, (uint8_t)%s }",
                 (unsigned)items[i].id,
                 layout,
                 items[i].name,
                 (unsigned)((unsigned)items[i].n * (unsigned)items[i].b),
                 (unsigned)items[i].n,
                 (unsigned)items[i].b,
-                (unsigned)stor);
+                type_enum);
         if ((i + 1u) < nitems) {
             oputs(",\n");
         } else {
@@ -337,7 +355,7 @@ int main(int argc, char **argv)
 
     oputs("#if defined(DC_VARIABLE_LAYOUT_DEFINE)\n\n");
 
-    oputs("const STR_VARIABLE_API_TABLE tVariableApiTable[] = {\n");
+    oputs("const ST_DC_VARIABLE_TABLE tVariableApiTable[] = {\n");
     emit_api_rows(s_a, na, "var_layout_a_t", 0u);
     oputs(",\n");
     emit_api_rows(s_b, nb, "var_layout_b_t", 1u);
