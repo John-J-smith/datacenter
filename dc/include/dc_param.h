@@ -22,7 +22,7 @@ typedef enum {
     DATATYPE_LINKARRAY
 } E_PARAM_STORAGE_DATATYPE;
 
-#include "dc_param_table.inc"
+#include "dc_param_cfg.h"
 
 #define PARAM_ENUM_ROW(tok, id, dt, n, b, fl) tok = (id),
 

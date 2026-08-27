@@ -1,5 +1,5 @@
+#define DC_PARAM_PACK
 #include "dc_param.h"
-#include "dc_param_default.inc"
 
 #include <stdio.h>
 #include <stdlib.h>

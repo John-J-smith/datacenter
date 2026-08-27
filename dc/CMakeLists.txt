@@ -46,13 +46,15 @@ add_custom_target(dc_variable_dump
 
 add_executable(dc_param_pack tools/dc_param_pack.c)
 set_property(TARGET dc_param_pack PROPERTY C_STANDARD 99)
-target_include_directories(dc_param_pack PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(dc_param_pack PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${DC_PORT_DIR}
+)
 
 add_custom_target(dc_param_layout ALL
     COMMAND $<TARGET_FILE:dc_param_pack> "${DC_PARAM_LAYOUT_H}"
     DEPENDS dc_param_pack
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_table.inc
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_default.inc
+            ${DC_PORT_DIR}/dc_param_cfg.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_param_pack.c
     BYPRODUCTS ${DC_PARAM_LAYOUT_H}
@@ -63,8 +65,7 @@ add_custom_target(dc_param_layout ALL
 add_custom_target(dc_param_dump
     COMMAND $<TARGET_FILE:dc_param_pack> --dump
     DEPENDS dc_param_pack
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_table.inc
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_default.inc
+            ${DC_PORT_DIR}/dc_param_cfg.h
     COMMENT "Dump param layout (host only)"
     VERBATIM
 )
