@@ -1,7 +1,6 @@
 #ifndef DC_VARIABLE_H
 #define DC_VARIABLE_H
 
-#include "dc_types.h"
 #include "dc_storage_cfg.h"
 #include "dc_variable_cfg.h"
 #include <stdint.h>

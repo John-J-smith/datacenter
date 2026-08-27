@@ -2,7 +2,6 @@
 #define DATACENTER_H
 
 #include "dc_alias.h"
-#include "dc_types.h"
 #include "dc_variable.h"
 #include "dc_param.h"
 #include <stdint.h>

@@ -29,7 +29,6 @@ add_custom_target(dc_variable_layout ALL
     DEPENDS dc_variable_pack
             ${DC_PORT_DIR}/dc_variable_cfg.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_types.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_variable_pack.c
     BYPRODUCTS ${DC_VARIABLE_LAYOUT_H}
     COMMENT "Generating dc_variable_layout.h in port dir"
