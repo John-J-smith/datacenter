@@ -334,6 +334,20 @@ static void emit_ee_class_map(const char *cls, const char *end_sym)
 #endif
 }
 
+static void emit_eeprom_bases(void)
+{
+    oputs("const uint32_t VAR_A_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE;\n");
+#if (VAR_EE_BACKUP_BANKS >= 2)
+    oputs("const uint32_t VAR_B_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE + (uint32_t)(3u * VAR_A_END_ADDR);\n");
+    oputs("const uint32_t VAR_D_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE + (uint32_t)(3u * VAR_A_END_ADDR) + (uint32_t)(3u * VAR_B_END_ADDR);\n");
+    oputs("const uint16_t VAR_EE_TOTAL = (uint16_t)((3u * VAR_A_END_ADDR) + (3u * VAR_B_END_ADDR) + VAR_D_END_ADDR);\n\n");
+#else
+    oputs("const uint32_t VAR_B_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE + (uint32_t)(2u * VAR_A_END_ADDR);\n");
+    oputs("const uint32_t VAR_D_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE + (uint32_t)(2u * VAR_A_END_ADDR) + (uint32_t)(2u * VAR_B_END_ADDR);\n");
+    oputs("const uint16_t VAR_EE_TOTAL = (uint16_t)((2u * VAR_A_END_ADDR) + (2u * VAR_B_END_ADDR) + VAR_D_END_ADDR);\n\n");
+#endif
+}
+
 static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     s_out_len = 0u;
@@ -377,6 +391,13 @@ static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
     emit_fields(s_d, nd);
     oputs("} var_layout_d_t;\n\n");
 
+    oputs("#define VAR_A_CRC_ADDR (uint16_t)offsetof(var_layout_a_t, crc)\n");
+    oputs("#define VAR_A_END_ADDR (uint16_t)sizeof(var_layout_a_t)\n");
+    oputs("#define VAR_B_CRC_ADDR (uint16_t)offsetof(var_layout_b_t, crc)\n");
+    oputs("#define VAR_B_END_ADDR (uint16_t)sizeof(var_layout_b_t)\n");
+    oputs("#define VAR_C_END_ADDR (uint16_t)sizeof(var_layout_c_t)\n");
+    oputs("#define VAR_D_END_ADDR (uint16_t)sizeof(var_layout_d_t)\n\n");
+
     oputs("#endif /* DC_VARIABLE_LAYOUT_H */\n\n");
 
     oputs("#if defined(DC_VARIABLE_LAYOUT_DEFINE)\n");
@@ -390,23 +411,13 @@ static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
     oputs("const uint16_t tVariableApiTableCount =\n");
     oputs("    (uint16_t)(sizeof(tVariableApiTable) / sizeof(tVariableApiTable[0]));\n\n");
 
-    oputs("const uint16_t VAR_A_CRC_ADDR = (uint16_t)offsetof(var_layout_a_t, crc);\n");
-    oputs("const uint16_t VAR_A_END_ADDR = (uint16_t)sizeof(var_layout_a_t);\n");
-    oputs("const uint16_t VAR_B_CRC_ADDR = (uint16_t)offsetof(var_layout_b_t, crc);\n");
-    oputs("const uint16_t VAR_B_END_ADDR = (uint16_t)sizeof(var_layout_b_t);\n");
-    oputs("const uint16_t VAR_C_END_ADDR = (uint16_t)sizeof(var_layout_c_t);\n");
-    oputs("const uint16_t VAR_D_END_ADDR = (uint16_t)sizeof(var_layout_d_t);\n\n");
-
     oputs("/* Contiguous EE map: one origin, A then B then D. */\n");
     emit_ee_class_map("VAR_A", "VAR_A_END_ADDR");
     emit_ee_class_map("VAR_B", "VAR_B_END_ADDR");
 
     oputs("const uint16_t VAR_D_EE_SIZE = VAR_D_END_ADDR;\n\n");
 
-    oputs("const uint32_t VAR_A_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE;\n");
-    oputs("const uint32_t VAR_B_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE + (uint32_t)VAR_A_EE_TOTAL;\n");
-    oputs("const uint32_t VAR_D_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE + (uint32_t)VAR_A_EE_TOTAL + (uint32_t)VAR_B_EE_TOTAL;\n");
-    oputs("const uint16_t VAR_EE_TOTAL = (uint16_t)(VAR_A_EE_TOTAL + VAR_B_EE_TOTAL + VAR_D_EE_SIZE);\n\n");
+    emit_eeprom_bases();
 
     oputs("#endif /* DC_VARIABLE_LAYOUT_TABLE_DEFINED */\n");
     oputs("#endif /* DC_VARIABLE_LAYOUT_DEFINE */\n");

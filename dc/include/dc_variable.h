@@ -44,13 +44,6 @@ typedef struct {
 extern const ST_DC_VARIABLE_TABLE tVariableApiTable[];
 extern const uint16_t tVariableApiTableCount;
 
-extern const uint16_t VAR_A_CRC_ADDR;
-extern const uint16_t VAR_A_END_ADDR;
-extern const uint16_t VAR_B_CRC_ADDR;
-extern const uint16_t VAR_B_END_ADDR;
-extern const uint16_t VAR_C_END_ADDR;
-extern const uint16_t VAR_D_END_ADDR;
-
 extern const uint32_t VAR_A_EEPROM_BASE;
 extern const uint32_t VAR_B_EEPROM_BASE;
 extern const uint32_t VAR_D_EEPROM_BASE;

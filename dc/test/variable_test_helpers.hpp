@@ -98,7 +98,7 @@ inline void InitVariableModule(void)
     std::vector<uint8_t> buf(MakeVarIoBuffer());
 
     SeedAClassEe(0u);
-    ReadVar(VARIABLE_DATE_TIME, 0, buf.data(), 1u);
+    ReadVar(VAR_DATE_TIME, 0, buf.data(), 1u);
 }
 
 inline void ExpectEeSlotFirstByte(E_VARIABLE_EE_SLOT slot, uint8_t expected, uint16_t block_len)

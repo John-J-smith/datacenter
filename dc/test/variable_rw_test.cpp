@@ -65,24 +65,24 @@ TEST_F(VariableTestBase, TypeAB_WriteRefreshesSramCrc)
 
     // 1. 写 A 类变量，断言 SRAM body CRC 合法
     buf[0] = 0xA1u;
-    ASSERT_EQ(WriteVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ASSERT_EQ(WriteVar(VAR_DATE_TIME, 0, buf, 1u), 7);
     ExpectZoneBodyCrcOk(DC_TEST_VAR_ZONE_A);
 
     // 2. magic 坏、CRC 好 → 仍读回刚写入的值
     DcTestVarCorruptMagic(DC_TEST_VAR_ZONE_A);
     std::memset(buf, 0, sizeof buf);
-    ASSERT_EQ(ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ASSERT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 1u), 7);
     EXPECT_EQ(buf[0], 0xA1u);
 
     // 3. 写 B 类变量，断言 SRAM body CRC 合法
     buf[0] = 0xB2u;
-    ASSERT_EQ(WriteVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
+    ASSERT_EQ(WriteVar(VAR_USED_MONTH, 0, buf, 1u), 4);
     ExpectZoneBodyCrcOk(DC_TEST_VAR_ZONE_B);
 
     // 4. magic 坏、CRC 好 → 仍读回刚写入的值
     DcTestVarCorruptMagic(DC_TEST_VAR_ZONE_B);
     std::memset(buf, 0, sizeof buf);
-    ASSERT_EQ(ReadVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
+    ASSERT_EQ(ReadVar(VAR_USED_MONTH, 0, buf, 1u), 4);
     EXPECT_EQ(buf[0], 0xB2u);
 }
 
@@ -98,7 +98,7 @@ TEST_F(VariableTestBase, TypeC_NoEeSideEffect)
     std::memcpy(ee_before, DcTestStoragePtr() + VAR_A_EEPROM_BASE, sizeof ee_before);
 
     // 2. 写 C 类变量
-    ASSERT_EQ(WriteVar(VARIABLE_RMS_VOLTAGE, 0, buf, 1u), 2);
+    ASSERT_EQ(WriteVar(VAR_RMS_VOLTAGE, 0, buf, 1u), 2);
 
     // 3. 断言 EE 快照不变
     EXPECT_EQ(std::memcmp(ee_before, DcTestStoragePtr() + VAR_A_EEPROM_BASE, sizeof ee_before), 0);
@@ -121,7 +121,7 @@ TEST_F(VariableTestBase, IndexOutOfRange)
     InitVariableModule();
 
     // 1. RMS_VOLTAGE index=2, usLen=2（越界），断言 DC_RET_PARAM_ERR
-    EXPECT_EQ(ReadVar(VARIABLE_RMS_VOLTAGE, 2, buf, 2u), DC_RET_PARAM_ERR);
+    EXPECT_EQ(ReadVar(VAR_RMS_VOLTAGE, 2, buf, 2u), DC_RET_PARAM_ERR);
 }
 
 // 测试内容：usLen==0 返回 0
@@ -132,14 +132,14 @@ TEST_F(VariableTestBase, ZeroLength)
     InitVariableModule();
 
     // 1. ReadVar usLen=0，断言返回 0
-    EXPECT_EQ(ReadVar(VARIABLE_DATE_TIME, 0, buf, 0u), 0);
+    EXPECT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 0u), 0);
 }
 
 // 测试内容：dataPtr==NULL 且 usLen!=0 返回 DC_RET_PARAM_ERR（alias 层）
 TEST_F(VariableTestBase, NullBufferWithLength)
 {
     // 1. dc_read_alias(NULL, usLen=1)，断言 DC_RET_PARAM_ERR
-    EXPECT_EQ(dc_read_alias(VarAliasBuild(VARIABLE_DATE_TIME, 0), nullptr, 1u, 0u),
+    EXPECT_EQ(dc_read_alias(VarAliasBuild(VAR_DATE_TIME, 0), nullptr, 1u, 0u),
               DC_RET_PARAM_ERR);
 }
 

@@ -7,9 +7,9 @@ TEST_F(VariableTestBase, TypeA_PeriodicPwrOnBackup)
 
     // 1. 写 DATE_TIME
     SeedAClassEe(0u);
-    ASSERT_EQ(ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ASSERT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 1u), 7);
     buf[0] = 0x31u;
-    ASSERT_EQ(WriteVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ASSERT_EQ(WriteVar(VAR_DATE_TIME, 0, buf, 1u), 7);
 
     // 2. var_backup_tick(VAR_A_BACKUP_INTERVAL_SEC)
     var_backup_tick(VAR_A_BACKUP_INTERVAL_SEC);
@@ -28,7 +28,7 @@ TEST_F(VariableTestBase, TypeB_DirtyGatedBackup)
     uint8_t ee[32];
 
     SeedAClassEe(0u);
-    ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u);
+    ReadVar(VAR_DATE_TIME, 0, buf, 1u);
 
     // 1. 未写 B 时 tick 满间隔 → B EE 仍为 0xFF
     var_backup_tick(VAR_B_BACKUP_INTERVAL_SEC);
@@ -44,7 +44,7 @@ TEST_F(VariableTestBase, TypeB_DirtyGatedBackup)
     buf[1] = 0u;
     buf[2] = 0u;
     buf[3] = 0u;
-    ASSERT_EQ(WriteVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
+    ASSERT_EQ(WriteVar(VAR_USED_MONTH, 0, buf, 1u), 4);
     DcTestVarResetBackupTimers();
     var_backup_tick(VAR_B_BACKUP_INTERVAL_SEC - 1u);
     VariableEeReadSlot(VAR_EE_SLOT_B_PWR_ON_0, ee, VAR_B_END_ADDR);
@@ -66,14 +66,14 @@ TEST_F(VariableTestBase, PwrDwnIntervalBackup)
 
     // 1. 写 A/B 类变量
     SeedAClassEe(0u);
-    ReadVar(VARIABLE_DATE_TIME, 0, a_buf, 1u);
+    ReadVar(VAR_DATE_TIME, 0, a_buf, 1u);
     a_buf[0] = 0x61u;
-    ASSERT_EQ(WriteVar(VARIABLE_DATE_TIME, 0, a_buf, 1u), 7);
+    ASSERT_EQ(WriteVar(VAR_DATE_TIME, 0, a_buf, 1u), 7);
     b_buf[0] = 0x62u;
     b_buf[1] = 0u;
     b_buf[2] = 0u;
     b_buf[3] = 0u;
-    ASSERT_EQ(WriteVar(VARIABLE_USED_MONTH, 0, b_buf, 1u), 4);
+    ASSERT_EQ(WriteVar(VAR_USED_MONTH, 0, b_buf, 1u), 4);
 
     // 2. var_backup_tick(VAR_PWR_DWN_INTERVAL_SEC)
     var_backup_tick(VAR_PWR_DWN_INTERVAL_SEC);
@@ -90,9 +90,9 @@ TEST_F(VariableTestBase, ImmediatePowerDown)
 
     // 1. 写 A 类变量
     SeedAClassEe(0u);
-    ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u);
+    ReadVar(VAR_DATE_TIME, 0, buf, 1u);
     buf[0] = 0x71u;
-    ASSERT_EQ(WriteVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ASSERT_EQ(WriteVar(VAR_DATE_TIME, 0, buf, 1u), 7);
 
     // 2. 调用 var_backup_power_down()
     var_backup_power_down();
@@ -108,9 +108,9 @@ TEST_F(VariableTestBase, BackupSkippedWhenInvalid)
 
     // 1. Seed EE=0x5A，读入 SRAM 后改写为 0xBB（使 SRAM 与 EE 可区分）
     SeedAClassEe(0x5Au);
-    ASSERT_EQ(ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ASSERT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 1u), 7);
     buf[0] = 0xBBu;
-    ASSERT_EQ(WriteVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ASSERT_EQ(WriteVar(VAR_DATE_TIME, 0, buf, 1u), 7);
 
     // 2. InvalidateAll(A)，tick 满 A 间隔
     DcTestVarInvalidateAll(DC_TEST_VAR_ZONE_A);
