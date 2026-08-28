@@ -56,6 +56,36 @@ TEST_F(VariableTestBase, AllVariables_ReadWrite)
     }
 }
 
+// 测试内容：A/B 类写 SRAM 后 body CRC 与数据一致（8.2.2）
+TEST_F(VariableTestBase, TypeAB_WriteRefreshesSramCrc)
+{
+    uint8_t buf[8];
+
+    InitVariableModule();
+
+    // 1. 写 A 类变量，断言 SRAM body CRC 合法
+    buf[0] = 0xA1u;
+    ASSERT_EQ(WriteVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ExpectZoneBodyCrcOk(DC_TEST_VAR_ZONE_A);
+
+    // 2. magic 坏、CRC 好 → 仍读回刚写入的值
+    DcTestVarCorruptMagic(DC_TEST_VAR_ZONE_A);
+    std::memset(buf, 0, sizeof buf);
+    ASSERT_EQ(ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    EXPECT_EQ(buf[0], 0xA1u);
+
+    // 3. 写 B 类变量，断言 SRAM body CRC 合法
+    buf[0] = 0xB2u;
+    ASSERT_EQ(WriteVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
+    ExpectZoneBodyCrcOk(DC_TEST_VAR_ZONE_B);
+
+    // 4. magic 坏、CRC 好 → 仍读回刚写入的值
+    DcTestVarCorruptMagic(DC_TEST_VAR_ZONE_B);
+    std::memset(buf, 0, sizeof buf);
+    ASSERT_EQ(ReadVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
+    EXPECT_EQ(buf[0], 0xB2u);
+}
+
 // 测试内容：C 类写操作不修改 EE 模拟区（8.2.2 TYPEC 仅 SRAM）
 TEST_F(VariableTestBase, TypeC_NoEeSideEffect)
 {

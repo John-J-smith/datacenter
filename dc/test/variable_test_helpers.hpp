@@ -88,6 +88,11 @@ inline int16_t WriteVar(uint16_t type_id, uint8_t index, const uint8_t *buf, uin
     return dc_write_alias(VarAliasBuild(type_id, index), buf, len, 0u);
 }
 
+inline void ExpectZoneBodyCrcOk(dc_test_var_zone_t zone)
+{
+    EXPECT_NE(DcTestVarBodyCrcOk(zone), 0);
+}
+
 inline void InitVariableModule(void)
 {
     std::vector<uint8_t> buf(MakeVarIoBuffer());

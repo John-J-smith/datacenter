@@ -64,6 +64,15 @@ TEST_F(VariableTestBase, RuntimeMagicBadCrcOk)
     std::memset(buf, 0, sizeof buf);
     ASSERT_EQ(ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
     EXPECT_EQ(buf[0], 0x55u);
+
+    // 4. 写入新值后 CRC 刷新；magic 再坏时仍读 SRAM 而非 EE
+    buf[0] = 0x66u;
+    ASSERT_EQ(WriteVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    ExpectZoneBodyCrcOk(DC_TEST_VAR_ZONE_A);
+    DcTestVarCorruptMagic(DC_TEST_VAR_ZONE_A);
+    std::memset(buf, 0, sizeof buf);
+    ASSERT_EQ(ReadVar(VARIABLE_DATE_TIME, 0, buf, 1u), 7);
+    EXPECT_EQ(buf[0], 0x66u);
 }
 
 // 测试内容：运行中 magic/CRC 坏 → 从 EE PWR_ON_0 恢复（CONTEXT 运行中链）
@@ -150,6 +159,15 @@ TEST_F(VariableTestBase, TypeB_RuntimeMagicBadCrcOk)
     std::memset(buf, 0, sizeof buf);
     ASSERT_EQ(ReadVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
     EXPECT_EQ(buf[0], 0x33u);
+
+    // 4. 写入新值后 CRC 刷新；magic 再坏时仍读 SRAM
+    buf[0] = 0x44u;
+    ASSERT_EQ(WriteVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
+    ExpectZoneBodyCrcOk(DC_TEST_VAR_ZONE_B);
+    DcTestVarCorruptMagic(DC_TEST_VAR_ZONE_B);
+    std::memset(buf, 0, sizeof buf);
+    ASSERT_EQ(ReadVar(VARIABLE_USED_MONTH, 0, buf, 1u), 4);
+    EXPECT_EQ(buf[0], 0x44u);
 }
 
 // 测试内容：B 区运行中 magic/CRC 坏 → 从 EE 恢复

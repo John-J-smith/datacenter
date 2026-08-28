@@ -554,8 +554,13 @@ static int16_t var_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
     if (writing != 0)
     {
         memcpy(base + off, ro, nbytes);
-        if (row->ucType == (uint8_t)VARIABLE_TYPEB)
+        if (row->ucType == (uint8_t)VARIABLE_TYPEA)
         {
+            var_a_crc_fill(&s_var_ram.body_a);
+        }
+        else if (row->ucType == (uint8_t)VARIABLE_TYPEB)
+        {
+            var_b_crc_fill(&s_var_ram.body_b);
             s_b_dirty = 1u;
         }
     }
@@ -625,6 +630,15 @@ void DcTestVarResetBackupTimers(void)
     s_a_pwr_on_sec = 0u;
     s_b_pwr_on_sec = 0u;
     s_pwr_dwn_sec = 0u;
+}
+
+int DcTestVarBodyCrcOk(dc_test_var_zone_t zone)
+{
+    if (zone == DC_TEST_VAR_ZONE_A)
+    {
+        return var_a_crc_ok(&s_var_ram.body_a);
+    }
+    return var_b_crc_ok(&s_var_ram.body_b);
 }
 
 #endif /* DC_TEST */

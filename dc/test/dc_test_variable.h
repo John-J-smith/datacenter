@@ -13,5 +13,6 @@ void DcTestVarCorruptMagic(dc_test_var_zone_t zone);
 void DcTestVarCorruptCrc(dc_test_var_zone_t zone);
 void DcTestVarInvalidateAll(dc_test_var_zone_t zone);
 void DcTestVarResetBackupTimers(void);
+int DcTestVarBodyCrcOk(dc_test_var_zone_t zone);
 
 #endif
