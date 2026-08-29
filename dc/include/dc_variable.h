@@ -6,6 +6,7 @@
 #include "dc_variable_layout.h"
 #include <stdint.h>
 
+#define VAR_INDEX_ALL       (0xFFu)
 #define VAR_CRC_BYTES_BLOCK (2u)
 #define VAR_SRAM_MAGIC_HEAD (0xA5A5A5A5u)
 #define VAR_SRAM_MAGIC_TAIL (0x5A5A5A5Au)

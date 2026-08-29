@@ -516,6 +516,14 @@ static int16_t var_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
     }
 
     index = GetAliasIndex(alias);
+
+    // index=VAR_INDEX_ALL(0xFF) 读写全部元素
+    if (index == VAR_INDEX_ALL)
+    {
+        index = 0u;
+        usLen = row->ucIndexNum;
+    }
+
     if ((uint16_t)index + usLen > (uint16_t)row->ucIndexNum)
     {
         return DC_RET_PARAM_ERR;

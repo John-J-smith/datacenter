@@ -124,6 +124,32 @@ TEST_F(VariableTestBase, IndexOutOfRange)
     EXPECT_EQ(ReadVar(VAR_RMS_VOLTAGE, 2, buf, 2u), DC_RET_PARAM_ERR);
 }
 
+// 测试内容：index=VAR_INDEX_ALL(0xFF) 读写全部元素（与 param PARAM_INDEX_ALL 一致）
+TEST_F(VariableTestBase, IndexAllReadsFullElement)
+{
+    uint8_t wbuf[6];
+    uint8_t rbuf[6];
+
+    InitVariableModule();
+
+    FillVarWritePattern(wbuf, 6u, 0u, 0u);
+    wbuf[2] = 0x11u;
+    wbuf[3] = 0x22u;
+    wbuf[4] = 0x33u;
+    wbuf[5] = 0x44u;
+
+    ASSERT_EQ(WriteVar(VAR_RMS_VOLTAGE, VAR_INDEX_ALL, wbuf, 1u), 6);
+    ASSERT_EQ(ReadVar(VAR_RMS_VOLTAGE, VAR_INDEX_ALL, rbuf, 1u), 6);
+    EXPECT_EQ(std::memcmp(wbuf, rbuf, 6u), 0);
+
+    ASSERT_EQ(ReadVar(VAR_RMS_VOLTAGE, 0, rbuf, 1u), 2);
+    EXPECT_EQ(rbuf[0], wbuf[0]);
+    EXPECT_EQ(rbuf[1], wbuf[1]);
+    ASSERT_EQ(ReadVar(VAR_RMS_VOLTAGE, 1, rbuf, 1u), 2);
+    EXPECT_EQ(rbuf[0], wbuf[2]);
+    EXPECT_EQ(rbuf[1], wbuf[3]);
+}
+
 // 测试内容：usLen==0 返回 0
 TEST_F(VariableTestBase, ZeroLength)
 {
