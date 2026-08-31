@@ -2,12 +2,6 @@
 #ifndef DC_VARIABLE_CFG_H
 #define DC_VARIABLE_CFG_H
 
-#include "dc_storage_cfg.h"
-
-#ifndef VAR_EEPROM_BASE
-#define VAR_EEPROM_BASE DC_STORAGE_BASE_EE
-#endif
-
 #ifndef VAR_EE_BACKUP_BANKS
 #define VAR_EE_BACKUP_BANKS 2
 #endif

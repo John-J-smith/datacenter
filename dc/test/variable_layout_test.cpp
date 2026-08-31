@@ -1,6 +1,7 @@
 #include "variable_test_helpers.hpp"
 
 extern "C" {
+#include "dc_storage_cfg.h"
 #include "dc_variable_layout.h"
 #include "dc_variable_cfg.h"
 }

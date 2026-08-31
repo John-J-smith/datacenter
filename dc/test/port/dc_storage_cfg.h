@@ -23,6 +23,10 @@
 #define DC_STORAGE_BASE_FILE  (0x80000000u)
 #endif
 
+#ifndef VAR_EEPROM_BASE
+#define VAR_EEPROM_BASE DC_STORAGE_BASE_EE
+#endif
+
 int16_t DcCfgStorageRead(uint32_t addr, uint8_t *buf, uint16_t len);
 int16_t DcCfgStorageWrite(uint32_t addr, const uint8_t *buf, uint16_t len);
 
