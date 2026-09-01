@@ -24,7 +24,7 @@ add_executable(dc_tests
     variable_rw_test.cpp
     variable_recovery_test.cpp
     variable_backup_test.cpp
-    param_test.cpp
+    param_rw_test.cpp
     param_layout_test.cpp
 )
 target_include_directories(dc_tests PRIVATE ${DC_PORT_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
