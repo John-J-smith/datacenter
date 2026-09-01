@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.16)
 #   cmake --build dc/tools/build --target gen_layouts
 #
 # DC_PORT_DIR 须含 dc_variable_cfg.h、dc_param_cfg.h；
-# 输出: DC_PORT_DIR/dc_variable_layout.h、dc_param_layout.h
+# 输出: DC_PORT_DIR/dc_variable_layout.h、dc_param_layout.h、dc_alias_layout.h
 
 project(dc_layout_gen C)
 
@@ -50,11 +50,13 @@ endif()
 # 生成物路径（写回 port，供固件 include）
 set(DC_VARIABLE_LAYOUT_H "${DC_PORT_DIR}/dc_variable_layout.h")
 set(DC_PARAM_LAYOUT_H "${DC_PORT_DIR}/dc_param_layout.h")
+set(DC_ALIAS_LAYOUT_H "${DC_PORT_DIR}/dc_alias_layout.h")
 
 message(STATUS "DC_ROOT=${DC_ROOT}")
 message(STATUS "DC_PORT_DIR=${DC_PORT_DIR}")
 message(STATUS "DC_VARIABLE_LAYOUT_H=${DC_VARIABLE_LAYOUT_H}")
 message(STATUS "DC_PARAM_LAYOUT_H=${DC_PARAM_LAYOUT_H}")
+message(STATUS "DC_ALIAS_LAYOUT_H=${DC_ALIAS_LAYOUT_H}")
 
 # host 工具：读 cfg 里的 VAR_LIST_* / PARAM 表，输出 layout 头文件
 add_executable(dc_variable_pack dc_variable_pack.c)
@@ -65,6 +67,12 @@ target_include_directories(dc_variable_pack PRIVATE
 
 add_executable(dc_param_pack dc_param_pack.c)
 target_include_directories(dc_param_pack PRIVATE
+    "${DC_ROOT}/include"
+    "${DC_PORT_DIR}"
+)
+
+add_executable(dc_alias_pack dc_alias_pack.c)
+target_include_directories(dc_alias_pack PRIVATE
     "${DC_ROOT}/include"
     "${DC_PORT_DIR}"
 )
@@ -93,8 +101,20 @@ add_custom_target(dc_param_layout
 )
 
 # 一次生成 variable + param 两份 layout
+add_custom_target(dc_alias_layout
+    COMMAND $<TARGET_FILE:dc_alias_pack> "${DC_ALIAS_LAYOUT_H}"
+    DEPENDS dc_alias_pack
+            "${DC_PORT_DIR}/dc_variable_cfg.h"
+            "${DC_PORT_DIR}/dc_param_cfg.h"
+            "${DC_ROOT}/include/dc_param.h"
+            "${DC_TOOLS_DIR}/dc_alias_pack.c"
+    BYPRODUCTS "${DC_ALIAS_LAYOUT_H}"
+    COMMENT "Generating dc_alias_layout.h -> ${DC_PORT_DIR}"
+    VERBATIM
+)
+
 add_custom_target(gen_layouts
-    DEPENDS dc_variable_layout dc_param_layout
+    DEPENDS dc_variable_layout dc_param_layout dc_alias_layout
 )
 
 # 仅打印布局到 stdout，不写文件（调试 / 文档对照）

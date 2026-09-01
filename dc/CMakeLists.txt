@@ -16,6 +16,7 @@ set(DC_PORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/port" CACHE PATH
 
 set(DC_VARIABLE_LAYOUT_H ${DC_PORT_DIR}/dc_variable_layout.h)
 set(DC_PARAM_LAYOUT_H ${DC_PORT_DIR}/dc_param_layout.h)
+set(DC_ALIAS_LAYOUT_H ${DC_PORT_DIR}/dc_alias_layout.h)
 
 add_executable(dc_variable_pack tools/dc_variable_pack.c)
 set_property(TARGET dc_variable_pack PROPERTY C_STANDARD 99)
@@ -69,6 +70,25 @@ add_custom_target(dc_param_dump
     VERBATIM
 )
 
+add_executable(dc_alias_pack tools/dc_alias_pack.c)
+set_property(TARGET dc_alias_pack PROPERTY C_STANDARD 99)
+target_include_directories(dc_alias_pack PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${DC_PORT_DIR}
+)
+
+add_custom_target(dc_alias_layout ALL
+    COMMAND $<TARGET_FILE:dc_alias_pack> "${DC_ALIAS_LAYOUT_H}"
+    DEPENDS dc_alias_pack
+            ${DC_PORT_DIR}/dc_variable_cfg.h
+            ${DC_PORT_DIR}/dc_param_cfg.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_alias_pack.c
+    BYPRODUCTS ${DC_ALIAS_LAYOUT_H}
+    COMMENT "Generating dc_alias_layout.h in port dir"
+    VERBATIM
+)
+
 add_library(dc_meter_fw
     src/dc_alias.c
     src/dc_crc16.c
@@ -84,9 +104,10 @@ target_include_directories(dc_meter_fw
            ${DC_PORT_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-add_dependencies(dc_meter_fw dc_param_layout dc_variable_layout)
+add_dependencies(dc_meter_fw dc_alias_layout dc_param_layout dc_variable_layout)
 set_source_files_properties(src/dc_param.c PROPERTIES OBJECT_DEPENDS ${DC_PARAM_LAYOUT_H})
 set_source_files_properties(src/dc_variable.c PROPERTIES OBJECT_DEPENDS ${DC_VARIABLE_LAYOUT_H})
+set_source_files_properties(src/dc_alias.c PROPERTIES OBJECT_DEPENDS ${DC_ALIAS_LAYOUT_H})
 
 option(DC_BUILD_TESTS "Build Google Test suite" ON)
 if(DC_BUILD_TESTS)
