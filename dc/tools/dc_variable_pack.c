@@ -191,38 +191,114 @@ static const char *stor_type_enum(uint8_t stor)
     }
 }
 
+static unsigned str_width(const char *s)
+{
+    return (unsigned)strlen(s);
+}
+
+static unsigned uint_text_width(unsigned v)
+{
+    char buf[16];
+
+    return (unsigned)snprintf(buf, sizeof buf, "%uu", v);
+}
+
+typedef struct {
+    unsigned name;
+    unsigned len;
+    unsigned n;
+    unsigned b;
+} var_tbl_cols_t;
+
+static void var_col_max_item(const var_item_t *item, var_tbl_cols_t *c)
+{
+    unsigned total;
+    unsigned w;
+
+    w = str_width(item->name);
+    if (w > c->name) {
+        c->name = w;
+    }
+    total = (unsigned)((unsigned)item->n * (unsigned)item->b);
+    w = uint_text_width(total);
+    if (w > c->len) {
+        c->len = w;
+    }
+    w = uint_text_width((unsigned)item->n);
+    if (w > c->n) {
+        c->n = w;
+    }
+    w = uint_text_width((unsigned)item->b);
+    if (w > c->b) {
+        c->b = w;
+    }
+}
+
+static void var_col_max_list(const var_item_t *items, unsigned nitems, var_tbl_cols_t *c)
+{
+    unsigned i;
+
+    for (i = 0u; i < nitems; i++) {
+        var_col_max_item(&items[i], c);
+    }
+}
+
+static var_tbl_cols_t var_api_col_widths(unsigned na, unsigned nb, unsigned nc, unsigned nd)
+{
+    var_tbl_cols_t c;
+
+    memset(&c, 0, sizeof c);
+    var_col_max_list(s_a, na, &c);
+    var_col_max_list(s_b, nb, &c);
+    var_col_max_list(s_c, nc, &c);
+    var_col_max_list(s_d, nd, &c);
+    return c;
+}
+
 static void emit_api_rows(const var_item_t *items, unsigned nitems,
-                          const char *layout, uint8_t stor, int *first_row)
+                          const char *layout, uint8_t stor,
+                          const var_tbl_cols_t *c, unsigned *row_i,
+                          unsigned row_total)
 {
     unsigned i;
     const char *type_enum;
+    char buf[16];
 
     type_enum = stor_type_enum(stor);
     for (i = 0u; i < nitems; i++) {
-        if (!*first_row) {
-            oputs(",\n");
-        }
-        *first_row = 0;
-        oprintf("    { (uint16_t)%s, (uint16_t)offsetof(%s, %s), %uu, %uu, %uu, (uint8_t)%s }",
-                items[i].name,
+        oprintf("    { (uint16_t)%-*s, (uint16_t)offsetof(%s, %-*s), ",
+                (int)c->name, items[i].name,
                 layout,
-                items[i].name,
-                (unsigned)((unsigned)items[i].n * (unsigned)items[i].b),
-                (unsigned)items[i].n,
-                (unsigned)items[i].b,
-                type_enum);
+                (int)c->name, items[i].name);
+        snprintf(buf, sizeof buf, "%uu",
+                 (unsigned)((unsigned)items[i].n * (unsigned)items[i].b));
+        oprintf("%-*s, ", (int)c->len, buf);
+        snprintf(buf, sizeof buf, "%uu", (unsigned)items[i].n);
+        oprintf("%-*s, ", (int)c->n, buf);
+        snprintf(buf, sizeof buf, "%uu", (unsigned)items[i].b);
+        oprintf("%-*s, (uint8_t)%s", (int)c->b, buf, type_enum);
+        (*row_i)++;
+        if (*row_i < row_total) {
+            oputs(" },\n");
+        } else {
+            oputs("  }\n");
+        }
     }
 }
 
 static void emit_all_api_rows(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
-    int first_row;
+    var_tbl_cols_t c;
+    unsigned row_i;
+    unsigned row_total;
 
-    first_row = 1;
-    emit_api_rows(s_a, na, "var_layout_a_t", 0u, &first_row);
-    emit_api_rows(s_b, nb, "var_layout_b_t", 1u, &first_row);
-    emit_api_rows(s_c, nc, "var_layout_c_t", 2u, &first_row);
-    emit_api_rows(s_d, nd, "var_layout_d_t", 3u, &first_row);
+    c = var_api_col_widths(na, nb, nc, nd);
+    row_total = na + nb + nc + nd;
+    row_i = 0u;
+    emit_api_rows(s_a, na, "var_layout_a_t", 0u, &c, &row_i, row_total);
+    emit_api_rows(s_b, nb, "var_layout_b_t", 1u, &c, &row_i, row_total);
+    emit_api_rows(s_c, nc, "var_layout_c_t", 2u, &c, &row_i, row_total);
+    emit_api_rows(s_d, nd, "var_layout_d_t", 3u, &c, &row_i, row_total);
     oputs("\n");
 }
 

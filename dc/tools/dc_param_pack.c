@@ -151,6 +151,88 @@ static void emit_bytes(const uint8_t *p, unsigned n)
     }
 }
 
+static unsigned str_width(const char *s)
+{
+    return (unsigned)strlen(s);
+}
+
+static unsigned uint_text_width(unsigned v)
+{
+    char buf[16];
+
+    return (unsigned)snprintf(buf, sizeof buf, "%uu", v);
+}
+
+typedef struct {
+    unsigned name;
+    unsigned blk;
+    unsigned len;
+    unsigned dtype;
+    unsigned n;
+    unsigned b;
+} param_tbl_cols_t;
+
+static param_tbl_cols_t param_api_col_widths(unsigned nitems, const pack_place_t *place)
+{
+    param_tbl_cols_t c;
+    unsigned i;
+
+    memset(&c, 0, sizeof c);
+    for (i = 0u; i < nitems; i++) {
+        if (str_width(s_items[i].name) > c.name) {
+            c.name = str_width(s_items[i].name);
+        }
+        if (uint_text_width((unsigned)place[i].blk) > c.blk) {
+            c.blk = uint_text_width((unsigned)place[i].blk);
+        }
+        if (uint_text_width((unsigned)place[i].len) > c.len) {
+            c.len = uint_text_width((unsigned)place[i].len);
+        }
+        if (uint_text_width((unsigned)s_items[i].dtype) > c.dtype) {
+            c.dtype = uint_text_width((unsigned)s_items[i].dtype);
+        }
+        if (uint_text_width((unsigned)s_items[i].n) > c.n) {
+            c.n = uint_text_width((unsigned)s_items[i].n);
+        }
+        if (uint_text_width((unsigned)s_items[i].b) > c.b) {
+            c.b = uint_text_width((unsigned)s_items[i].b);
+        }
+    }
+    return c;
+}
+
+static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
+{
+    param_tbl_cols_t c;
+    unsigned i;
+    char buf[16];
+
+    c = param_api_col_widths(nitems, place);
+    oputs("const ST_PARAM_TABLE tParamApiTable[] = {\n");
+    for (i = 0u; i < nitems; i++) {
+        oprintf("    { %-*s, ", (int)c.name, s_items[i].name);
+        snprintf(buf, sizeof buf, "%uu", (unsigned)place[i].blk);
+        oprintf("%-*s, (uint16_t)offsetof(param_layout_%u_t, %-*s), ",
+                (int)c.blk, buf,
+                (unsigned)place[i].blk,
+                (int)c.name, s_items[i].name);
+        snprintf(buf, sizeof buf, "%uu", (unsigned)place[i].len);
+        oprintf("%-*s, ", (int)c.len, buf);
+        snprintf(buf, sizeof buf, "%uu", (unsigned)s_items[i].dtype);
+        oprintf("%-*s, ", (int)c.dtype, buf);
+        snprintf(buf, sizeof buf, "%uu", (unsigned)s_items[i].n);
+        oprintf("%-*s, ", (int)c.n, buf);
+        snprintf(buf, sizeof buf, "%uu", (unsigned)s_items[i].b);
+        oprintf("%-*s", (int)c.b, buf);
+        if ((i + 1u) < nitems) {
+            oputs(" },\n");
+        } else {
+            oputs("  }\n");
+        }
+    }
+    oputs("};\n\n");
+}
+
 static int file_same(const char *path, const char *data, size_t len)
 {
     FILE *fp;
@@ -516,24 +598,7 @@ int main(int argc, char **argv)
     }
     oputs("};\n\n");
     oputs("const uint16_t tParamBlockTableCount = (uint16_t)PARAM_LAYOUT_BLOCK_COUNT;\n\n");
-    oputs("const ST_PARAM_TABLE tParamApiTable[] = {\n");
-    for (i = 0u; i < nitems; i++) {
-        oprintf("    { %s, %uu, (uint16_t)offsetof(param_layout_%u_t, %s), "
-                "%uu, %uu, %uu, %uu }",
-                s_items[i].name,
-                (unsigned)place[i].blk,
-                (unsigned)place[i].blk,
-                s_items[i].name,
-                (unsigned)place[i].len,
-                (unsigned)s_items[i].dtype,
-                (unsigned)s_items[i].n,
-                (unsigned)s_items[i].b);
-        if ((i + 1u) < nitems) {
-            oputs(",");
-        }
-        oputs("\n");
-    }
-    oputs("};\n\n");
+    emit_param_api_table(nitems, place);
     oputs("const uint16_t tParamApiTableCount = (uint16_t)PARAM_LAYOUT_ITEM_COUNT;\n\n");
     oputs("#endif /* DC_PARAM_LAYOUT_TABLE_DEFINED */\n");
     oputs("#endif /* DC_PARAM_LAYOUT_DEFINE */\n");

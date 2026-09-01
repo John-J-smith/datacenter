@@ -230,15 +230,15 @@ const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {
 const uint16_t tParamBlockTableCount = (uint16_t)PARAM_LAYOUT_BLOCK_COUNT;
 
 const ST_PARAM_TABLE tParamApiTable[] = {
-    { PARAM_SEASON_SWTIME, 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_SEASON_SWTIME), 7u, 0u, 1u, 7u },
-    { PARAM_DAY_SWTIME, 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_DAY_SWTIME), 7u, 0u, 1u, 7u },
-    { PARAM_FEE_SWTIME, 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_FEE_SWTIME), 7u, 0u, 1u, 7u },
-    { PARAM_LADDER_SWTIME, 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_LADDER_SWTIME), 7u, 0u, 1u, 7u },
-    { PARAM_HOLIDAY_DATA, 1u, (uint16_t)offsetof(param_layout_1_t, PARAM_HOLIDAY_DATA), 240u, 4u, 20u, 12u },
-    { PARAM_CALIB_DATA, 5u, (uint16_t)offsetof(param_layout_5_t, PARAM_CALIB_DATA), 240u, 4u, 20u, 12u },
-    { PARAM_UN, 9u, (uint16_t)offsetof(param_layout_9_t, PARAM_UN), 4u, 0u, 1u, 4u },
-    { PARAM_IB, 9u, (uint16_t)offsetof(param_layout_9_t, PARAM_IB), 4u, 0u, 1u, 4u },
-    { PARAM_IMAX, 9u, (uint16_t)offsetof(param_layout_9_t, PARAM_IMAX), 4u, 0u, 1u, 4u }
+    { PARAM_SEASON_SWTIME, 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_SEASON_SWTIME), 7u  , 0u, 1u , 7u  },
+    { PARAM_DAY_SWTIME   , 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_DAY_SWTIME   ), 7u  , 0u, 1u , 7u  },
+    { PARAM_FEE_SWTIME   , 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_FEE_SWTIME   ), 7u  , 0u, 1u , 7u  },
+    { PARAM_LADDER_SWTIME, 0u, (uint16_t)offsetof(param_layout_0_t, PARAM_LADDER_SWTIME), 7u  , 0u, 1u , 7u  },
+    { PARAM_HOLIDAY_DATA , 1u, (uint16_t)offsetof(param_layout_1_t, PARAM_HOLIDAY_DATA ), 240u, 4u, 20u, 12u },
+    { PARAM_CALIB_DATA   , 5u, (uint16_t)offsetof(param_layout_5_t, PARAM_CALIB_DATA   ), 240u, 4u, 20u, 12u },
+    { PARAM_UN           , 9u, (uint16_t)offsetof(param_layout_9_t, PARAM_UN           ), 4u  , 0u, 1u , 4u  },
+    { PARAM_IB           , 9u, (uint16_t)offsetof(param_layout_9_t, PARAM_IB           ), 4u  , 0u, 1u , 4u  },
+    { PARAM_IMAX         , 9u, (uint16_t)offsetof(param_layout_9_t, PARAM_IMAX         ), 4u  , 0u, 1u , 4u   }
 };
 
 const uint16_t tParamApiTableCount = (uint16_t)PARAM_LAYOUT_ITEM_COUNT;
