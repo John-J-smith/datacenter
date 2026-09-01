@@ -24,21 +24,16 @@ typedef enum {
 
 #include "dc_param_cfg.h"
 
-#define PARAM_ENUM_ROW(tok, id, dt, n, b, fl) tok = (id),
-
-typedef enum {
-    PARAM_ITEM_LIST(PARAM_ENUM_ROW)
-} E_PARAMETER_TYPE;
-
-#undef PARAM_ENUM_ROW
+#define PARAM_BLOCK_NULL_EE_OFF  (0xFFFFFFFFu)
 
 typedef struct {
     uint8_t eBlockName;
+    uint32_t uBlockEeOff;
     uint8_t *ram;
     uint16_t ucBlockLen;
     uint8_t ucFlag;
     const uint8_t *ucPtr;
-} STR_PARAM_BLOCK_TABLE;
+} ST_PARAM_BLOCK_TABLE;
 
 typedef struct {
     uint16_t eParamType;
@@ -48,11 +43,13 @@ typedef struct {
     uint8_t ucDataType;
     uint8_t ucIndexNum;
     uint8_t ucBytes;
-} STR_PARAMETER_TABLE;
+} ST_PARAM_TABLE;
 
-extern const STR_PARAM_BLOCK_TABLE tParamBlockTable[];
+extern const ST_PARAM_BLOCK_TABLE tParamBlockTable[];
 extern const uint16_t tParamBlockTableCount;
-extern const STR_PARAMETER_TABLE tParamApiTable[];
+extern const ST_PARAM_TABLE tParamApiTable[];
 extern const uint16_t tParamApiTableCount;
+
+extern const uint32_t PARAM_EEPROM_ORIGIN;
 
 #endif

@@ -2,8 +2,10 @@
 #ifndef DC_PARAM_CFG_H
 #define DC_PARAM_CFG_H
 
+/* Subclass IDs are assigned 0..N-1 by dc_param_pack (list order). */
+
 #define PARAM_ITEM_LIST(X) \
-    X(PARAM_SEASON_SWTIME, 0x4008u, DATATYPE_INT, 1u, 7u, (FLAG_SRAM | FLAG_ROM | FLAG_EEPROM | FLAG_EEPROM_BAK))
+    X(PARAM_SEASON_SWTIME, DATATYPE_INT, 1u, 7u, (FLAG_SRAM | FLAG_ROM | FLAG_EEPROM | FLAG_EEPROM_BAK))
 
 #if defined(DC_PARAM_PACK)
 

@@ -2,9 +2,10 @@
 #define DATACENTER_H
 
 #include "dc_alias.h"
-#include "dc_alias_layout.h"
 #include "dc_variable.h"
 #include "dc_param.h"
+#include "dc_param_layout.h"
+#include "dc_alias_layout.h"
 #include <stdint.h>
 
 #define DC_RET_ALIAS_ERR     ((int16_t)-1)

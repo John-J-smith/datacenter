@@ -3,7 +3,7 @@
 #define DC_ALIAS_LAYOUT_H
 
 #include "dc_variable_layout.h"
-#include "dc_param.h"
+#include "dc_param_layout.h"
 
 #ifndef VarAliasBuild
 #error "Include dc_alias.h before dc_alias_layout.h"

@@ -25,17 +25,26 @@ typedef struct {
 } param_item_t;
 
 #define PACK_VAR(tok, n, b) { #tok, 0u, (uint8_t)(n), (uint8_t)(b) },
-#define PACK_PARAM(tok, id, dt, n, b, fl) \
-    { #tok, (uint16_t)(id), (uint8_t)(n) },
+#define PACK_PARAM(tok, dt, n, b, fl) \
+    { #tok, 0u, (uint8_t)(n) },
 
 static var_item_t s_a[] = { VAR_LIST_A(PACK_VAR) };
 static var_item_t s_b[] = { VAR_LIST_B(PACK_VAR) };
 static var_item_t s_c[] = { VAR_LIST_C(PACK_VAR) };
 static var_item_t s_d[] = { VAR_LIST_D(PACK_VAR) };
-static const param_item_t s_params[] = { PARAM_ITEM_LIST(PACK_PARAM) };
+static param_item_t s_params[] = { PARAM_ITEM_LIST(PACK_PARAM) };
 
 #undef PACK_VAR
 #undef PACK_PARAM
+
+static void assign_param_ids(unsigned nparams)
+{
+    unsigned i;
+
+    for (i = 0u; i < nparams; i++) {
+        s_params[i].id = (uint16_t)i;
+    }
+}
 
 static char s_out[OUT_CAP];
 static size_t s_out_len;
@@ -289,7 +298,7 @@ static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
     oputs("#ifndef DC_ALIAS_LAYOUT_H\n");
     oputs("#define DC_ALIAS_LAYOUT_H\n\n");
     oputs("#include \"dc_variable_layout.h\"\n");
-    oputs("#include \"dc_param.h\"\n\n");
+    oputs("#include \"dc_param_layout.h\"\n\n");
     oputs("#ifndef VarAliasBuild\n");
     oputs("#error \"Include dc_alias.h before dc_alias_layout.h\"\n");
     oputs("#endif\n\n");
@@ -321,6 +330,7 @@ int main(int argc, char **argv)
     nd = (unsigned)(sizeof s_d / sizeof s_d[0]);
 
     assign_global_var_ids(na, nb, nc, nd);
+    assign_param_ids((unsigned)(sizeof s_params / sizeof s_params[0]));
 
     if (argc != 2) {
         die("usage: dc_alias_pack <dc_alias_layout.h>");

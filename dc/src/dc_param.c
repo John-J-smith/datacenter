@@ -20,12 +20,15 @@ static void param_ensure_init(void)
     }
     for (i = 0u; i < tParamBlockTableCount; i++)
     {
-        memcpy(tParamBlockTable[i].ram, tParamBlockTable[i].ucPtr, tParamBlockTable[i].ucBlockLen);
+        uint16_t payload;
+
+        payload = (uint16_t)(tParamBlockTable[i].ucBlockLen - (uint16_t)PARAM_CRC_BYTES_BLOCK);
+        memcpy(tParamBlockTable[i].ram, tParamBlockTable[i].ucPtr, payload);
     }
     s_param_inited = 1u;
 }
 
-static const STR_PARAMETER_TABLE *param_find_item(uint16_t subclass)
+static const ST_PARAM_TABLE *param_find_item(uint16_t subclass)
 {
     uint16_t i;
 
@@ -39,7 +42,7 @@ static const STR_PARAMETER_TABLE *param_find_item(uint16_t subclass)
     return 0;
 }
 
-static const STR_PARAM_BLOCK_TABLE *param_find_block(uint8_t name)
+static const ST_PARAM_BLOCK_TABLE *param_find_block(uint8_t name)
 {
     uint16_t i;
 
@@ -53,7 +56,7 @@ static const STR_PARAM_BLOCK_TABLE *param_find_block(uint8_t name)
     return 0;
 }
 
-static int16_t param_xfer_link(const STR_PARAMETER_TABLE *item, uint8_t *rw,
+static int16_t param_xfer_link(const ST_PARAM_TABLE *item, uint8_t *rw,
                                const uint8_t *ro, uint16_t usLen, uint8_t index,
                                int writing)
 {
@@ -79,7 +82,7 @@ static int16_t param_xfer_link(const STR_PARAMETER_TABLE *item, uint8_t *rw,
         uint16_t rec;
         uint8_t page;
         uint8_t slot;
-        const STR_PARAM_BLOCK_TABLE *block;
+        const ST_PARAM_BLOCK_TABLE *block;
         uint16_t off;
 
         rec = (uint16_t)index + i;
@@ -107,8 +110,8 @@ static int16_t param_xfer_link(const STR_PARAMETER_TABLE *item, uint8_t *rw,
 static int16_t param_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
                           uint16_t usLen, uint8_t type, int writing)
 {
-    const STR_PARAMETER_TABLE *item;
-    const STR_PARAM_BLOCK_TABLE *block;
+    const ST_PARAM_TABLE *item;
+    const ST_PARAM_BLOCK_TABLE *block;
     uint8_t index;
     uint16_t nbytes;
     uint16_t off;

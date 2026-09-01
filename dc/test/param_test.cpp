@@ -57,7 +57,7 @@ TEST_F(ParamTest, ReadWrite)
     ret = dc_read_alias(g, buf, 2u, 0u);
     EXPECT_EQ(ret, DC_RET_PARAM_ERR);
 
-    g = ParaAliasBuild(0x40FFu, 0);
+    g = ParaAliasBuild((E_PARAMETER_TYPE)99, 0);
     ret = dc_read_alias(g, buf, 1u, 0u);
     EXPECT_EQ(ret, DC_RET_ALIAS_ERR);
 
