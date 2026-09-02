@@ -3,6 +3,7 @@
 
 /* Storage presets for PARAM_ITEM_LIST rows (mapped to FLAG_* by dc_param_pack). */
 #define PARAM_STORE_FULL   (FLAG_SRAM | FLAG_ROM | FLAG_EEPROM | FLAG_EEPROM_BAK)
+#define PARAM_STORE_EE_BK  (FLAG_ROM | FLAG_EEPROM | FLAG_EEPROM_BAK)
 #define PARAM_STORE_ROM_EE (FLAG_ROM | FLAG_EEPROM)
 
 #ifndef DC_PARAM_ATTR_INT_DEFINED
@@ -64,6 +65,9 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
 #define PARAM_LINK_ATTR(name, n, elem) \
     static const uint8_t _param_attr_##name[] = { DATATYPE_LINKARRAY, 0u, 0u, (elem) };
 
+/* Pack-only: total_len in X(...) — derive byte count from shared attrib (STRUCT *_USE). */
+#define PARAM_TOTAL_FROM_ATTR  (0xFFFFu)
+
 #define PARAM_INT(X, name, len, store) \
     X(name, DATATYPE_INT, (len), (store), _PARAM_ATTR_INT)
 
@@ -90,7 +94,7 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
     static const uint8_t _param_attr_##tag[] = { DATATYPE_LINKARRAY, 0u, 0u, (elem) };
 
 #define PARAM_STRUCT_USE(X, name, store, tag) \
-    X(name, DATATYPE_STRUCT, 0u, (store), _param_attr_##tag)
+    X(name, DATATYPE_STRUCT, PARAM_TOTAL_FROM_ATTR, (store), _param_attr_##tag)
 
 #define PARAM_ARRAY_USE(X, name, n, elem, store, tag) \
     X(name, DATATYPE_ARRAY, (n) * (elem), (store), _param_attr_##tag)

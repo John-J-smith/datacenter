@@ -128,7 +128,7 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
             die("%s: STRUCT member count 0", item->name);
         }
         sum = struct_attr_sum(attr);
-        if (item->total_len == 0u) {
+        if (item->total_len == PARAM_TOTAL_FROM_ATTR) {
             item->total_len = (uint16_t)sum;
         } else if (sum != (unsigned)item->total_len) {
             die("%s: STRUCT field sum %u != total_len %u", item->name,
