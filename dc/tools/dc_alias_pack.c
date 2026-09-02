@@ -21,12 +21,12 @@ typedef struct {
 typedef struct {
     const char *name;
     uint16_t id;
-    uint8_t n;
+    const uint8_t *attr;
 } param_item_t;
 
 #define PACK_VAR(tok, n, b) { #tok, 0u, (uint8_t)(n), (uint8_t)(b) },
-#define PACK_PARAM(tok, dt, n, b, fl) \
-    { #tok, 0u, (uint8_t)(n) },
+#define PACK_PARAM(tok, dt, total, fl, attr) \
+    { #tok, 0u, (const uint8_t *)(attr) },
 
 static var_item_t s_a[] = { VAR_LIST_A(PACK_VAR) };
 static var_item_t s_b[] = { VAR_LIST_B(PACK_VAR) };
@@ -36,6 +36,24 @@ static param_item_t s_params[] = { PARAM_ITEM_LIST(PACK_PARAM) };
 
 #undef PACK_VAR
 #undef PACK_PARAM
+
+static unsigned param_alias_index_count(const uint8_t *attr)
+{
+    if (attr == 0) {
+        return 1u;
+    }
+    switch ((E_PARAM_STORAGE_DATATYPE)attr[0]) {
+    case DATATYPE_INT:
+        return 1u;
+    case DATATYPE_ARRAY:
+    case DATATYPE_STRUCT:
+        return (unsigned)attr[1];
+    case DATATYPE_LINKARRAY:
+        return (unsigned)attr[1] * (unsigned)attr[2];
+    default:
+        return 1u;
+    }
+}
 
 static void assign_param_ids(unsigned nparams)
 {
@@ -269,11 +287,15 @@ static void emit_param_aliases(int *first)
 
     nparams = (unsigned)(sizeof s_params / sizeof s_params[0]);
     for (i = 0u; i < nparams; i++) {
-        count = param_alias_count(s_params[i].n);
+        unsigned n;
+        unsigned count;
+
+        n = param_alias_index_count(s_params[i].attr);
+        count = param_alias_count((uint8_t)n);
         for (j = 0u; j < count; j++) {
-            param_alias_symbol(sym, sizeof sym, s_params[i].name, s_params[i].n, j);
+            param_alias_symbol(sym, sizeof sym, s_params[i].name, (uint8_t)n, j);
             emit_alias_line_prefix(first, j);
-            if (s_params[i].n == 1u) {
+            if (n == 1u) {
                 oprintf("    %s = ParaAliasBuild(%s, 0u)", sym, s_params[i].name);
             } else if (j == 0u) {
                 oprintf("    %s = ParaAliasBuild(%s, 0u)", sym, s_params[i].name);

@@ -38,11 +38,9 @@ typedef struct {
 typedef struct {
     uint16_t eParamType;
     uint8_t eBlockName;
-    uint16_t uParamOffset;
-    uint16_t ucParamLen;
-    uint8_t ucDataType;
-    uint8_t ucIndexNum;
-    uint8_t ucBytes;
+    uint8_t uParamOffset;
+    uint8_t ucParamLen;
+    const uint8_t *ucPtr;
 } ST_PARAM_TABLE;
 
 extern const ST_PARAM_BLOCK_TABLE tParamBlockTable[];

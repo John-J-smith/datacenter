@@ -10,6 +10,73 @@
 
 static uint8_t s_param_inited;
 
+static uint8_t param_attr_type(const ST_PARAM_TABLE *item)
+{
+    if ((item == 0) || (item->ucPtr == 0))
+    {
+        return 0xFFu;
+    }
+    return item->ucPtr[0];
+}
+
+static uint8_t param_attr_index_count(const ST_PARAM_TABLE *item)
+{
+    const uint8_t *attr;
+
+    attr = item->ucPtr;
+    switch ((E_PARAM_STORAGE_DATATYPE)attr[0])
+    {
+    case DATATYPE_INT:
+        return 1u;
+    case DATATYPE_ARRAY:
+    case DATATYPE_STRUCT:
+        return attr[1];
+    case DATATYPE_LINKARRAY:
+        return (uint8_t)((uint16_t)attr[1] * (uint16_t)attr[2]);
+    default:
+        return 0u;
+    }
+}
+
+static uint8_t param_attr_elem_bytes(const ST_PARAM_TABLE *item, uint8_t index)
+{
+    const uint8_t *attr;
+
+    attr = item->ucPtr;
+    switch ((E_PARAM_STORAGE_DATATYPE)attr[0])
+    {
+    case DATATYPE_INT:
+        return item->ucParamLen;
+    case DATATYPE_ARRAY:
+        return attr[2];
+    case DATATYPE_STRUCT:
+        if (index >= attr[1])
+        {
+            return 0u;
+        }
+        return attr[2u + index];
+    case DATATYPE_LINKARRAY:
+        return attr[3];
+    default:
+        return 0u;
+    }
+}
+
+static uint16_t param_struct_field_off(const ST_PARAM_TABLE *item, uint8_t index)
+{
+    const uint8_t *attr;
+    uint8_t i;
+    uint16_t off;
+
+    attr = item->ucPtr;
+    off = 0u;
+    for (i = 0u; i < index; i++)
+    {
+        off = (uint16_t)(off + (uint16_t)attr[2u + i]);
+    }
+    return off;
+}
+
 static void param_ensure_init(void)
 {
     uint16_t i;
@@ -60,17 +127,19 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *item, uint8_t *rw,
                                const uint8_t *ro, uint16_t usLen, uint8_t index,
                                int writing)
 {
+    const uint8_t *attr;
     uint8_t k;
     uint8_t per_page;
     uint16_t i;
     uint16_t copied;
 
-    k = item->ucBytes;
+    attr = item->ucPtr;
+    k = attr[3];
     if (k == 0u)
     {
         return DC_RET_PARAM_ERR;
     }
-    per_page = (uint8_t)(PARAM_BLOCK_PAYLOAD_MAX / (uint16_t)k);
+    per_page = attr[2];
     if (per_page == 0u)
     {
         return DC_RET_PARAM_ERR;
@@ -107,14 +176,53 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *item, uint8_t *rw,
     return (int16_t)copied;
 }
 
+static int16_t param_xfer_struct(const ST_PARAM_TABLE *item,
+                                 const ST_PARAM_BLOCK_TABLE *block,
+                                 uint8_t *rw, const uint8_t *ro,
+                                 uint16_t usLen, uint8_t index, int writing)
+{
+    uint16_t copied;
+    uint16_t i;
+    uint8_t idx;
+
+    copied = 0u;
+    idx = index;
+    for (i = 0u; i < usLen; i++)
+    {
+        uint8_t eb;
+        uint16_t off;
+
+        eb = param_attr_elem_bytes(item, idx);
+        if (eb == 0u)
+        {
+            return DC_RET_PARAM_ERR;
+        }
+        off = (uint16_t)(item->uParamOffset + param_struct_field_off(item, idx));
+        if (writing != 0)
+        {
+            memcpy(block->ram + off, ro + copied, eb);
+        }
+        else
+        {
+            memcpy(rw + copied, block->ram + off, eb);
+        }
+        copied = (uint16_t)(copied + eb);
+        idx = (uint8_t)(idx + 1u);
+    }
+    return (int16_t)copied;
+}
+
 static int16_t param_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
                           uint16_t usLen, uint8_t type, int writing)
 {
     const ST_PARAM_TABLE *item;
     const ST_PARAM_BLOCK_TABLE *block;
     uint8_t index;
+    uint8_t dtype;
+    uint8_t index_max;
     uint16_t nbytes;
     uint16_t off;
+    uint8_t elem_bytes;
 
     param_ensure_init();
 
@@ -135,30 +243,50 @@ static int16_t param_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
         return DC_RET_ALIAS_ERR;
     }
 
+    dtype = param_attr_type(item);
+    index_max = param_attr_index_count(item);
     index = GetAliasIndex(alias);
     if (index == PARAM_INDEX_ALL)
     {
         index = 0u;
-        usLen = item->ucIndexNum;
+        usLen = index_max;
     }
 
-    if ((item->ucDataType == (uint8_t)DATATYPE_LIST) && (usLen > 1u))
+    if (dtype == (uint8_t)DATATYPE_LIST)
     {
         return DC_RET_PARAM_ERR;
     }
 
-    if ((uint16_t)index + usLen > (uint16_t)item->ucIndexNum)
+    if ((uint16_t)index + usLen > (uint16_t)index_max)
     {
         return DC_RET_PARAM_ERR;
     }
 
-    if (item->ucDataType == (uint8_t)DATATYPE_LINKARRAY)
+    if (dtype == (uint8_t)DATATYPE_LINKARRAY)
     {
         return param_xfer_link(item, rw, ro, usLen, index, writing);
     }
 
-    nbytes = (uint16_t)(usLen * (uint16_t)item->ucBytes);
-    off = (uint16_t)(item->uParamOffset + (uint16_t)index * (uint16_t)item->ucBytes);
+    if (dtype == (uint8_t)DATATYPE_STRUCT)
+    {
+        return param_xfer_struct(item, block, rw, ro, usLen, index, writing);
+    }
+
+    if (dtype == (uint8_t)DATATYPE_INT)
+    {
+        nbytes = item->ucParamLen;
+        off = item->uParamOffset;
+    }
+    else
+    {
+        elem_bytes = param_attr_elem_bytes(item, index);
+        if (elem_bytes == 0u)
+        {
+            return DC_RET_PARAM_ERR;
+        }
+        nbytes = (uint16_t)(usLen * (uint16_t)elem_bytes);
+        off = (uint16_t)(item->uParamOffset + (uint16_t)index * (uint16_t)elem_bytes);
+    }
 
     if (writing != 0)
     {

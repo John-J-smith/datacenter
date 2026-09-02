@@ -8,15 +8,89 @@ extern "C" {
 #include "datacenter.h"
 }
 
+inline uint8_t ParamAttrType(const ST_PARAM_TABLE *entry)
+{
+    return entry->ucPtr[0];
+}
+
+inline uint8_t ParamIndexCount(const ST_PARAM_TABLE *entry)
+{
+    const uint8_t *attr = entry->ucPtr;
+
+    switch (static_cast<E_PARAM_STORAGE_DATATYPE>(attr[0]))
+    {
+    case DATATYPE_INT:
+        return 1u;
+    case DATATYPE_ARRAY:
+    case DATATYPE_STRUCT:
+        return attr[1];
+    case DATATYPE_LINKARRAY:
+        return static_cast<uint8_t>(attr[1] * attr[2]);
+    default:
+        return 0u;
+    }
+}
+
+inline uint16_t ParamElemBytes(const ST_PARAM_TABLE *entry, uint8_t index)
+{
+    const uint8_t *attr = entry->ucPtr;
+
+    switch (static_cast<E_PARAM_STORAGE_DATATYPE>(attr[0]))
+    {
+    case DATATYPE_INT:
+        return entry->ucParamLen;
+    case DATATYPE_ARRAY:
+        return attr[2];
+    case DATATYPE_STRUCT:
+        if (index >= attr[1])
+        {
+            return 0u;
+        }
+        return attr[2u + index];
+    case DATATYPE_LINKARRAY:
+        return attr[3];
+    default:
+        return 0u;
+    }
+}
+
+inline uint16_t ParamTotalBytes(const ST_PARAM_TABLE *entry)
+{
+    const uint8_t *attr = entry->ucPtr;
+    uint16_t sum;
+    uint8_t i;
+
+    switch (static_cast<E_PARAM_STORAGE_DATATYPE>(attr[0]))
+    {
+    case DATATYPE_INT:
+        return entry->ucParamLen;
+    case DATATYPE_ARRAY:
+        return static_cast<uint16_t>(attr[1]) * static_cast<uint16_t>(attr[2]);
+    case DATATYPE_STRUCT:
+        sum = 0u;
+        for (i = 0u; i < attr[1]; ++i)
+        {
+            sum = static_cast<uint16_t>(sum + attr[2u + i]);
+        }
+        return sum;
+    case DATATYPE_LINKARRAY:
+        return static_cast<uint16_t>(attr[1]) * static_cast<uint16_t>(attr[2]) *
+               static_cast<uint16_t>(attr[3]);
+    default:
+        return 0u;
+    }
+}
+
 inline uint16_t MaxParamIoBytes(void)
 {
     uint16_t max_bytes = 1u;
 
     for (uint16_t i = 0u; i < tParamApiTableCount; ++i)
     {
-        if (tParamApiTable[i].ucParamLen > max_bytes)
+        const uint16_t total = ParamTotalBytes(&tParamApiTable[i]);
+        if (total > max_bytes)
         {
-            max_bytes = tParamApiTable[i].ucParamLen;
+            max_bytes = total;
         }
     }
     return max_bytes;
@@ -40,6 +114,8 @@ inline uint32_t ParamAlias(E_PARAMETER_TYPE type, uint8_t index)
 {
     switch (type)
     {
+    case PARAM_REMOTECTRL:
+        return DC_ALIAS_PARAM_REMOTECTRL_0;
     case PARAM_SEASON_SWTIME:
         return DC_ALIAS_PARAM_SEASON_SWTIME;
     case PARAM_DAY_SWTIME:
