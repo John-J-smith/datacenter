@@ -102,18 +102,8 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
 #define PARAM_LINK_USE(X, name, n, elem, store, tag) \
     X(name, DATATYPE_LINKARRAY, (n) * (elem), (store), _param_attr_##tag)
 
-#if defined(DC_PARAM_PACK)
-
-#define PARAM_DEF_SWTIME7 \
-    { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 255u }
-
-#define PARAM_DEFAULT(name) \
-    static const uint8_t name##_def[] = PARAM_DEF_SWTIME7
-
-#else
-
+#if !defined(DC_PARAM_PACK)
 #define _PARAM_ATTR_EMIT_(name, dt, total, store, attr)
-
-#endif /* DC_PARAM_PACK */
+#endif
 
 #endif /* DC_PARAM_CFG_MACROS_H */

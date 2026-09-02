@@ -36,10 +36,18 @@ PARAM_ITEM_LIST(_PARAM_ATTR_EMIT_)
     X(PARAM_FEE_SWTIME) \
     X(PARAM_LADDER_SWTIME)
 
-PARAM_DEFAULT(PARAM_SEASON_SWTIME);
-PARAM_DEFAULT(PARAM_DAY_SWTIME);
-PARAM_DEFAULT(PARAM_FEE_SWTIME);
-PARAM_DEFAULT(PARAM_LADDER_SWTIME);
+static const uint8_t PARAM_SEASON_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 255u
+};
+static const uint8_t PARAM_DAY_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 255u
+};
+static const uint8_t PARAM_FEE_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 255u
+};
+static const uint8_t PARAM_LADDER_SWTIME_def[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 255u
+};
 
 #endif /* DC_PARAM_PACK */
 
