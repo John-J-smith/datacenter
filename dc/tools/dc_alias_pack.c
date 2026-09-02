@@ -1,8 +1,8 @@
 #include <stdint.h>
 #include "dc_variable_cfg.h"
 
-#define DC_PARAM_PACK
 #include "dc_param.h"
+#include "dc_param_attr.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,38 +21,52 @@ typedef struct {
 typedef struct {
     const char *name;
     uint16_t id;
+    uint8_t dtype;
+    uint16_t total_len;
     const uint8_t *attr;
 } param_item_t;
 
 #define PACK_VAR(tok, n, b) { #tok, 0u, (uint8_t)(n), (uint8_t)(b) },
-#define PACK_PARAM(tok, dt, total, fl, attr) \
-    { #tok, 0u, (const uint8_t *)(attr) },
+#define PACK_PARAM(tok, dt, total, fl, atab) \
+    do { \
+        if (s_nparams >= PACK_MAX_PARAMS) { \
+            die("too many param items"); \
+        } \
+        s_params[s_nparams].name = #tok; \
+        s_params[s_nparams].id = 0u; \
+        s_params[s_nparams].dtype = (uint8_t)(dt); \
+        s_params[s_nparams].total_len = (uint16_t)(total); \
+        s_params[s_nparams].attr = (const uint8_t *)(atab); \
+        s_nparams++; \
+    } while (0);
+
+#define PACK_MAX_PARAMS 64
 
 static var_item_t s_a[] = { VAR_LIST_A(PACK_VAR) };
 static var_item_t s_b[] = { VAR_LIST_B(PACK_VAR) };
 static var_item_t s_c[] = { VAR_LIST_C(PACK_VAR) };
 static var_item_t s_d[] = { VAR_LIST_D(PACK_VAR) };
-static param_item_t s_params[] = { PARAM_ITEM_LIST(PACK_PARAM) };
+static param_item_t s_params[PACK_MAX_PARAMS];
+static unsigned s_nparams;
+
+static void die(const char *fmt, ...);
+
+static void load_param_items(void)
+{
+    s_nparams = 0u;
+    PARAM_ITEM_LIST(PACK_PARAM)
+}
 
 #undef PACK_VAR
 #undef PACK_PARAM
 
-static unsigned param_alias_index_count(const uint8_t *attr)
+static unsigned param_alias_index_count(const param_item_t *item)
 {
-    if (attr == 0) {
+    if (item->attr == 0) {
         return 1u;
     }
-    switch ((E_PARAM_STORAGE_DATATYPE)attr[0]) {
-    case DATATYPE_INT:
-        return 1u;
-    case DATATYPE_ARRAY:
-    case DATATYPE_STRUCT:
-        return (unsigned)attr[1];
-    case DATATYPE_LINKARRAY:
-        return (unsigned)attr[1] * (unsigned)attr[2];
-    default:
-        return 1u;
-    }
+    return (unsigned)param_attr_bytes_index_count(item->attr, (uint8_t)item->total_len,
+                                                  item->total_len);
 }
 
 static void assign_param_ids(unsigned nparams)
@@ -285,12 +299,12 @@ static void emit_param_aliases(int *first)
     unsigned nparams;
     char sym[128];
 
-    nparams = (unsigned)(sizeof s_params / sizeof s_params[0]);
+    nparams = s_nparams;
     for (i = 0u; i < nparams; i++) {
         unsigned n;
         unsigned count;
 
-        n = param_alias_index_count(s_params[i].attr);
+        n = param_alias_index_count(&s_params[i]);
         count = param_alias_count((uint8_t)n);
         for (j = 0u; j < count; j++) {
             param_alias_symbol(sym, sizeof sym, s_params[i].name, (uint8_t)n, j);
@@ -352,7 +366,8 @@ int main(int argc, char **argv)
     nd = (unsigned)(sizeof s_d / sizeof s_d[0]);
 
     assign_global_var_ids(na, nb, nc, nd);
-    assign_param_ids((unsigned)(sizeof s_params / sizeof s_params[0]));
+    load_param_items();
+    assign_param_ids(s_nparams);
 
     if (argc != 2) {
         die("usage: dc_alias_pack <dc_alias_layout.h>");

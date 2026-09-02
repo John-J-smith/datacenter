@@ -56,6 +56,8 @@ add_custom_target(dc_param_layout ALL
     DEPENDS dc_param_pack
             ${DC_PORT_DIR}/dc_param_cfg.h
             ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_attr.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_cfg_macros.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_param_pack.c
     BYPRODUCTS ${DC_PARAM_LAYOUT_H}
     COMMENT "Generating dc_param_layout.h in port dir"

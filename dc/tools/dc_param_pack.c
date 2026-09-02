@@ -1,5 +1,6 @@
 #define DC_PARAM_PACK
 #include "dc_param.h"
+#include "dc_param_attr.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,17 +24,43 @@ typedef struct {
     uint8_t link_n;
     uint8_t link_m;
     uint8_t link_k;
+    uint8_t resolved_attr[4];
+    uint8_t attr_resolved;
 } pack_item_t;
 
-#define PACK_ROW(tok, dt, total, fl, attr) \
-    { #tok, 0u, (uint8_t)(dt), (uint16_t)(total), (uint8_t)(fl), #attr, \
-      (const uint8_t *)(attr), 0u, 0u, 0u, 0u, 0u },
+#define PACK_ROW(tok, dt, total, fl, atab) \
+    do { \
+        if (s_nitems >= PACK_MAX_ITEMS) { \
+            die("too many param items"); \
+        } \
+        s_items[s_nitems].name = #tok; \
+        s_items[s_nitems].id = 0u; \
+        s_items[s_nitems].dtype = (uint8_t)(dt); \
+        s_items[s_nitems].total_len = (uint16_t)(total); \
+        s_items[s_nitems].flags = (uint8_t)(fl); \
+        s_items[s_nitems].attr_sym = #atab; \
+        s_items[s_nitems].attr = (const uint8_t *)(atab); \
+        s_items[s_nitems].index_count = 0u; \
+        s_items[s_nitems].elem_bytes = 0u; \
+        s_items[s_nitems].link_n = 0u; \
+        s_items[s_nitems].link_m = 0u; \
+        s_items[s_nitems].link_k = 0u; \
+        s_items[s_nitems].attr_resolved = 0u; \
+        s_nitems++; \
+    } while (0);
 
-static pack_item_t s_items[] = { PARAM_ITEM_LIST(PACK_ROW) };
-
-#undef PACK_ROW
+static pack_item_t s_items[PACK_MAX_ITEMS];
+static unsigned s_nitems;
 
 static void die(const char *fmt, ...);
+
+static void load_param_items(void)
+{
+    s_nitems = 0u;
+    PARAM_ITEM_LIST(PACK_ROW)
+}
+
+#undef PACK_ROW
 
 static void assign_param_ids(unsigned nitems)
 {
@@ -101,7 +128,9 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
             die("%s: STRUCT member count 0", item->name);
         }
         sum = struct_attr_sum(attr);
-        if (sum != (unsigned)item->total_len) {
+        if (item->total_len == 0u) {
+            item->total_len = (uint16_t)sum;
+        } else if (sum != (unsigned)item->total_len) {
             die("%s: STRUCT field sum %u != total_len %u", item->name,
                 sum, (unsigned)item->total_len);
         }
@@ -120,34 +149,58 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
         unsigned per_page;
         unsigned npage;
 
-        if (attr[1] == 0u || attr[2] == 0u || attr[3] == 0u) {
-            die("%s: LINKARRAY attrib N/M/K zero", item->name);
+        if (attr[3] == 0u) {
+            die("%s: LINKARRAY K zero", item->name);
         }
         k = (unsigned)attr[3];
-        if ((unsigned)attr[1] * (unsigned)attr[2] * k != (unsigned)item->total_len) {
-            die("%s: LINKARRAY N*M*K != total_len %u", item->name,
-                (unsigned)item->total_len);
+        if ((attr[1] == 0u) && (attr[2] == 0u)) {
+            uint8_t np8;
+            uint8_t pp8;
+            uint16_t nr16;
+
+            if (param_linkarray_dims(item->total_len, (uint8_t)k, payload_max,
+                                     &np8, &pp8, &nr16) == 0) {
+                die("%s: LINKARRAY cannot pack total=%u k=%u payload=%u",
+                    item->name, (unsigned)item->total_len, (unsigned)k,
+                    (unsigned)payload_max);
+            }
+            npage = (unsigned)np8;
+            per_page = (unsigned)pp8;
+            nrec = (unsigned)nr16;
+            item->resolved_attr[0] = (uint8_t)DATATYPE_LINKARRAY;
+            item->resolved_attr[1] = np8;
+            item->resolved_attr[2] = pp8;
+            item->resolved_attr[3] = (uint8_t)k;
+            item->attr_resolved = 1u;
+        } else {
+            if (attr[1] == 0u || attr[2] == 0u) {
+                die("%s: LINKARRAY attrib N/M zero", item->name);
+            }
+            if ((unsigned)attr[1] * (unsigned)attr[2] * k != (unsigned)item->total_len) {
+                die("%s: LINKARRAY N*M*K != total_len %u", item->name,
+                    (unsigned)item->total_len);
+            }
+            nrec = (unsigned)item->total_len / k;
+            per_page = (unsigned)payload_max / k;
+            if (per_page == 0u) {
+                die("%s: record %u exceeds payload %u", item->name,
+                    (unsigned)k, (unsigned)payload_max);
+            }
+            npage = (nrec + per_page - 1u) / per_page;
+            if (npage != (unsigned)attr[1]) {
+                die("%s: LINKARRAY N=%u expected %u", item->name,
+                    (unsigned)attr[1], (unsigned)npage);
+            }
+            if ((unsigned)attr[2] != per_page) {
+                die("%s: LINKARRAY M=%u expected %u", item->name,
+                    (unsigned)attr[2], (unsigned)per_page);
+            }
         }
-        nrec = (unsigned)item->total_len / k;
-        per_page = (unsigned)payload_max / k;
-        if (per_page == 0u) {
-            die("%s: record %u exceeds payload %u", item->name,
-                (unsigned)k, (unsigned)payload_max);
-        }
-        npage = (nrec + per_page - 1u) / per_page;
-        if (npage != (unsigned)attr[1]) {
-            die("%s: LINKARRAY N=%u expected %u", item->name,
-                (unsigned)attr[1], (unsigned)npage);
-        }
-        if ((unsigned)attr[2] != per_page) {
-            die("%s: LINKARRAY M=%u expected %u", item->name,
-                (unsigned)attr[2], (unsigned)per_page);
-        }
-        item->link_n = attr[1];
-        item->link_m = attr[2];
-        item->link_k = attr[3];
+        item->link_n = (uint8_t)npage;
+        item->link_m = (uint8_t)per_page;
+        item->link_k = (uint8_t)k;
         item->index_count = (uint8_t)nrec;
-        item->elem_bytes = attr[3];
+        item->elem_bytes = (uint8_t)k;
         break;
     }
 
@@ -315,26 +368,60 @@ static param_tbl_cols_t param_api_col_widths(unsigned nitems, const pack_place_t
         if (str_width(s_items[i].attr_sym) > c.attr) {
             c.attr = str_width(s_items[i].attr_sym);
         }
+        if (s_items[i].attr_resolved != 0u) {
+            char gen[64];
+
+            snprintf(gen, sizeof gen, "g_param_attr_%s", s_items[i].name);
+            if (str_width(gen) > c.attr) {
+                c.attr = str_width(gen);
+            }
+        }
     }
     return c;
+}
+
+static void emit_resolved_attr_tables(unsigned nitems)
+{
+    unsigned i;
+
+    for (i = 0u; i < nitems; i++) {
+        if (s_items[i].attr_resolved == 0u) {
+            continue;
+        }
+        oprintf("const uint8_t g_param_attr_%s[] = { %uu, %uu, %uu, %uu };\n\n",
+                s_items[i].name,
+                (unsigned)s_items[i].resolved_attr[0],
+                (unsigned)s_items[i].resolved_attr[1],
+                (unsigned)s_items[i].resolved_attr[2],
+                (unsigned)s_items[i].resolved_attr[3]);
+    }
 }
 
 static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
 {
     param_tbl_cols_t c;
     unsigned i;
-    char buf[16];
+    char num_buf[16];
+    char attr_buf[64];
+    const char *attr_ref;
 
     c = param_api_col_widths(nitems, place);
+    emit_resolved_attr_tables(nitems);
     oputs("const ST_PARAM_TABLE tParamApiTable[] = {\n");
     for (i = 0u; i < nitems; i++) {
+        if (s_items[i].attr_resolved != 0u) {
+            snprintf(attr_buf, sizeof attr_buf, "g_param_attr_%s", s_items[i].name);
+            attr_ref = attr_buf;
+        } else {
+            attr_ref = s_items[i].attr_sym;
+        }
         oprintf("    { %-*s, ", (int)c.name, s_items[i].name);
-        snprintf(buf, sizeof buf, "%uu", (unsigned)place[i].blk);
-        oprintf("%-*s, ", (int)c.blk, buf);
-        snprintf(buf, sizeof buf, "%uu", (unsigned)place[i].off);
-        oprintf("%-*s, ", (int)c.off, buf);
-        snprintf(buf, sizeof buf, "%uu", (unsigned)place[i].blk_len);
-        oprintf("%-*s, %-*s", (int)c.len, buf, (int)c.attr, s_items[i].attr_sym);
+        snprintf(num_buf, sizeof num_buf, "%uu", (unsigned)place[i].blk);
+        oprintf("%-*s, ", (int)c.blk, num_buf);
+        snprintf(num_buf, sizeof num_buf, "%uu", (unsigned)place[i].off);
+        oprintf("%-*s, ", (int)c.off, num_buf);
+        snprintf(num_buf, sizeof num_buf, "%uu", (unsigned)place[i].blk_len);
+        oprintf("%-*s, %-*s", (int)c.len, num_buf, (int)c.attr, attr_ref);
         if ((i + 1u) < nitems) {
             oputs(" },\n");
         } else {
@@ -526,7 +613,7 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
         ee_this = PARAM_BLOCK_NULL_EE_OFF;
         if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
             ee_this = ee_off;
-            ee_off += (uint32_t)PARAM_BLOCK_BYTES_MAX;
+            ee_off += (uint32_t)PARAM_BLOCK_EE_SLOT_LEN;
         }
 
         printf("  block %u: flags=0x%02X payload=%u ram=%u ee_slot=%u ee_off=%u fields=%u\n",
@@ -534,7 +621,7 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
                (unsigned)blocks[bi].flags,
                (unsigned)blocks[bi].payload,
                compact,
-               (unsigned)PARAM_BLOCK_BYTES_MAX,
+               (unsigned)PARAM_BLOCK_EE_SLOT_LEN,
                ee_this,
                blocks[bi].nfields);
         for (f = 0u; f < blocks[bi].nfields; f++) {
@@ -552,8 +639,8 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
     for (bi = 0u; bi < nblocks; bi++) {
         if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
             printf("  block %u @+%u size=%u\n",
-                   bi, (unsigned)ee_off, (unsigned)PARAM_BLOCK_BYTES_MAX);
-            ee_off += (uint32_t)PARAM_BLOCK_BYTES_MAX;
+                   bi, (unsigned)ee_off, (unsigned)PARAM_BLOCK_EE_SLOT_LEN);
+            ee_off += (uint32_t)PARAM_BLOCK_EE_SLOT_LEN;
         }
     }
 
@@ -592,7 +679,8 @@ int main(int argc, char **argv)
     pack_place_t place[PACK_MAX_ITEMS];
     uint16_t payload_max;
 
-    nitems = (unsigned)(sizeof s_items / sizeof s_items[0]);
+    load_param_items();
+    nitems = s_nitems;
     if (nitems == 0u) {
         die("no param items");
     }
@@ -634,17 +722,34 @@ int main(int argc, char **argv)
 
     {
         uint32_t ee_off = 0u;
+        unsigned last_ee_blk = 0u;
+        int has_last_ee = 0;
 
         for (i = 0u; i < nblocks; i++) {
             if ((blocks[i].flags & FLAG_EEPROM) != 0u) {
-                oprintf("#define PARAM_LAYOUT_BLOCK_%u_EE_OFF (%uu)\n", i, ee_off);
-                ee_off += (uint32_t)PARAM_BLOCK_BYTES_MAX;
+                if (ee_off == 0u) {
+                    oprintf("#define PARAM_LAYOUT_BLOCK_%u_EE_OFF (0u)\n", i);
+                } else {
+                    oprintf("#define PARAM_LAYOUT_BLOCK_%u_EE_OFF "
+                            "(PARAM_LAYOUT_BLOCK_%u_EE_OFF + "
+                            "PARAM_BLOCK_EE_SLOT_LEN)\n",
+                            i, last_ee_blk);
+                }
+                last_ee_blk = i;
+                has_last_ee = 1;
+                ee_off += (uint32_t)PARAM_BLOCK_EE_SLOT_LEN;
             } else {
                 oprintf("#define PARAM_LAYOUT_BLOCK_%u_EE_OFF (PARAM_BLOCK_NULL_EE_OFF)\n",
                         i);
             }
         }
-        oprintf("#define PARAM_EE_TOTAL (%uu)\n\n", ee_off);
+        if (has_last_ee != 0) {
+            oprintf("#define PARAM_EE_TOTAL (PARAM_LAYOUT_BLOCK_%u_EE_OFF + "
+                    "PARAM_BLOCK_EE_SLOT_LEN)\n\n",
+                    last_ee_blk);
+        } else {
+            oputs("#define PARAM_EE_TOTAL (0u)\n\n");
+        }
     }
 
     for (i = 0u; i < nblocks; i++) {

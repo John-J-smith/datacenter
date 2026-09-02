@@ -1,6 +1,7 @@
 #include "dc_entry.h"
 #include "datacenter.h"
 #include "dc_param.h"
+#include "dc_param_attr.h"
 
 #define DC_PARAM_LAYOUT_DEFINE
 
@@ -9,73 +10,6 @@
 #include <string.h>
 
 static uint8_t s_param_inited;
-
-static uint8_t param_attr_type(const ST_PARAM_TABLE *item)
-{
-    if ((item == 0) || (item->ucPtr == 0))
-    {
-        return 0xFFu;
-    }
-    return item->ucPtr[0];
-}
-
-static uint8_t param_attr_index_count(const ST_PARAM_TABLE *item)
-{
-    const uint8_t *attr;
-
-    attr = item->ucPtr;
-    switch ((E_PARAM_STORAGE_DATATYPE)attr[0])
-    {
-    case DATATYPE_INT:
-        return 1u;
-    case DATATYPE_ARRAY:
-    case DATATYPE_STRUCT:
-        return attr[1];
-    case DATATYPE_LINKARRAY:
-        return (uint8_t)((uint16_t)attr[1] * (uint16_t)attr[2]);
-    default:
-        return 0u;
-    }
-}
-
-static uint8_t param_attr_elem_bytes(const ST_PARAM_TABLE *item, uint8_t index)
-{
-    const uint8_t *attr;
-
-    attr = item->ucPtr;
-    switch ((E_PARAM_STORAGE_DATATYPE)attr[0])
-    {
-    case DATATYPE_INT:
-        return item->ucParamLen;
-    case DATATYPE_ARRAY:
-        return attr[2];
-    case DATATYPE_STRUCT:
-        if (index >= attr[1])
-        {
-            return 0u;
-        }
-        return attr[2u + index];
-    case DATATYPE_LINKARRAY:
-        return attr[3];
-    default:
-        return 0u;
-    }
-}
-
-static uint16_t param_struct_field_off(const ST_PARAM_TABLE *item, uint8_t index)
-{
-    const uint8_t *attr;
-    uint8_t i;
-    uint16_t off;
-
-    attr = item->ucPtr;
-    off = 0u;
-    for (i = 0u; i < index; i++)
-    {
-        off = (uint16_t)(off + (uint16_t)attr[2u + i]);
-    }
-    return off;
-}
 
 static void param_ensure_init(void)
 {
@@ -197,7 +131,7 @@ static int16_t param_xfer_struct(const ST_PARAM_TABLE *item,
         {
             return DC_RET_PARAM_ERR;
         }
-        off = (uint16_t)(item->uParamOffset + param_struct_field_off(item, idx));
+        off = (uint16_t)(item->uParamOffset + param_attr_struct_field_off(item, idx));
         if (writing != 0)
         {
             memcpy(block->ram + off, ro + copied, eb);

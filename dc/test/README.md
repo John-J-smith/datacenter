@@ -94,7 +94,7 @@ DcTestVarReset();      // SRAM、计时器、dirty 清零
 | 模块 | 推荐入口 |
 |------|----------|
 | 变量 | `ReadVar` / `WriteVar`（`variable_test_helpers.hpp`）→ `VarAliasBuild` + `dc_read_alias` / `dc_write_alias` |
-| 参数 | `dc_read_alias` / `dc_write_alias` + `ParamAlias()` 或 `DC_ALIAS_PARAM_*`（`port/dc_alias_layout.h`） |
+| 参数 | `dc_read_alias` / `dc_write_alias` + `ParaAliasBuild` 或 `DC_ALIAS_PARAM_*`（`port/dc_alias_layout.h`） |
 
 错误码、空指针等边界用例在 **alias 层**直接调用 `dc_read_alias` / `dc_write_alias`。
 
@@ -130,7 +130,7 @@ DcTestVarReset();      // SRAM、计时器、dirty 清零
 | Helper | 用途 |
 |--------|------|
 | `MakeParamIoBuffer` / `FillParamWritePattern` | buffer 与写图案 |
-| `ParamAlias(type, index)` | 映射到 `DC_ALIAS_PARAM_*`，含 `PARAM_INDEX_ALL` |
+| `ParamIndexCount` / `ParamElemBytes` | 经 `dc_param_attr.h` 读映射表元数据 |
 
 **原则**：可复用逻辑放进 helper；用例本体只保留 Arrange / Act / Assert。
 
