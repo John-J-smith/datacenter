@@ -30,7 +30,7 @@
 
 ### 3.1 编译边界
 
-- 在 `dc/test/CMakeLists.txt` 中为 `dc_meter_fw` 与 `dc_tests` 定义 `DC_TEST`
+- 在 `dc/test/CMakeLists.txt` 中为 `datacenter` 与 `dc_tests` 定义 `DC_TEST`
 - Hook 实现位于 `dc/src/dc_variable.c` 末尾 `#ifdef DC_TEST` 块
 - 头文件 `dc/test/dc_test_variable.h`（仅测试 include，不进 `dc/include/`）
 
@@ -177,7 +177,7 @@ add_executable(dc_tests
     variable_backup_test.cpp
     param_test.cpp
 )
-target_compile_definitions(dc_meter_fw PRIVATE DC_TEST)
+target_compile_definitions(datacenter PRIVATE DC_TEST)
 target_compile_definitions(dc_tests PRIVATE DC_TEST)
 target_include_directories(dc_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 ```
@@ -194,7 +194,7 @@ ctest --test-dir <build-dir> -R dc_tests --output-on-failure
 1. 全部变量用例绿灯
 2. 覆盖项与第 5 节清单一致
 3. 用例注释符合第 4.2 节
-4. 未定义 `DC_TEST` 的 `dc_meter_fw` 构建不含 hook 符号
+4. 未定义 `DC_TEST` 的 `datacenter` 构建不含 hook 符号
 
 ## 8. 不在范围
 

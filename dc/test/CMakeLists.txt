@@ -16,8 +16,8 @@ target_include_directories(dc_test_port PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_include_directories(dc_meter_fw PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(dc_meter_fw PRIVATE DC_TEST)
+target_include_directories(datacenter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(datacenter PRIVATE DC_TEST)
 
 add_executable(dc_tests
     variable_layout_test.cpp
@@ -29,7 +29,7 @@ add_executable(dc_tests
 )
 target_include_directories(dc_tests PRIVATE ${DC_PORT_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(dc_tests PRIVATE DC_TEST)
-target_link_libraries(dc_tests PRIVATE dc_meter_fw dc_test_port GTest::gtest_main)
+target_link_libraries(dc_tests PRIVATE datacenter dc_test_port GTest::gtest_main)
 
 if(MINGW)
     target_link_options(dc_tests PRIVATE -static-libgcc -static-libstdc++ -static)

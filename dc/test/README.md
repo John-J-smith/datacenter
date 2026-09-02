@@ -12,7 +12,7 @@
 | 覆盖 | 布局（8.2.1）、类型读写（8.2.2）、恢复链、备份调度、错误码 |
 | 隔离 | 用例任意顺序执行、重复运行结果一致 |
 | 产品固件 | **不得**定义 `DC_TEST`，无 test hook 开销 |
-| 测试构建 | `dc_meter_fw` 与 `dc_tests` **均**定义 `DC_TEST` |
+| 测试构建 | `datacenter` 与 `dc_tests` **均**定义 `DC_TEST` |
 
 ---
 
@@ -215,9 +215,9 @@ add_executable(dc_tests
     param_rw_test.cpp
     param_layout_test.cpp
 )
-target_compile_definitions(dc_meter_fw PRIVATE DC_TEST)
+target_compile_definitions(datacenter PRIVATE DC_TEST)
 target_compile_definitions(dc_tests PRIVATE DC_TEST)
-target_link_libraries(dc_tests PRIVATE dc_meter_fw dc_test_port GTest::gtest_main)
+target_link_libraries(dc_tests PRIVATE datacenter dc_test_port GTest::gtest_main)
 ```
 
 构建与运行：

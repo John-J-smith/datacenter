@@ -4,7 +4,7 @@
 
 **Goal:** 在 `dc/` 下落地电表专用数据中心骨架：别名读/写分发（空大类入口）+ 由 X-macro 生成的变量参数表；不碰现有 `dc_core` / `dc_meter`。
 
-**Architecture:** `dc_read_alias` / `dc_write_alias` 只做线性查表；各大类独立 `.c` 返回 `DC_RET_UNSUPPORTED`。变量小类、长度、偏移、映射表全部由 `dc/include/dc_variable_table.inc` 展开（偏移用 packed 布局 + `offsetof`）。CMake 目标 `dc_meter_fw` 与旧库并存。
+**Architecture:** `dc_read_alias` / `dc_write_alias` 只做线性查表；各大类独立 `.c` 返回 `DC_RET_UNSUPPORTED`。变量小类、长度、偏移、映射表全部由 `dc/include/dc_variable_table.inc` 展开（偏移用 packed 布局 + `offsetof`）。CMake 目标 `datacenter` 与旧库并存。
 
 **Tech Stack:** C99、CMake、Host `assert` 测试（不链接 `dc_core`）。
 
@@ -41,7 +41,7 @@
 | `dc/src/dc_record.c` | 记录读/写 |
 | `tests/host/test_fw_alias.c` | 分发测试 |
 | `tests/host/test_fw_variable_table.c` | 参数表测试 |
-| `CMakeLists.txt` | `dc_meter_fw` |
+| `CMakeLists.txt` | `datacenter` |
 | `tests/host/CMakeLists.txt` | 两个新 test |
 
 ---
@@ -59,7 +59,7 @@
 
 **Interfaces:**
 - Consumes: 无
-- Produces: `ALIAS_CLASS_*`、`GetAliasClass` / `ParaAliasToType` / `GetAliasIndex` / `*AliasBuild`、`DC_RET_*`、库目标 `dc_meter_fw`
+- Produces: `ALIAS_CLASS_*`、`GetAliasClass` / `ParaAliasToType` / `GetAliasIndex` / `*AliasBuild`、`DC_RET_*`、库目标 `datacenter`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -213,10 +213,10 @@ int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, u
 In root `CMakeLists.txt`, after `target_compile_definitions(dc_meter ...)` and before `enable_testing()`, add:
 
 ```cmake
-add_library(dc_meter_fw
+add_library(datacenter
     dc/src/dc_alias.c
 )
-target_include_directories(dc_meter_fw
+target_include_directories(datacenter
     PUBLIC dc/include
     PRIVATE dc/src
 )
@@ -226,7 +226,7 @@ In `tests/host/CMakeLists.txt`, append:
 
 ```cmake
 add_executable(test_fw_macro test_fw_macro.c)
-target_link_libraries(test_fw_macro PRIVATE dc_meter_fw)
+target_link_libraries(test_fw_macro PRIVATE datacenter)
 add_test(NAME fw_macro COMMAND test_fw_macro)
 ```
 
@@ -244,7 +244,7 @@ Expected: `fw_macro` PASS，打印 `fw_macro ok`。
 
 ```bash
 git add dc/include/dc_types.h dc/include/dc_alias.h dc/include/datacenter.h dc/src/dc_alias.c CMakeLists.txt tests/host/CMakeLists.txt tests/host/test_fw_macro.c
-git commit -m "feat: add dc_meter_fw headers and alias macros"
+git commit -m "feat: add datacenter headers and alias macros"
 ```
 
 ---
@@ -260,7 +260,7 @@ git commit -m "feat: add dc_meter_fw headers and alias macros"
 - Create: `dc/src/dc_list.c`
 - Create: `dc/src/dc_record.c`
 - Modify: `dc/src/dc_alias.c`
-- Modify: `CMakeLists.txt`（把上述 `.c` 加入 `dc_meter_fw`）
+- Modify: `CMakeLists.txt`（把上述 `.c` 加入 `datacenter`）
 - Create: `tests/host/test_fw_alias.c`
 - Modify: `tests/host/CMakeLists.txt`
 
@@ -335,7 +335,7 @@ Append to `tests/host/CMakeLists.txt`:
 
 ```cmake
 add_executable(test_fw_alias test_fw_alias.c)
-target_link_libraries(test_fw_alias PRIVATE dc_meter_fw)
+target_link_libraries(test_fw_alias PRIVATE datacenter)
 add_test(NAME fw_alias COMMAND test_fw_alias)
 ```
 
@@ -492,10 +492,10 @@ int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, u
 }
 ```
 
-Replace `add_library(dc_meter_fw ...)` sources with:
+Replace `add_library(datacenter ...)` sources with:
 
 ```cmake
-add_library(dc_meter_fw
+add_library(datacenter
     dc/src/dc_alias.c
     dc/src/dc_energy.c
     dc/src/dc_demand.c
@@ -651,7 +651,7 @@ Append:
 
 ```cmake
 add_executable(test_fw_variable_table test_fw_variable_table.c)
-target_link_libraries(test_fw_variable_table PRIVATE dc_meter_fw)
+target_link_libraries(test_fw_variable_table PRIVATE datacenter)
 add_test(NAME fw_variable_table COMMAND test_fw_variable_table)
 ```
 
@@ -879,7 +879,7 @@ git commit -m "feat: generate variable parameter table from X-macros"
 - 目录与对外原型 → Task 1–2
 - 分发、写表无电量、空入口、错误码、NULL 检查 → Task 2
 - X-macro、四块、offsetof、CRC 槽、D 独立、7.4.2 表项、占位宽度 → Task 3
-- Host 测试不链 `dc_core` → 三个 `test_fw_*` 只链 `dc_meter_fw`
+- Host 测试不链 `dc_core` → 三个 `test_fw_*` 只链 `datacenter`
 - 不做 SRAM 实例 / 真读写 → 无对应实现任务
 
 **Path note:** 规格写 `dc/src/dc_variable_table.inc`；本计划改为 `dc/include/dc_variable_table.inc`，否则公开头无法单点维护。

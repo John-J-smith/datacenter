@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 # Standalone: open/build this directory. As subdirectory of the repo root,
 # skip project() so the parent project name wins.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(dc_meter_fw C CXX)
+    project(datacenter C CXX)
     set(CMAKE_C_STANDARD 99)
     set(CMAKE_C_STANDARD_REQUIRED ON)
     set(CMAKE_CXX_STANDARD 17)
@@ -91,7 +91,7 @@ add_custom_target(dc_alias_layout ALL
     VERBATIM
 )
 
-add_library(dc_meter_fw
+add_library(datacenter
     src/dc_alias.c
     src/dc_crc16.c
     src/dc_energy.c
@@ -101,12 +101,12 @@ add_library(dc_meter_fw
     src/dc_list.c
     src/dc_record.c
 )
-target_include_directories(dc_meter_fw
+target_include_directories(datacenter
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
            ${DC_PORT_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
-add_dependencies(dc_meter_fw dc_alias_layout dc_param_layout dc_variable_layout)
+add_dependencies(datacenter dc_alias_layout dc_param_layout dc_variable_layout)
 set_source_files_properties(src/dc_param.c PROPERTIES OBJECT_DEPENDS ${DC_PARAM_LAYOUT_H})
 set_source_files_properties(src/dc_variable.c PROPERTIES OBJECT_DEPENDS ${DC_VARIABLE_LAYOUT_H})
 set_source_files_properties(src/dc_alias.c PROPERTIES OBJECT_DEPENDS ${DC_ALIAS_LAYOUT_H})

@@ -69,7 +69,7 @@ dc/
     dc_record.c
 ```
 
-CMake 独立目标（建议名 `dc_meter_fw`），不链接现有 `dc_core`。Host 测试只链该目标。
+CMake 独立目标（建议名 `datacenter`），不链接现有 `dc_core`。Host 测试只链该目标。
 
 ## 5. 对外接口
 
@@ -216,7 +216,7 @@ A/B 在各项之后另有 **2 字节 CRC 槽**（不是小类）。C 无 CRC 槽
 
 ## 7. 测试
 
-Host 测试，只链 `dc_meter_fw`。
+Host 测试，只链 `datacenter`。
 
 **分发**
 

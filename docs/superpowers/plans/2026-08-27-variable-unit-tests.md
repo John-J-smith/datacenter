@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- 仅在 `dc_meter_fw` 与 `dc_tests` 构建时定义 `DC_TEST`；产品固件构建不得定义
+- 仅在 `datacenter` 与 `dc_tests` 构建时定义 `DC_TEST`；产品固件构建不得定义
 - Hook 头文件 `dc/test/dc_test_variable.h` 不得放入 `dc/include/`
 - **不修改** `var_backup_power_down` 函数名与实现；测试通过 `extern` 调用
 - 每个 `TEST_F` 前必须有块注释：`// 测试内容：` + `// 测试步骤：`（编号步骤）
@@ -122,7 +122,7 @@ void DcTestVarInvalidateAll(dc_test_var_zone_t zone)
 #endif
 ```
 
-**注意：** `dc_test_variable.h` 在 `dc/test/`，需在 `dc/test/CMakeLists.txt` 对 `dc_meter_fw` 追加 `target_include_directories(dc_meter_fw PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})`，否则 `dc_variable.c` 找不到头文件。
+**注意：** `dc_test_variable.h` 在 `dc/test/`，需在 `dc/test/CMakeLists.txt` 对 `datacenter` 追加 `target_include_directories(datacenter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})`，否则 `dc_variable.c` 找不到头文件。
 
 - [ ] **Step 3: 创建 `dc/test/variable_test_helpers.hpp`**
 
@@ -203,8 +203,8 @@ protected:
 - [ ] **Step 4: 更新 `dc/test/CMakeLists.txt`**
 
 ```cmake
-target_include_directories(dc_meter_fw PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(dc_meter_fw PRIVATE DC_TEST)
+target_include_directories(datacenter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(datacenter PRIVATE DC_TEST)
 target_compile_definitions(dc_tests PRIVATE DC_TEST)
 target_include_directories(dc_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 ```
@@ -216,7 +216,7 @@ target_include_directories(dc_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 Run（在 `dc/cmake-build-debug` 或你的 build 目录）:
 
 ```bash
-cmake --build . --target dc_meter_fw dc_tests
+cmake --build . --target datacenter dc_tests
 ```
 
 Expected: 链接成功；若报找不到 `dc_test_variable.h`，检查 Step 4 include 路径。

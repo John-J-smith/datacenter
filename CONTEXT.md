@@ -91,7 +91,7 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 ### 构建与测试
 
 - Host：`dc_variable_pack`、`dc_param_pack`；自定义 target `dc_variable_layout`、`dc_param_layout`、`dc_variable_dump`、`dc_param_dump`
-- 库 target：`dc_meter_fw`
+- 库 target：`datacenter`
 - 测试：`dc/test/`，Google Test（`dc_tests`）；模拟 storage 在 `test/port/dc_storage_sim.c`
 - 生成的 `dc_*_layout.h` 在构建时写入 port 目录，**不入库**（见 `.gitignore`）
 
