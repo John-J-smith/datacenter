@@ -7,6 +7,7 @@
 extern "C" {
 #include "datacenter.h"
 #include "dc_param_attr.h"
+#include "dc_test_param.h"
 }
 
 inline uint8_t ParamIndexCount(const ST_PARAM_TABLE *entry)
@@ -60,4 +61,11 @@ inline void TraceParamEntry(uint16_t row, const ST_PARAM_TABLE *entry, uint8_t i
                  std::to_string(static_cast<unsigned>(index)));
 }
 
-class ParamTestBase : public ::testing::Test {};
+class ParamTestBase : public ::testing::Test
+{
+protected:
+    void SetUp() override
+    {
+        DcTestParamReset();
+    }
+};

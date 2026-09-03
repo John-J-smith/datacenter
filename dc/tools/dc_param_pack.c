@@ -344,6 +344,7 @@ typedef struct {
     unsigned off;
     unsigned len;
     unsigned attr;
+    unsigned def;
 } param_tbl_cols_t;
 
 static param_tbl_cols_t param_api_col_widths(unsigned nitems, const pack_place_t *place)
@@ -376,6 +377,21 @@ static param_tbl_cols_t param_api_col_widths(unsigned nitems, const pack_place_t
                 c.attr = str_width(gen);
             }
         }
+        {
+            const uint8_t *def;
+            size_t deflen;
+            char def_sym[64];
+
+            def = lookup_def(s_items[i].name, &deflen);
+            if (def != 0) {
+                snprintf(def_sym, sizeof def_sym, "g_default_%s", s_items[i].name);
+                if (str_width(def_sym) > c.def) {
+                    c.def = str_width(def_sym);
+                }
+            } else if (str_width("NULL") > c.def) {
+                c.def = str_width("NULL");
+            }
+        }
     }
     return c;
 }
@@ -397,23 +413,55 @@ static void emit_resolved_attr_tables(unsigned nitems)
     }
 }
 
+static void emit_param_defaults(unsigned nitems)
+{
+    unsigned i;
+
+    for (i = 0u; i < nitems; i++) {
+        const uint8_t *def;
+        size_t deflen;
+
+        def = lookup_def(s_items[i].name, &deflen);
+        if (def == 0) {
+            continue;
+        }
+        oprintf("const uint8_t g_default_%s[%uu] = {",
+                s_items[i].name, (unsigned)deflen);
+        emit_bytes(def, (unsigned)deflen);
+        oputs("\n};\n\n");
+    }
+}
+
 static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
 {
     param_tbl_cols_t c;
     unsigned i;
     char num_buf[16];
     char attr_buf[64];
+    char def_buf[64];
     const char *attr_ref;
+    const char *def_ref;
 
     c = param_api_col_widths(nitems, place);
     emit_resolved_attr_tables(nitems);
+    emit_param_defaults(nitems);
     oputs("const ST_PARAM_TABLE tParamApiTable[] = {\n");
     for (i = 0u; i < nitems; i++) {
+        const uint8_t *def;
+        size_t deflen;
+
         if (s_items[i].attr_resolved != 0u) {
             snprintf(attr_buf, sizeof attr_buf, "g_param_attr_%s", s_items[i].name);
             attr_ref = attr_buf;
         } else {
             attr_ref = s_items[i].attr_sym;
+        }
+        def = lookup_def(s_items[i].name, &deflen);
+        if (def != 0) {
+            snprintf(def_buf, sizeof def_buf, "g_default_%s", s_items[i].name);
+            def_ref = def_buf;
+        } else {
+            def_ref = "NULL";
         }
         oprintf("    { %-*s, ", (int)c.name, s_items[i].name);
         snprintf(num_buf, sizeof num_buf, "%uu", (unsigned)place[i].blk);
@@ -421,7 +469,8 @@ static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
         snprintf(num_buf, sizeof num_buf, "%uu", (unsigned)place[i].off);
         oprintf("%-*s, ", (int)c.off, num_buf);
         snprintf(num_buf, sizeof num_buf, "%uu", (unsigned)place[i].blk_len);
-        oprintf("%-*s, %-*s", (int)c.len, num_buf, (int)c.attr, attr_ref);
+        oprintf("%-*s, %-*s, %-*s",
+                (int)c.len, num_buf, (int)c.attr, attr_ref, (int)c.def, def_ref);
         if ((i + 1u) < nitems) {
             oputs(" },\n");
         } else {
@@ -785,19 +834,13 @@ int main(int argc, char **argv)
         oprintf("param_layout_%u_t g_param_ram_%u;\n", i, i);
     }
     oputs("\n");
-    for (i = 0u; i < nblocks; i++) {
-        oprintf("const uint8_t g_param_rom_%u[PARAM_LAYOUT_BLOCK_%u_PAYLOAD] = {",
-                i, i);
-        emit_bytes(blocks[i].rom, (unsigned)blocks[i].payload);
-        oputs("\n};\n\n");
-    }
     oputs("const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;\n\n");
     oputs("const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {\n");
     for (i = 0u; i < nblocks; i++) {
-        oprintf("    { %uu, PARAM_LAYOUT_BLOCK_%u_EE_OFF, "
+        oprintf("    { PARAM_LAYOUT_BLOCK_%u_EE_OFF, "
                 "(uint8_t *)&g_param_ram_%u, (uint16_t)sizeof(g_param_ram_%u), "
-                "0x%02Xu, g_param_rom_%u }",
-                i, i, i, i, (unsigned)blocks[i].flags, i);
+                "0x%02Xu }",
+                i, i, i, (unsigned)blocks[i].flags);
         if ((i + 1u) < nblocks) {
             oputs(",");
         }

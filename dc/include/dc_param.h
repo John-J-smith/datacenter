@@ -33,12 +33,10 @@ typedef enum {
 #define PARAM_BLOCK_NULL_EE_OFF  (0xFFFFFFFFu)
 
 typedef struct {
-    uint8_t eBlockName;
     uint32_t uBlockEeOff;
     uint8_t *ram;
     uint16_t ucBlockLen;
     uint8_t ucFlag;
-    const uint8_t *ucPtr;
 } ST_PARAM_BLOCK_TABLE;
 
 typedef struct {
@@ -46,7 +44,8 @@ typedef struct {
     uint8_t eBlockName;
     uint8_t uParamOffset;
     uint8_t ucParamLen;
-    const uint8_t *ucPtr;
+    const uint8_t *pAttr;
+    const uint8_t *pDefault;
 } ST_PARAM_TABLE;
 
 extern const ST_PARAM_BLOCK_TABLE tParamBlockTable[];

@@ -159,11 +159,11 @@ static inline uint16_t param_attr_bytes_total_bytes(const uint8_t *attr, uint8_t
 
 static inline uint8_t param_attr_type(const ST_PARAM_TABLE *item)
 {
-    if ((item == 0) || (item->ucPtr == 0))
+    if ((item == 0) || (item->pAttr == 0))
     {
         return 0xFFu;
     }
-    return param_attr_bytes_type(item->ucPtr);
+    return param_attr_bytes_type(item->pAttr);
 }
 
 static inline uint8_t param_attr_index_count(const ST_PARAM_TABLE *item)
@@ -172,7 +172,7 @@ static inline uint8_t param_attr_index_count(const ST_PARAM_TABLE *item)
     {
         return 0u;
     }
-    return param_attr_bytes_index_count(item->ucPtr, item->ucParamLen, item->ucParamLen);
+    return param_attr_bytes_index_count(item->pAttr, item->ucParamLen, item->ucParamLen);
 }
 
 static inline uint8_t param_attr_elem_bytes(const ST_PARAM_TABLE *item, uint8_t index)
@@ -181,7 +181,7 @@ static inline uint8_t param_attr_elem_bytes(const ST_PARAM_TABLE *item, uint8_t 
     {
         return 0u;
     }
-    return param_attr_bytes_elem_bytes(item->ucPtr, item->ucParamLen, index);
+    return param_attr_bytes_elem_bytes(item->pAttr, item->ucParamLen, index);
 }
 
 static inline uint16_t param_attr_struct_field_off(const ST_PARAM_TABLE *item, uint8_t index)
@@ -190,7 +190,7 @@ static inline uint16_t param_attr_struct_field_off(const ST_PARAM_TABLE *item, u
     {
         return 0u;
     }
-    return param_attr_bytes_struct_field_off(item->ucPtr, index);
+    return param_attr_bytes_struct_field_off(item->pAttr, index);
 }
 
 static inline uint16_t param_attr_total_bytes(const ST_PARAM_TABLE *item)
@@ -199,7 +199,7 @@ static inline uint16_t param_attr_total_bytes(const ST_PARAM_TABLE *item)
     {
         return 0u;
     }
-    return param_attr_bytes_total_bytes(item->ucPtr, item->ucParamLen, item->ucParamLen);
+    return param_attr_bytes_total_bytes(item->pAttr, item->ucParamLen, item->ucParamLen);
 }
 
 #endif /* DC_PARAM_ATTR_H */

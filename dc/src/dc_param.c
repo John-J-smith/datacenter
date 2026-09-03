@@ -11,6 +11,15 @@
 
 static uint8_t s_param_inited;
 
+static const ST_PARAM_BLOCK_TABLE *param_find_block(uint8_t blk)
+{
+    if ((uint16_t)blk >= tParamBlockTableCount)
+    {
+        return 0;
+    }
+    return &tParamBlockTable[blk];
+}
+
 static void param_ensure_init(void)
 {
     uint16_t i;
@@ -24,7 +33,24 @@ static void param_ensure_init(void)
         uint16_t payload;
 
         payload = (uint16_t)(tParamBlockTable[i].ucBlockLen - (uint16_t)PARAM_CRC_BYTES_BLOCK);
-        memcpy(tParamBlockTable[i].ram, tParamBlockTable[i].ucPtr, payload);
+        memset(tParamBlockTable[i].ram, 0xFF, payload);
+    }
+    for (i = 0u; i < tParamApiTableCount; i++)
+    {
+        const ST_PARAM_TABLE *item;
+        const ST_PARAM_BLOCK_TABLE *block;
+
+        item = &tParamApiTable[i];
+        if (item->pDefault == NULL)
+        {
+            continue;
+        }
+        block = param_find_block(item->eBlockName);
+        if ((block == 0) || (block->ram == 0))
+        {
+            continue;
+        }
+        memcpy(block->ram + item->uParamOffset, item->pDefault, item->ucParamLen);
     }
     s_param_inited = 1u;
 }
@@ -43,20 +69,6 @@ static const ST_PARAM_TABLE *param_find_item(uint16_t subclass)
     return 0;
 }
 
-static const ST_PARAM_BLOCK_TABLE *param_find_block(uint8_t name)
-{
-    uint16_t i;
-
-    for (i = 0u; i < tParamBlockTableCount; i++)
-    {
-        if (tParamBlockTable[i].eBlockName == name)
-        {
-            return &tParamBlockTable[i];
-        }
-    }
-    return 0;
-}
-
 static int16_t param_xfer_link(const ST_PARAM_TABLE *item, uint8_t *rw,
                                const uint8_t *ro, uint16_t usLen, uint8_t index,
                                int writing)
@@ -67,7 +79,7 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *item, uint8_t *rw,
     uint16_t i;
     uint16_t copied;
 
-    attr = item->ucPtr;
+    attr = item->pAttr;
     k = attr[3];
     if (k == 0u)
     {
@@ -242,3 +254,19 @@ int16_t dc_write_param(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, u
 {
     return param_xfer(alias, 0, dataPtr, usLen, type, 1);
 }
+
+#ifdef DC_TEST
+void DcTestParamReset(void)
+{
+    uint16_t i;
+
+    s_param_inited = 0u;
+    for (i = 0u; i < tParamBlockTableCount; i++)
+    {
+        if (tParamBlockTable[i].ram != 0)
+        {
+            memset(tParamBlockTable[i].ram, 0, (size_t)tParamBlockTable[i].ucBlockLen);
+        }
+    }
+}
+#endif /* DC_TEST */

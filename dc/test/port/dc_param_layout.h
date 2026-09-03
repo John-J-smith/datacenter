@@ -97,67 +97,49 @@ param_layout_2_t g_param_ram_2;
 param_layout_3_t g_param_ram_3;
 param_layout_4_t g_param_ram_4;
 
-const uint8_t g_param_rom_0[PARAM_LAYOUT_BLOCK_0_PAYLOAD] = {
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu
-};
-
-const uint8_t g_param_rom_1[PARAM_LAYOUT_BLOCK_1_PAYLOAD] = {
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu
-};
-
-const uint8_t g_param_rom_2[PARAM_LAYOUT_BLOCK_2_PAYLOAD] = {
-    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu, 0x00u, 0x00u, 
-    0x00u, 0x00u, 0x00u, 0x00u, 0xFFu, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu
-};
-
-const uint8_t g_param_rom_3[PARAM_LAYOUT_BLOCK_3_PAYLOAD] = {
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu
-};
-
-const uint8_t g_param_rom_4[PARAM_LAYOUT_BLOCK_4_PAYLOAD] = {
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 
-    0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu, 0xFFu
-};
-
 const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;
 
 const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {
-    { 0u, PARAM_LAYOUT_BLOCK_0_EE_OFF, (uint8_t *)&g_param_ram_0, (uint16_t)sizeof(g_param_ram_0), 0x0Fu, g_param_rom_0 },
-    { 1u, PARAM_LAYOUT_BLOCK_1_EE_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x06u, g_param_rom_1 },
-    { 2u, PARAM_LAYOUT_BLOCK_2_EE_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x0Fu, g_param_rom_2 },
-    { 3u, PARAM_LAYOUT_BLOCK_3_EE_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x06u, g_param_rom_3 },
-    { 4u, PARAM_LAYOUT_BLOCK_4_EE_OFF, (uint8_t *)&g_param_ram_4, (uint16_t)sizeof(g_param_ram_4), 0x06u, g_param_rom_4 }
+    { PARAM_LAYOUT_BLOCK_0_EE_OFF, (uint8_t *)&g_param_ram_0, (uint16_t)sizeof(g_param_ram_0), 0x0Fu },
+    { PARAM_LAYOUT_BLOCK_1_EE_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x06u },
+    { PARAM_LAYOUT_BLOCK_2_EE_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x0Fu },
+    { PARAM_LAYOUT_BLOCK_3_EE_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x06u },
+    { PARAM_LAYOUT_BLOCK_4_EE_OFF, (uint8_t *)&g_param_ram_4, (uint16_t)sizeof(g_param_ram_4), 0x06u }
 };
 
 const uint16_t tParamBlockTableCount = (uint16_t)PARAM_LAYOUT_BLOCK_COUNT;
 
 const uint8_t g_param_attr_PARAM_CALIB_DATA[] = { 4u, 1u, 10u, 12u };
 
+const uint8_t g_default_PARAM_SEASON_SWTIME[7u] = {
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu
+};
+
+const uint8_t g_default_PARAM_DAY_SWTIME[7u] = {
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu
+};
+
+const uint8_t g_default_PARAM_FEE_SWTIME[7u] = {
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu
+};
+
+const uint8_t g_default_PARAM_LADDER_SWTIME[7u] = {
+    0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu
+};
+
 const ST_PARAM_TABLE tParamApiTable[] = {
-    { PARAM_REMOTECTRL   , 0u, 0u , 6u  , _param_attr_PARAM_REMOTECTRL    },
-    { PARAM_LOCALCTRL    , 0u, 6u , 6u  , _param_attr_PARAM_REMOTECTRL    },
-    { PARAM_TCP_UDP_SETUP, 1u, 0u , 71u , _param_attr_PARAM_TCP_UDP_SETUP },
-    { PARAM_SEASON_SWTIME, 2u, 0u , 7u  , _PARAM_ATTR_INT                 },
-    { PARAM_DAY_SWTIME   , 2u, 7u , 7u  , _PARAM_ATTR_INT                 },
-    { PARAM_FEE_SWTIME   , 2u, 14u, 7u  , _PARAM_ATTR_INT                 },
-    { PARAM_LADDER_SWTIME, 2u, 21u, 7u  , _PARAM_ATTR_INT                 },
-    { PARAM_UN           , 2u, 28u, 4u  , _PARAM_ATTR_INT                 },
-    { PARAM_IB           , 2u, 32u, 4u  , _PARAM_ATTR_INT                 },
-    { PARAM_IMAX         , 2u, 36u, 4u  , _PARAM_ATTR_INT                 },
-    { PARAM_HOLIDAY_DATA , 3u, 0u , 60u , _param_attr_PARAM_HOLIDAY_DATA  },
-    { PARAM_CALIB_DATA   , 4u, 0u , 120u, g_param_attr_PARAM_CALIB_DATA    }
+    { PARAM_REMOTECTRL   , 0u, 0u , 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
+    { PARAM_LOCALCTRL    , 0u, 6u , 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
+    { PARAM_TCP_UDP_SETUP, 1u, 0u , 71u , _param_attr_PARAM_TCP_UDP_SETUP, NULL                          },
+    { PARAM_SEASON_SWTIME, 2u, 0u , 7u  , _PARAM_ATTR_INT                , g_default_PARAM_SEASON_SWTIME },
+    { PARAM_DAY_SWTIME   , 2u, 7u , 7u  , _PARAM_ATTR_INT                , g_default_PARAM_DAY_SWTIME    },
+    { PARAM_FEE_SWTIME   , 2u, 14u, 7u  , _PARAM_ATTR_INT                , g_default_PARAM_FEE_SWTIME    },
+    { PARAM_LADDER_SWTIME, 2u, 21u, 7u  , _PARAM_ATTR_INT                , g_default_PARAM_LADDER_SWTIME },
+    { PARAM_UN           , 2u, 28u, 4u  , _PARAM_ATTR_INT                , NULL                          },
+    { PARAM_IB           , 2u, 32u, 4u  , _PARAM_ATTR_INT                , NULL                          },
+    { PARAM_IMAX         , 2u, 36u, 4u  , _PARAM_ATTR_INT                , NULL                          },
+    { PARAM_HOLIDAY_DATA , 3u, 0u , 60u , _param_attr_PARAM_HOLIDAY_DATA , NULL                          },
+    { PARAM_CALIB_DATA   , 4u, 0u , 120u, g_param_attr_PARAM_CALIB_DATA  , NULL                           }
 };
 
 const uint16_t tParamApiTableCount = (uint16_t)PARAM_LAYOUT_ITEM_COUNT;
