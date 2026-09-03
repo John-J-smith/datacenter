@@ -575,7 +575,7 @@ static unsigned pack_param_blocks(pack_block_t blocks[PACK_MAX_BLOCKS],
             }
             place[i].blk = (uint8_t)nblocks;
             place[i].off = 0u;
-            place[i].blk_len = (uint8_t)(per_page * k);
+            place[i].blk_len = (uint8_t)s_items[i].total_len;
             def_off = 0u;
             for (page = 0u; page < npage; page++) {
                 unsigned remain;

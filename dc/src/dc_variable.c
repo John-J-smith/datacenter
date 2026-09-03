@@ -35,6 +35,12 @@ static uint16_t s_pwr_dwn_sec;
 
 static void var_ensure_init(void);
 
+/**
+ * @brief 按变量小类 ID 查找 API 表项（ID 即表下标）
+ *
+ * @param subclass E_VARIABLE_TYPE 枚举值
+ * @return API 表项指针；越界时返回 NULL
+ */
 static const ST_DC_VARIABLE_TABLE *var_find_row(uint16_t subclass)
 {
     if (subclass >= tVariableApiTableCount)
@@ -44,50 +50,94 @@ static const ST_DC_VARIABLE_TABLE *var_find_row(uint16_t subclass)
     return &tVariableApiTable[subclass];
 }
 
+/**
+ * @brief A 区 SRAM 头尾 magic 是否有效
+ *
+ * @return 非 0 表示 head/tail 均正确
+ */
 static int var_a_sram_ok(void)
 {
     return (s_var_ram.head_a == VAR_SRAM_MAGIC_HEAD) &&
            (s_var_ram.tail_a == VAR_SRAM_MAGIC_TAIL);
 }
 
+/**
+ * @brief B 区 SRAM 头尾 magic 是否有效
+ *
+ * @return 非 0 表示 head/tail 均正确
+ */
 static int var_b_sram_ok(void)
 {
     return (s_var_ram.head_b == VAR_SRAM_MAGIC_HEAD) &&
            (s_var_ram.tail_b == VAR_SRAM_MAGIC_TAIL);
 }
 
+/**
+ * @brief 写入 A 区 SRAM 头尾 magic（body CRC 已可信时调用）
+ */
 static void var_a_mark_ok(void)
 {
     s_var_ram.head_a = VAR_SRAM_MAGIC_HEAD;
     s_var_ram.tail_a = VAR_SRAM_MAGIC_TAIL;
 }
 
+/**
+ * @brief 写入 B 区 SRAM 头尾 magic（body CRC 已可信时调用）
+ */
 static void var_b_mark_ok(void)
 {
     s_var_ram.head_b = VAR_SRAM_MAGIC_HEAD;
     s_var_ram.tail_b = VAR_SRAM_MAGIC_TAIL;
 }
 
+/**
+ * @brief 重算并写入 A 区 body CRC
+ *
+ * @param body A 区 layout 体（含 payload，不含 head/tail magic）
+ */
 static void var_a_crc_fill(var_layout_a_t *body)
 {
     body->crc = dc_crc16_ccitt((const uint8_t *)body, VAR_A_CRC_ADDR);
 }
 
+/**
+ * @brief 重算并写入 B 区 body CRC
+ *
+ * @param body B 区 layout 体
+ */
 static void var_b_crc_fill(var_layout_b_t *body)
 {
     body->crc = dc_crc16_ccitt((const uint8_t *)body, VAR_B_CRC_ADDR);
 }
 
+/**
+ * @brief 校验 A 区 body CRC16-CCITT
+ *
+ * @param body A 区 layout 体
+ * @return 非 0 表示 CRC 正确
+ */
 static int var_a_crc_ok(const var_layout_a_t *body)
 {
     return body->crc == dc_crc16_ccitt((const uint8_t *)body, VAR_A_CRC_ADDR);
 }
 
+/**
+ * @brief 校验 B 区 body CRC16-CCITT
+ *
+ * @param body B 区 layout 体
+ * @return 非 0 表示 CRC 正确
+ */
 static int var_b_crc_ok(const var_layout_b_t *body)
 {
     return body->crc == dc_crc16_ccitt((const uint8_t *)body, VAR_B_CRC_ADDR);
 }
 
+/**
+ * @brief 变量 EE 备份槽绝对地址
+ *
+ * @param slot 备份槽枚举
+ * @return 绝对 EE 地址；无效槽返回 0
+ */
 uint32_t VariableEeSlotAddr(E_VARIABLE_EE_SLOT slot)
 {
     switch (slot)
@@ -115,6 +165,14 @@ uint32_t VariableEeSlotAddr(E_VARIABLE_EE_SLOT slot)
     }
 }
 
+/**
+ * @brief 从变量 EE 备份槽读取
+ *
+ * @param slot 备份槽枚举
+ * @param buf  输出缓冲
+ * @param len  读取字节数
+ * @return 成功返回读取字节数；失败返回负错误码
+ */
 int16_t VariableEeReadSlot(E_VARIABLE_EE_SLOT slot, uint8_t *buf, uint16_t len)
 {
     uint32_t addr;
@@ -127,6 +185,14 @@ int16_t VariableEeReadSlot(E_VARIABLE_EE_SLOT slot, uint8_t *buf, uint16_t len)
     return DC_STORAGE_READ(addr, buf, len);
 }
 
+/**
+ * @brief 向变量 EE 备份槽写入
+ *
+ * @param slot 备份槽枚举
+ * @param buf  输入数据
+ * @param len  写入字节数
+ * @return 成功返回写入字节数；失败返回负错误码
+ */
 int16_t VariableEeWriteSlot(E_VARIABLE_EE_SLOT slot, const uint8_t *buf, uint16_t len)
 {
     uint32_t addr;
@@ -139,6 +205,12 @@ int16_t VariableEeWriteSlot(E_VARIABLE_EE_SLOT slot, const uint8_t *buf, uint16_
     return DC_STORAGE_WRITE(addr, buf, len);
 }
 
+/**
+ * @brief 尝试从指定 EE 槽恢复 A 区 body
+ *
+ * @param slot EE 备份槽
+ * @return 非 0 表示读回且 CRC 校验通过并已写入 s_var_ram.body_a
+ */
 static int var_try_restore_a_slot(E_VARIABLE_EE_SLOT slot)
 {
     var_layout_a_t tmp;
@@ -156,6 +228,12 @@ static int var_try_restore_a_slot(E_VARIABLE_EE_SLOT slot)
     return 1;
 }
 
+/**
+ * @brief 尝试从指定 EE 槽恢复 B 区 body
+ *
+ * @param slot EE 备份槽
+ * @return 非 0 表示读回且 CRC 校验通过并已写入 s_var_ram.body_b
+ */
 static int var_try_restore_b_slot(E_VARIABLE_EE_SLOT slot)
 {
     var_layout_b_t tmp;
@@ -249,6 +327,11 @@ static int var_restore_b_pwrup(void)
     return var_restore_b_backup();
 }
 
+/**
+ * @brief 判断 A 区当前是否允许写入 EE 备份
+ *
+ * @return 非 0 表示 magic 有效或 body CRC 正确
+ */
 static int var_a_backup_allowed(void)
 {
     if (var_a_sram_ok())
@@ -258,6 +341,11 @@ static int var_a_backup_allowed(void)
     return var_a_crc_ok(&s_var_ram.body_a);
 }
 
+/**
+ * @brief 判断 B 区当前是否允许写入 EE 备份
+ *
+ * @return 非 0 表示 magic 有效或 body CRC 正确
+ */
 static int var_b_backup_allowed(void)
 {
     if (var_b_sram_ok())
@@ -294,6 +382,11 @@ static int16_t var_a_prepare_access(void)
     return 0;
 }
 
+/**
+ * @brief B 区访问前完整性检查（SRAM noinit，逻辑同 A 区）
+ *
+ * @return 0 成功；负值表示恢复失败
+ */
 static int16_t var_b_prepare_access(void)
 {
     if (var_b_sram_ok())
@@ -311,6 +404,9 @@ static int16_t var_b_prepare_access(void)
     return 0;
 }
 
+/**
+ * @brief 将 A 区快照写入 PWR_ON 备份槽（双 bank 时写 0/1）
+ */
 static void var_backup_a_pwr_on(void)
 {
     var_layout_a_t snap;
@@ -327,6 +423,9 @@ static void var_backup_a_pwr_on(void)
 #endif
 }
 
+/**
+ * @brief 将 B 区快照写入 PWR_ON 备份槽（双 bank 时写 0/1）
+ */
 static void var_backup_b_pwr_on(void)
 {
     var_layout_b_t snap;
@@ -343,6 +442,9 @@ static void var_backup_b_pwr_on(void)
 #endif
 }
 
+/**
+ * @brief 将 A 区快照写入 PWR_DWN 掉电备份槽
+ */
 static void var_backup_a_pwr_dwn(void)
 {
     var_layout_a_t snap;
@@ -356,6 +458,9 @@ static void var_backup_a_pwr_dwn(void)
     VariableEeWriteSlot(VAR_EE_SLOT_A_PWR_DWN, (const uint8_t *)&snap, VAR_A_END_ADDR);
 }
 
+/**
+ * @brief 将 B 区快照写入 PWR_DWN 掉电备份槽
+ */
 static void var_backup_b_pwr_dwn(void)
 {
     var_layout_b_t snap;
@@ -370,9 +475,12 @@ static void var_backup_b_pwr_dwn(void)
 }
 
 /**
- * @brief 定时备份A/B区数据
- * 
- * @param elapsed_sec
+ * @brief 定时备份 A/B 区与掉电区
+ *   A 区：达 VAR_A_BACKUP_INTERVAL_SEC 写 PWR_ON
+ *   B 区：脏且达 VAR_B_BACKUP_INTERVAL_SEC 写 PWR_ON
+ *   A/B：达 VAR_PWR_DWN_INTERVAL_SEC 写 PWR_DWN
+ *
+ * @param elapsed_sec 距上次 tick 经过的秒数
  */
 void var_backup_tick(uint16_t elapsed_sec)
 {
@@ -407,8 +515,7 @@ void var_backup_tick(uint16_t elapsed_sec)
 }
 
 /**
- * @brief 掉电备份A/B区数据，只写掉电区
- * 
+ * @brief 立即掉电备份 A/B 区（仅写 PWR_DWN 槽）
  */
 void var_backup_power_down(void)
 {
@@ -452,6 +559,13 @@ static void var_ensure_init(void)
     s_var_inited = 1u;
 }
 
+/**
+ * @brief 按存储类型取得 SRAM 区基址指针
+ *
+ * @param stor VARIABLE_TYPEA/B/C
+ * @param off  区内偏移（通常为 0）
+ * @return 指向区内偏移的指针；不支持的类型返回 NULL
+ */
 static uint8_t *var_sram_ptr(uint8_t stor, uint16_t off)
 {
     if (stor == (uint8_t)VARIABLE_TYPEA)
@@ -469,8 +583,22 @@ static uint8_t *var_sram_ptr(uint8_t stor, uint16_t off)
     return 0;
 }
 
-static int16_t var_storage_xfer(const ST_DC_VARIABLE_TABLE *row, uint8_t *rw,
-                                const uint8_t *ro, uint16_t usLen, uint8_t index,
+/**
+ * @brief D 类变量 EE 直读写（不经 SRAM 镜像）
+ *
+ * @param row     API 表项
+ * @param rw      读缓冲（写时可为 NULL）
+ * @param ro      写数据源（读时可为 NULL）
+ * @param usLen   元素个数
+ * @param index   起始元素索引
+ * @param writing 非 0 表示写
+ * @return 成功返回传输字节数；失败返回负错误码
+ */
+static int16_t var_storage_xfer(const ST_DC_VARIABLE_TABLE *row, 
+                                uint8_t *rw,
+                                const uint8_t *ro, 
+                                uint16_t usLen, 
+                                uint8_t index,
                                 int writing)
 {
     uint16_t nbytes;
@@ -492,8 +620,23 @@ static int16_t var_storage_xfer(const ST_DC_VARIABLE_TABLE *row, uint8_t *rw,
     return DC_STORAGE_READ(addr, rw, nbytes);
 }
 
-static int16_t var_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
-                        uint16_t usLen, uint8_t type, int writing)
+/**
+ * @brief 变量别名读写分发（A/B/C/D 类）
+ *
+ * @param alias   变量别名（含小类与 index）
+ * @param rw      读缓冲（写时可为 NULL）
+ * @param ro      写数据源（读时可为 NULL）
+ * @param usLen   元素个数（index=VAR_INDEX_ALL 时为全部分项）
+ * @param type    保留，传 0
+ * @param writing 非 0 表示写
+ * @return 成功返回传输字节数；失败返回负错误码
+ */
+static int16_t var_xfer(uint32_t alias,
+                        uint8_t *rw, 
+                        const uint8_t *ro,
+                        uint16_t usLen, 
+                        uint8_t type, 
+                        int writing)
 {
     const ST_DC_VARIABLE_TABLE *row;
     uint8_t *base;
@@ -579,11 +722,29 @@ static int16_t var_xfer(uint32_t alias, uint8_t *rw, const uint8_t *ro,
     return (int16_t)nbytes;
 }
 
+/**
+ * @brief 读变量（别名层 ALIAS_CLASS_VARIABLE 入口）
+ *
+ * @param alias    变量别名
+ * @param dataPtr  输出缓冲
+ * @param usLen    元素个数
+ * @param type     保留，传 0
+ * @return 成功返回读取字节数；失败返回负错误码
+ */
 int16_t dc_read_variable(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
     return var_xfer(alias, dataPtr, 0, usLen, type, 0);
 }
 
+/**
+ * @brief 写变量（别名层 ALIAS_CLASS_VARIABLE 入口）
+ *
+ * @param alias    变量别名
+ * @param dataPtr  输入数据
+ * @param usLen    元素个数
+ * @param type     保留，传 0
+ * @return 成功返回写入字节数；失败返回负错误码
+ */
 int16_t dc_write_variable(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
 {
     return var_xfer(alias, 0, dataPtr, usLen, type, 1);
@@ -591,6 +752,9 @@ int16_t dc_write_variable(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen
 
 #ifdef DC_TEST
 
+/**
+ * @brief 测试用：清空 SRAM、备份计时器与 init 标志
+ */
 void DcTestVarReset(void)
 {
     memset(&s_var_ram, 0, sizeof s_var_ram);
@@ -601,6 +765,11 @@ void DcTestVarReset(void)
     s_pwr_dwn_sec = 0u;
 }
 
+/**
+ * @brief 测试用：破坏指定区 head/tail magic
+ *
+ * @param zone A 或 B 区
+ */
 void DcTestVarCorruptMagic(dc_test_var_zone_t zone)
 {
     if (zone == DC_TEST_VAR_ZONE_A)
@@ -615,6 +784,11 @@ void DcTestVarCorruptMagic(dc_test_var_zone_t zone)
     }
 }
 
+/**
+ * @brief 测试用：破坏指定区 body CRC
+ *
+ * @param zone A 或 B 区
+ */
 void DcTestVarCorruptCrc(dc_test_var_zone_t zone)
 {
     if (zone == DC_TEST_VAR_ZONE_A)
@@ -627,12 +801,20 @@ void DcTestVarCorruptCrc(dc_test_var_zone_t zone)
     }
 }
 
+/**
+ * @brief 测试用：同时破坏 magic 与 CRC（模拟完全无效 RAM）
+ *
+ * @param zone A 或 B 区
+ */
 void DcTestVarInvalidateAll(dc_test_var_zone_t zone)
 {
     DcTestVarCorruptMagic(zone);
     DcTestVarCorruptCrc(zone);
 }
 
+/**
+ * @brief 测试用：重置备份计时器（PWR_ON / PWR_DWN 间隔）
+ */
 void DcTestVarResetBackupTimers(void)
 {
     s_a_pwr_on_sec = 0u;
@@ -640,6 +822,12 @@ void DcTestVarResetBackupTimers(void)
     s_pwr_dwn_sec = 0u;
 }
 
+/**
+ * @brief 测试用：查询指定区 body CRC 是否有效
+ *
+ * @param zone A 或 B 区
+ * @return 非 0 表示 CRC 正确
+ */
 int DcTestVarBodyCrcOk(dc_test_var_zone_t zone)
 {
     if (zone == DC_TEST_VAR_ZONE_A)

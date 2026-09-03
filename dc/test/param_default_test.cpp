@@ -5,10 +5,12 @@
 
 extern "C" {
 #include "dc_alias_layout.h"
+#include "dc_param_layout.h"
 extern const uint8_t g_default_PARAM_SEASON_SWTIME[];
 extern const uint8_t g_default_PARAM_DAY_SWTIME[];
 extern const uint8_t g_default_PARAM_FEE_SWTIME[];
 extern const uint8_t g_default_PARAM_LADDER_SWTIME[];
+extern param_layout_2_t g_param_ram_2;
 }
 
 namespace {
@@ -105,6 +107,45 @@ TEST_F(ParamTestBase, AfterWrite_ReadReturnsWrittenValueNotDefault)
     std::fill(buf.begin(), buf.end(), 0u);
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
     EXPECT_EQ(std::memcmp(buf.data(), custom, sizeof(custom)), 0);
+}
+
+// 测试内容：noinit 下块 CRC 有效时，重新 init 保留 RAM 内容
+TEST_F(ParamTestBase, Noinit_ValidBlockCrc_KeepsRamAcrossReinit)
+{
+    const uint8_t custom[] = {0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x66u, 0x77u};
+    std::array<uint8_t, 7u> buf{};
+
+    // 1. 冷启动读默认并写入自定义值（写路径会刷新块 CRC）
+    ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
+    ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), 7);
+
+    // 2. 仅清除 init 标志，模拟 noinit 软复位
+    DcTestParamReinit();
+
+    // 3. 再读应仍为写入值
+    std::fill(buf.begin(), buf.end(), 0u);
+    ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
+    EXPECT_EQ(std::memcmp(buf.data(), custom, sizeof(custom)), 0);
+}
+
+// 测试内容：noinit 下块 CRC 失效时，重新 init 恢复 catalog 默认
+TEST_F(ParamTestBase, Noinit_BadBlockCrc_RestoresCatalogDefault)
+{
+    const uint8_t custom[] = {0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x66u, 0x77u};
+    std::array<uint8_t, 7u> buf{};
+
+    // 1. 写入自定义值
+    ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
+    ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), 7);
+
+    // 2. 破坏块 CRC，再仅清除 init 标志
+    g_param_ram_2.crc[0u] ^= 0xFFu;
+    DcTestParamReinit();
+
+    // 3. 再读应恢复为 g_default_*
+    std::fill(buf.begin(), buf.end(), 0u);
+    ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
+    EXPECT_EQ(std::memcmp(buf.data(), g_default_PARAM_SEASON_SWTIME, buf.size()), 0);
 }
 
 }  // namespace

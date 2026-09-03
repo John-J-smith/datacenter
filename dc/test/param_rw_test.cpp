@@ -23,7 +23,8 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
             TraceParamEntry(row, entry, index);
             FillParamWritePattern(wbuf.data(), elem_bytes, row, index);
             ASSERT_EQ(dc_write_alias(alias, wbuf.data(), 1u, 0u),
-                      static_cast<int16_t>(elem_bytes)) << "alias: " << alias;
+                      static_cast<int16_t>(elem_bytes))
+                << ParamTraceLabel(row, entry, index);
         }
     }
 
@@ -41,8 +42,10 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
             FillParamWritePattern(wbuf.data(), elem_bytes, row, index);
             std::fill(rbuf.begin(), rbuf.end(), 0u);
             ASSERT_EQ(dc_read_alias(alias, rbuf.data(), 1u, 0u),
-                      static_cast<int16_t>(elem_bytes));
-            EXPECT_EQ(std::memcmp(wbuf.data(), rbuf.data(), elem_bytes), 0);
+                      static_cast<int16_t>(elem_bytes))
+                << ParamTraceLabel(row, entry, index);
+            EXPECT_TRUE(ExpectParamBuffersEqual(wbuf.data(), rbuf.data(), elem_bytes, row,
+                                                entry, index));
         }
     }
 
@@ -62,12 +65,15 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
         TraceParamEntry(row, entry, PARAM_INDEX_ALL);
         FillParamWritePattern(wbuf.data(), total_bytes, row, PARAM_INDEX_ALL);
         ASSERT_EQ(dc_write_alias(alias_all, wbuf.data(), index_count, 0u),
-                  static_cast<int16_t>(total_bytes));
+                  static_cast<int16_t>(total_bytes))
+            << ParamTraceLabel(row, entry, PARAM_INDEX_ALL);
 
         std::fill(rbuf.begin(), rbuf.end(), 0u);
         ASSERT_EQ(dc_read_alias(alias_all, rbuf.data(), index_count, 0u),
-                  static_cast<int16_t>(total_bytes));
-        EXPECT_EQ(std::memcmp(wbuf.data(), rbuf.data(), total_bytes), 0);
+                  static_cast<int16_t>(total_bytes))
+            << ParamTraceLabel(row, entry, PARAM_INDEX_ALL);
+        EXPECT_TRUE(ExpectParamBuffersEqual(wbuf.data(), rbuf.data(), total_bytes, row, entry,
+                                            PARAM_INDEX_ALL));
     }
 }
 

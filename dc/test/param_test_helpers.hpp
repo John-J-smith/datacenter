@@ -2,12 +2,44 @@
 
 #include <gtest/gtest.h>
 #include <cstring>
+#include <sstream>
+#include <string>
 #include <vector>
 
 extern "C" {
 #include "datacenter.h"
 #include "dc_param_attr.h"
 #include "dc_test_param.h"
+}
+
+#define PARAM_TEST_NAME_CASE(name, ...) \
+    case name:                        \
+        return #name;
+
+inline const char *ParamTypeName(uint16_t type)
+{
+    switch (type)
+    {
+        PARAM_ITEM_LIST(PARAM_TEST_NAME_CASE)
+    default:
+        return "?";
+    }
+}
+
+#undef PARAM_TEST_NAME_CASE
+
+inline std::string ParamTraceLabel(uint16_t row, const ST_PARAM_TABLE *entry, uint8_t index)
+{
+    std::ostringstream oss;
+
+    oss << "row=" << row << " " << ParamTypeName(entry->eParamType)
+        << "(type=" << entry->eParamType << ")"
+        << " blk=" << static_cast<unsigned>(entry->eBlockName)
+        << " off=" << entry->uParamOffset
+        << " ucParamLen=" << static_cast<unsigned>(entry->ucParamLen)
+        << " index=" << static_cast<unsigned>(index)
+        << " alias=0x" << std::hex << ParaAliasBuild(entry->eParamType, index);
+    return oss.str();
 }
 
 inline uint8_t ParamIndexCount(const ST_PARAM_TABLE *entry)
@@ -56,9 +88,27 @@ inline void FillParamWritePattern(uint8_t *buf, uint16_t nbytes, uint16_t row, u
 
 inline void TraceParamEntry(uint16_t row, const ST_PARAM_TABLE *entry, uint8_t index)
 {
-    SCOPED_TRACE("row=" + std::to_string(row) + " type=" +
-                 std::to_string(entry->eParamType) + " index=" +
-                 std::to_string(static_cast<unsigned>(index)));
+    SCOPED_TRACE(ParamTraceLabel(row, entry, index));
+}
+
+inline ::testing::AssertionResult ExpectParamBuffersEqual(const uint8_t *expected,
+                                                          const uint8_t *actual,
+                                                          uint16_t nbytes,
+                                                          uint16_t row,
+                                                          const ST_PARAM_TABLE *entry,
+                                                          uint8_t index)
+{
+    for (uint16_t b = 0u; b < nbytes; ++b)
+    {
+        if (expected[b] != actual[b])
+        {
+            return ::testing::AssertionFailure()
+                   << ParamTraceLabel(row, entry, index) << " byte=" << b << " expected=0x"
+                   << std::hex << static_cast<unsigned>(expected[b]) << " actual=0x"
+                   << static_cast<unsigned>(actual[b]);
+        }
+    }
+    return ::testing::AssertionSuccess();
 }
 
 class ParamTestBase : public ::testing::Test
