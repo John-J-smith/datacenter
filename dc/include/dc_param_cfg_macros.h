@@ -1,10 +1,16 @@
 #ifndef DC_PARAM_CFG_MACROS_H
 #define DC_PARAM_CFG_MACROS_H
 
-/* Storage presets for PARAM_ITEM_LIST rows (mapped to FLAG_* by dc_param_pack). */
-#define PARAM_STORE_FULL   (FLAG_SRAM | FLAG_ROM | FLAG_EEPROM | FLAG_EEPROM_BAK)
-#define PARAM_STORE_EE_BK  (FLAG_ROM | FLAG_EEPROM | FLAG_EEPROM_BAK)
-#define PARAM_STORE_ROM_EE (FLAG_ROM | FLAG_EEPROM)
+#include "dc_param.h"
+
+/* RAM EE双备份 */
+#define PARAM_STORE_RAM_EE_BK   (FLAG_SRAM | FLAG_EEPROM | FLAG_EEPROM_BAK)
+/* RAM EE单备份 */
+#define PARAM_STORE_RAM_EE      (FLAG_SRAM | FLAG_EEPROM)
+/* EE双备份 */
+#define PARAM_STORE_EE_BK       (FLAG_EEPROM | FLAG_EEPROM_BAK)
+/* EE单备份 */
+#define PARAM_STORE_EE          (FLAG_EEPROM)
 
 #ifndef DC_PARAM_ATTR_INT_DEFINED
 #define DC_PARAM_ATTR_INT_DEFINED

@@ -10,7 +10,6 @@ extern const uint8_t g_default_PARAM_SEASON_SWTIME[];
 extern const uint8_t g_default_PARAM_DAY_SWTIME[];
 extern const uint8_t g_default_PARAM_FEE_SWTIME[];
 extern const uint8_t g_default_PARAM_LADDER_SWTIME[];
-extern param_layout_2_t g_param_ram_2;
 }
 
 namespace {
@@ -138,8 +137,10 @@ TEST_F(ParamTestBase, Noinit_BadBlockCrc_RestoresCatalogDefault)
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
     ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), 7);
 
-    // 2. 破坏块 CRC，再仅清除 init 标志
-    g_param_ram_2.crc[0u] ^= 0xFFu;
+    // 2. 破坏该参数所在块的 CRC，再仅清除 init 标志
+    const ST_PARAM_TABLE *entry = ParamFindEntry(PARAM_SEASON_SWTIME);
+    ASSERT_NE(entry, nullptr);
+    ParamCorruptBlockCrc(entry->eBlockName);
     DcTestParamReinit();
 
     // 3. 再读应恢复为 g_default_*

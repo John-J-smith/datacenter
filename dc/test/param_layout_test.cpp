@@ -32,13 +32,13 @@ TEST_F(ParamLayoutTest, EeMapContiguous)
         }
         else
         {
-            EXPECT_EQ(off, prev + PARAM_BLOCK_EE_SLOT_LEN);
+            EXPECT_EQ(off, prev + PARAM_BLOCK_SIZE);
         }
         prev = off;
     }
     if (prev != PARAM_BLOCK_NULL_EE_OFF)
     {
-        EXPECT_EQ(PARAM_EE_TOTAL, prev + PARAM_BLOCK_EE_SLOT_LEN);
+        EXPECT_EQ(PARAM_EE_TOTAL, prev + PARAM_BLOCK_SIZE);
     }
 }
 

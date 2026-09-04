@@ -22,13 +22,7 @@ typedef enum {
 #include "dc_param_cfg_macros.h"
 #include "dc_param_cfg.h"
 
-#define PARAM_BLOCK_PAYLOAD_MAX (PARAM_BLOCK_BYTES_MAX - PARAM_CRC_BYTES_BLOCK)
-
-/* EE slot stride: PARAM_BLOCK_BYTES_MAX rounded up to PARAM_BLOCK_BASE_LEN. */
-#define PARAM_BLOCK_EE_SLOT_LEN \
-    ((PARAM_BLOCK_BYTES_MAX) + \
-     (((PARAM_BLOCK_BASE_LEN) - ((PARAM_BLOCK_BYTES_MAX) % (PARAM_BLOCK_BASE_LEN))) % \
-      (PARAM_BLOCK_BASE_LEN)))
+#define PARAM_BLOCK_PAYLOAD_MAX (PARAM_BLOCK_SIZE - PARAM_CRC_BYTES_BLOCK)
 
 #define PARAM_BLOCK_NULL_EE_OFF  (0xFFFFFFFFu)
 

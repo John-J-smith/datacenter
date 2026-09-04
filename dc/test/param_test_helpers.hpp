@@ -28,6 +28,34 @@ inline const char *ParamTypeName(uint16_t type)
 
 #undef PARAM_TEST_NAME_CASE
 
+inline const ST_PARAM_TABLE *ParamFindEntry(uint16_t type)
+{
+    for (uint16_t i = 0u; i < tParamApiTableCount; ++i)
+    {
+        if (tParamApiTable[i].eParamType == type)
+        {
+            return &tParamApiTable[i];
+        }
+    }
+    return NULL;
+}
+
+inline void ParamCorruptBlockCrc(uint8_t blk)
+{
+    const ST_PARAM_BLOCK_TABLE *block;
+
+    if ((uint16_t)blk >= tParamBlockTableCount)
+    {
+        return;
+    }
+    block = &tParamBlockTable[blk];
+    if (block->ram == NULL)
+    {
+        return;
+    }
+    block->ram[block->ucBlockLen - PARAM_CRC_BYTES_BLOCK] ^= 0xFFu;
+}
+
 inline std::string ParamTraceLabel(uint16_t row, const ST_PARAM_TABLE *entry, uint8_t index)
 {
     std::ostringstream oss;

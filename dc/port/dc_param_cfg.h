@@ -4,9 +4,12 @@
 
 #include <stdint.h>
 
-/* Block geometry (per product). */
-#define PARAM_BLOCK_BASE_LEN   (128u)
-#define PARAM_BLOCK_BYTES_MAX  (64u)
+/* eeprom一页的大小，必须是 PARAM_BLOCK_SIZE 的整数倍 */
+#define PARAM_EE_PAGE_SIZE  (128u) 
+/* 一个校验块的最大大小，不能跨页 */
+#define PARAM_BLOCK_SIZE    (64u)  
+/* 编译期参数检查: PARAM_EE_PAGE_SIZE 必须是 PARAM_BLOCK_SIZE 的整数倍 */
+typedef char _param_block_check[(PARAM_EE_PAGE_SIZE % PARAM_BLOCK_SIZE) ? -1 : 1];
 
 /* Subclass IDs are assigned 0..N-1 by dc_param_pack (list order). */
 

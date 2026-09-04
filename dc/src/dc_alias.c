@@ -1,4 +1,5 @@
 #include "datacenter.h"
+#include "dc_alias.h"
 #include "dc_entry.h"
 
 typedef struct {

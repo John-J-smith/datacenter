@@ -230,7 +230,7 @@ static const uint8_t *lookup_def(const char *name, size_t *len)
 typedef struct {
     uint8_t flags;
     uint16_t payload;
-    uint8_t rom[PARAM_BLOCK_BYTES_MAX];
+    uint8_t rom[PARAM_BLOCK_SIZE];
     unsigned nfields;
     unsigned item_i[PACK_MAX_ITEMS];
     uint16_t field_len[PACK_MAX_ITEMS];
@@ -662,7 +662,7 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
         ee_this = PARAM_BLOCK_NULL_EE_OFF;
         if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
             ee_this = ee_off;
-            ee_off += (uint32_t)PARAM_BLOCK_EE_SLOT_LEN;
+            ee_off += (uint32_t)PARAM_BLOCK_SIZE;
         }
 
         printf("  block %u: flags=0x%02X payload=%u ram=%u ee_slot=%u ee_off=%u fields=%u\n",
@@ -670,7 +670,7 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
                (unsigned)blocks[bi].flags,
                (unsigned)blocks[bi].payload,
                compact,
-               (unsigned)PARAM_BLOCK_EE_SLOT_LEN,
+               (unsigned)PARAM_BLOCK_SIZE,
                ee_this,
                blocks[bi].nfields);
         for (f = 0u; f < blocks[bi].nfields; f++) {
@@ -688,8 +688,8 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
     for (bi = 0u; bi < nblocks; bi++) {
         if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
             printf("  block %u @+%u size=%u\n",
-                   bi, (unsigned)ee_off, (unsigned)PARAM_BLOCK_EE_SLOT_LEN);
-            ee_off += (uint32_t)PARAM_BLOCK_EE_SLOT_LEN;
+                   bi, (unsigned)ee_off, (unsigned)PARAM_BLOCK_SIZE);
+            ee_off += (uint32_t)PARAM_BLOCK_SIZE;
         }
     }
 
@@ -781,12 +781,12 @@ int main(int argc, char **argv)
                 } else {
                     oprintf("#define PARAM_LAYOUT_BLOCK_%u_EE_OFF "
                             "(PARAM_LAYOUT_BLOCK_%u_EE_OFF + "
-                            "PARAM_BLOCK_EE_SLOT_LEN)\n",
+                            "PARAM_BLOCK_SIZE)\n",
                             i, last_ee_blk);
                 }
                 last_ee_blk = i;
                 has_last_ee = 1;
-                ee_off += (uint32_t)PARAM_BLOCK_EE_SLOT_LEN;
+                ee_off += (uint32_t)PARAM_BLOCK_SIZE;
             } else {
                 oprintf("#define PARAM_LAYOUT_BLOCK_%u_EE_OFF (PARAM_BLOCK_NULL_EE_OFF)\n",
                         i);
@@ -794,7 +794,7 @@ int main(int argc, char **argv)
         }
         if (has_last_ee != 0) {
             oprintf("#define PARAM_EE_TOTAL (PARAM_LAYOUT_BLOCK_%u_EE_OFF + "
-                    "PARAM_BLOCK_EE_SLOT_LEN)\n\n",
+                    "PARAM_BLOCK_SIZE)\n\n",
                     last_ee_blk);
         } else {
             oputs("#define PARAM_EE_TOTAL (0u)\n\n");
@@ -806,8 +806,8 @@ int main(int argc, char **argv)
         unsigned compact;
 
         compact = (unsigned)blocks[i].payload + (unsigned)PARAM_CRC_BYTES_BLOCK;
-        if (compact > (unsigned)PARAM_BLOCK_BYTES_MAX) {
-            die("block %u: compact %u exceeds PARAM_BLOCK_BYTES_MAX", i, compact);
+        if (compact > (unsigned)PARAM_BLOCK_SIZE) {
+            die("block %u: compact %u exceeds PARAM_BLOCK_SIZE", i, compact);
         }
         oprintf("#define PARAM_LAYOUT_BLOCK_%u_PAYLOAD (%uu)\n", i,
                 (unsigned)blocks[i].payload);

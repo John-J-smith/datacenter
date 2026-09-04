@@ -11,10 +11,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#ifdef DC_TEST
-#include "dc_test_variable.h"
-#endif
-
 typedef struct
 {
     uint32_t head_a;
@@ -751,6 +747,8 @@ int16_t dc_write_variable(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen
 }
 
 #ifdef DC_TEST
+
+#include "dc_test_variable.h"
 
 /**
  * @brief 测试用：清空 SRAM、备份计时器与 init 标志

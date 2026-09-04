@@ -81,7 +81,7 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 - 清单与默认：`dc_param_cfg.h`（`PARAM_ITEM_LIST`；默认字节在 `#if defined(DC_PARAM_PACK)` 段，仅 pack 工具编译）
 - 布局生成：`dc_param_pack` → `${DC_PORT_DIR}/dc_param_layout.h`
 - 装箱规则：按清单顺序；flags 变化或块满则新块；`DATATYPE_LINKARRAY` 独占连续块、按记录分页
-- 当前实现块长 `PARAM_BLOCK_BYTES_MAX = 64`（有效载荷 62，含 2 字节 CRC）
+- 当前实现块长 `PARAM_BLOCK_SIZE = 64`（有效载荷 62，含 2 字节 CRC）
 - 布局 dump：`dc_param_pack --dump`（已从固件移除 `ParamDumpLayout`）
 
 ### 别名入口
