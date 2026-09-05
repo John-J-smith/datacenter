@@ -4,8 +4,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "dc_param.h"
 #include "dc_storage_cfg.h"
-#include "dc_param_cfg.h"
 
 typedef enum {
     PARAM_REMOTECTRL = 0u,
@@ -23,7 +23,7 @@ typedef enum {
     PARAM_ID_SENTINEL
 } E_PARAMETER_TYPE;
 
-#define PARAM_LAYOUT_BLOCK_COUNT (5u)
+#define PARAM_LAYOUT_BLOCK_COUNT (6u)
 #define PARAM_LAYOUT_ITEM_COUNT (12u)
 
 #define PARAM_LAYOUT_BLOCK_0_EE_OFF (0u)
@@ -31,8 +31,15 @@ typedef enum {
 #define PARAM_LAYOUT_BLOCK_2_EE_OFF (PARAM_LAYOUT_BLOCK_1_EE_OFF + PARAM_BLOCK_SIZE)
 #define PARAM_LAYOUT_BLOCK_3_EE_OFF (PARAM_LAYOUT_BLOCK_2_EE_OFF + PARAM_BLOCK_SIZE)
 #define PARAM_LAYOUT_BLOCK_4_EE_OFF (PARAM_LAYOUT_BLOCK_3_EE_OFF + PARAM_BLOCK_SIZE)
-#define PARAM_EE_TOTAL (PARAM_LAYOUT_BLOCK_4_EE_OFF + PARAM_BLOCK_SIZE)
+#define PARAM_LAYOUT_BLOCK_5_EE_OFF (PARAM_LAYOUT_BLOCK_4_EE_OFF + PARAM_BLOCK_SIZE)
+#define PARAM_EE_TOTAL (PARAM_EE_TOTAL_ALIGN(PARAM_LAYOUT_BLOCK_5_EE_OFF + PARAM_BLOCK_SIZE))
+#define PARAM_EE_BAK_BASE (PARAM_EE_TOTAL)
+#define PARAM_EE_BAK_SPAN (128u)
+#define PARAM_EE_MAP_END (PARAM_EE_BAK_BASE + PARAM_EE_BAK_SPAN)
+#define PARAM_LAYOUT_BLOCK_0_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_0_EE_OFF)
+#define PARAM_LAYOUT_BLOCK_1_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_1_EE_OFF)
 
+/* tParamBlockTable: primary slots only. bak2 = PARAM_EE_BAK_BASE + uBlockEeOff */
 #define PARAM_LAYOUT_BLOCK_0_PAYLOAD (58u)
 #define PARAM_LAYOUT_BLOCK_0_LEN (60u)
 
@@ -45,25 +52,24 @@ typedef struct {
 } param_layout_0_t;
 typedef char param_layout_0_szchk[(sizeof(param_layout_0_t) == (size_t)PARAM_LAYOUT_BLOCK_0_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_1_PAYLOAD (33u)
-#define PARAM_LAYOUT_BLOCK_1_LEN (35u)
+#define PARAM_LAYOUT_BLOCK_1_PAYLOAD (21u)
+#define PARAM_LAYOUT_BLOCK_1_LEN (23u)
 
 typedef struct {
     uint8_t PARAM_DAY_SWTIME[7u];
     uint8_t PARAM_FEE_SWTIME[7u];
     uint8_t PARAM_LADDER_SWTIME[7u];
-    uint8_t PARAM_UN[4u];
-    uint8_t PARAM_IB[4u];
-    uint8_t PARAM_IMAX[4u];
     uint8_t crc[2u];
 } param_layout_1_t;
 typedef char param_layout_1_szchk[(sizeof(param_layout_1_t) == (size_t)PARAM_LAYOUT_BLOCK_1_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_2_PAYLOAD (60u)
-#define PARAM_LAYOUT_BLOCK_2_LEN (62u)
+#define PARAM_LAYOUT_BLOCK_2_PAYLOAD (12u)
+#define PARAM_LAYOUT_BLOCK_2_LEN (14u)
 
 typedef struct {
-    uint8_t PARAM_HOLIDAY_DATA[60u];
+    uint8_t PARAM_UN[4u];
+    uint8_t PARAM_IB[4u];
+    uint8_t PARAM_IMAX[4u];
     uint8_t crc[2u];
 } param_layout_2_t;
 typedef char param_layout_2_szchk[(sizeof(param_layout_2_t) == (size_t)PARAM_LAYOUT_BLOCK_2_LEN) ? 1 : -1];
@@ -72,19 +78,28 @@ typedef char param_layout_2_szchk[(sizeof(param_layout_2_t) == (size_t)PARAM_LAY
 #define PARAM_LAYOUT_BLOCK_3_LEN (62u)
 
 typedef struct {
-    uint8_t PARAM_CALIB_DATA[60u];
+    uint8_t PARAM_HOLIDAY_DATA[60u];
     uint8_t crc[2u];
 } param_layout_3_t;
 typedef char param_layout_3_szchk[(sizeof(param_layout_3_t) == (size_t)PARAM_LAYOUT_BLOCK_3_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_4_PAYLOAD (36u)
-#define PARAM_LAYOUT_BLOCK_4_LEN (38u)
+#define PARAM_LAYOUT_BLOCK_4_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_4_LEN (62u)
+
+typedef struct {
+    uint8_t PARAM_CALIB_DATA[60u];
+    uint8_t crc[2u];
+} param_layout_4_t;
+typedef char param_layout_4_szchk[(sizeof(param_layout_4_t) == (size_t)PARAM_LAYOUT_BLOCK_4_LEN) ? 1 : -1];
+
+#define PARAM_LAYOUT_BLOCK_5_PAYLOAD (36u)
+#define PARAM_LAYOUT_BLOCK_5_LEN (38u)
 
 typedef struct {
     uint8_t PARAM_CALIB_DATA[36u];
     uint8_t crc[2u];
-} param_layout_4_t;
-typedef char param_layout_4_szchk[(sizeof(param_layout_4_t) == (size_t)PARAM_LAYOUT_BLOCK_4_LEN) ? 1 : -1];
+} param_layout_5_t;
+typedef char param_layout_5_szchk[(sizeof(param_layout_5_t) == (size_t)PARAM_LAYOUT_BLOCK_5_LEN) ? 1 : -1];
 
 #endif /* DC_PARAM_LAYOUT_H */
 
@@ -93,19 +108,22 @@ typedef char param_layout_4_szchk[(sizeof(param_layout_4_t) == (size_t)PARAM_LAY
 #define DC_PARAM_LAYOUT_TABLE_DEFINED
 
 param_layout_0_t g_param_ram_0;
-param_layout_1_t g_param_ram_1;
 param_layout_2_t g_param_ram_2;
 param_layout_3_t g_param_ram_3;
-param_layout_4_t g_param_ram_4;
 
 const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;
 
 const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {
+    /* RAM_EE_BK */
     { PARAM_LAYOUT_BLOCK_0_EE_OFF, (uint8_t *)&g_param_ram_0, (uint16_t)sizeof(g_param_ram_0), 0x0Bu },
-    { PARAM_LAYOUT_BLOCK_1_EE_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x0Bu },
+    /* EE_BK */
+    { PARAM_LAYOUT_BLOCK_1_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_1_LEN, 0x0Au },
+    /* RAM_EE */
     { PARAM_LAYOUT_BLOCK_2_EE_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x03u },
     { PARAM_LAYOUT_BLOCK_3_EE_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x03u },
-    { PARAM_LAYOUT_BLOCK_4_EE_OFF, (uint8_t *)&g_param_ram_4, (uint16_t)sizeof(g_param_ram_4), 0x03u }
+    /* EE */
+    { PARAM_LAYOUT_BLOCK_4_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_4_LEN, 0x02u },
+    { PARAM_LAYOUT_BLOCK_5_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_5_LEN, 0x02u }
 };
 
 const uint16_t tParamBlockTableCount = (uint16_t)PARAM_LAYOUT_BLOCK_COUNT;
@@ -136,11 +154,11 @@ const ST_PARAM_TABLE tParamApiTable[] = {
     { PARAM_DAY_SWTIME   , 1u, 0u , 7u , _PARAM_ATTR_INT                , g_default_PARAM_DAY_SWTIME    },
     { PARAM_FEE_SWTIME   , 1u, 7u , 7u , _PARAM_ATTR_INT                , g_default_PARAM_FEE_SWTIME    },
     { PARAM_LADDER_SWTIME, 1u, 14u, 7u , _PARAM_ATTR_INT                , g_default_PARAM_LADDER_SWTIME },
-    { PARAM_UN           , 1u, 21u, 4u , _PARAM_ATTR_INT                , NULL                          },
-    { PARAM_IB           , 1u, 25u, 4u , _PARAM_ATTR_INT                , NULL                          },
-    { PARAM_IMAX         , 1u, 29u, 4u , _PARAM_ATTR_INT                , NULL                          },
-    { PARAM_HOLIDAY_DATA , 2u, 0u , 60u, _param_attr_PARAM_HOLIDAY_DATA , NULL                          },
-    { PARAM_CALIB_DATA   , 3u, 0u , 96u, g_param_attr_PARAM_CALIB_DATA  , NULL                           }
+    { PARAM_UN           , 2u, 0u , 4u , _PARAM_ATTR_INT                , NULL                          },
+    { PARAM_IB           , 2u, 4u , 4u , _PARAM_ATTR_INT                , NULL                          },
+    { PARAM_IMAX         , 2u, 8u , 4u , _PARAM_ATTR_INT                , NULL                          },
+    { PARAM_HOLIDAY_DATA , 3u, 0u , 60u, _param_attr_PARAM_HOLIDAY_DATA , NULL                          },
+    { PARAM_CALIB_DATA   , 4u, 0u , 96u, g_param_attr_PARAM_CALIB_DATA  , NULL                           }
 };
 
 const uint16_t tParamApiTableCount = (uint16_t)PARAM_LAYOUT_ITEM_COUNT;

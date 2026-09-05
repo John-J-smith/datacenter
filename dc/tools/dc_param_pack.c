@@ -643,6 +643,37 @@ static unsigned pack_param_blocks(pack_block_t blocks[PACK_MAX_BLOCKS],
     return nblocks;
 }
 
+static const char *store_label(uint8_t flags)
+{
+    if (((flags & FLAG_SRAM) != 0u) && ((flags & FLAG_EEPROM_BAK) != 0u)) {
+        return "RAM_EE_BK";
+    }
+    if ((flags & FLAG_SRAM) != 0u) {
+        return "RAM_EE";
+    }
+    if ((flags & FLAG_EEPROM_BAK) != 0u) {
+        return "EE_BK";
+    }
+    if ((flags & FLAG_EEPROM) != 0u) {
+        return "EE";
+    }
+    return "?";
+}
+
+static uint32_t pack_bak_span(const pack_block_t *blocks, unsigned nblocks)
+{
+    uint32_t span = 0u;
+    unsigned i;
+
+    for (i = 0u; i < nblocks; i++) {
+        if ((blocks[i].flags & FLAG_EEPROM_BAK) == 0u) {
+            continue;
+        }
+        span += (uint32_t)PARAM_BLOCK_SIZE;
+    }
+    return span;
+}
+
 static void dump_layout(unsigned nitems, unsigned nblocks,
                         const pack_block_t *blocks, const pack_place_t *place)
 {
@@ -650,6 +681,7 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
     unsigned i;
     uint32_t ee_off = 0u;
     uint32_t ee_total = 0u;
+    uint32_t bak_span;
 
     printf("=== param layout (host dump) ===\n");
     printf("=== blocks (%u) ===\n", nblocks);
@@ -657,18 +689,23 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
         unsigned f;
         unsigned compact;
         uint32_t ee_this;
+        unsigned has_sram;
 
         compact = (unsigned)blocks[bi].payload + (unsigned)PARAM_CRC_BYTES_BLOCK;
+        has_sram = ((blocks[bi].flags & FLAG_SRAM) != 0u) ? 1u : 0u;
         ee_this = PARAM_BLOCK_NULL_EE_OFF;
         if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
             ee_this = ee_off;
             ee_off += (uint32_t)PARAM_BLOCK_SIZE;
         }
 
-        printf("  block %u: flags=0x%02X payload=%u ram=%u ee_slot=%u ee_off=%u fields=%u\n",
+        printf("  block %u: store=%s flags=0x%02X payload=%u ram=%s compact=%u "
+               "ee_slot=%u ee_off=%u fields=%u\n",
                bi,
+               store_label(blocks[bi].flags),
                (unsigned)blocks[bi].flags,
                (unsigned)blocks[bi].payload,
+               has_sram ? "yes" : "NULL",
                compact,
                (unsigned)PARAM_BLOCK_SIZE,
                ee_this,
@@ -681,14 +718,22 @@ static void dump_layout(unsigned nitems, unsigned nblocks,
         }
     }
 
-    ee_total = ee_off;
+    bak_span = pack_bak_span(blocks, nblocks);
+    ee_total = PARAM_EE_TOTAL_ALIGN(ee_off);
     printf("=== EE map (relative to PARAM_EEPROM_BASE) ===\n");
-    printf("  total=%u\n", (unsigned)ee_total);
+    printf("  primary_raw=%u primary_aligned=%u bak_span=%u map_end=%u\n",
+           (unsigned)ee_off, (unsigned)ee_total, (unsigned)bak_span,
+           (unsigned)(ee_total + bak_span));
     ee_off = 0u;
     for (bi = 0u; bi < nblocks; bi++) {
         if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
-            printf("  block %u @+%u size=%u\n",
-                   bi, (unsigned)ee_off, (unsigned)PARAM_BLOCK_SIZE);
+            printf("  block %u primary @+%u size=%u store=%s\n",
+                   bi, (unsigned)ee_off, (unsigned)PARAM_BLOCK_SIZE,
+                   store_label(blocks[bi].flags));
+            if ((blocks[bi].flags & FLAG_EEPROM_BAK) != 0u) {
+                printf("           bak     @+%u size=%u\n",
+                       (unsigned)(ee_total + ee_off), (unsigned)PARAM_BLOCK_SIZE);
+            }
             ee_off += (uint32_t)PARAM_BLOCK_SIZE;
         }
     }
@@ -761,8 +806,8 @@ int main(int argc, char **argv)
     oputs("#define DC_PARAM_LAYOUT_H\n\n");
     oputs("#include <stddef.h>\n");
     oputs("#include <stdint.h>\n");
-    oputs("#include \"dc_storage_cfg.h\"\n");
-    oputs("#include \"dc_param_cfg.h\"\n\n");
+    oputs("#include \"dc_param.h\"\n");
+    oputs("#include \"dc_storage_cfg.h\"\n\n");
 
     emit_param_enum(nitems);
 
@@ -773,6 +818,7 @@ int main(int argc, char **argv)
         uint32_t ee_off = 0u;
         unsigned last_ee_blk = 0u;
         int has_last_ee = 0;
+        uint32_t bak_span;
 
         for (i = 0u; i < nblocks; i++) {
             if ((blocks[i].flags & FLAG_EEPROM) != 0u) {
@@ -793,12 +839,26 @@ int main(int argc, char **argv)
             }
         }
         if (has_last_ee != 0) {
-            oprintf("#define PARAM_EE_TOTAL (PARAM_LAYOUT_BLOCK_%u_EE_OFF + "
-                    "PARAM_BLOCK_SIZE)\n\n",
+            oprintf("#define PARAM_EE_TOTAL (PARAM_EE_TOTAL_ALIGN("
+                    "PARAM_LAYOUT_BLOCK_%u_EE_OFF + PARAM_BLOCK_SIZE))\n",
                     last_ee_blk);
         } else {
-            oputs("#define PARAM_EE_TOTAL (0u)\n\n");
+            oputs("#define PARAM_EE_TOTAL (0u)\n");
         }
+        bak_span = pack_bak_span(blocks, nblocks);
+        oprintf("#define PARAM_EE_BAK_BASE (PARAM_EE_TOTAL)\n");
+        oprintf("#define PARAM_EE_BAK_SPAN (%uu)\n", (unsigned)bak_span);
+        oprintf("#define PARAM_EE_MAP_END (PARAM_EE_BAK_BASE + PARAM_EE_BAK_SPAN)\n");
+        for (i = 0u; i < nblocks; i++) {
+            if ((blocks[i].flags & FLAG_EEPROM_BAK) != 0u) {
+                oprintf("#define PARAM_LAYOUT_BLOCK_%u_EE_BK_OFF "
+                        "(PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_%u_EE_OFF)\n",
+                        i, i);
+            }
+        }
+        oputs("\n");
+
+        oputs("/* tParamBlockTable: primary slots only. bak2 = PARAM_EE_BAK_BASE + uBlockEeOff */\n");
     }
 
     for (i = 0u; i < nblocks; i++) {
@@ -831,20 +891,40 @@ int main(int argc, char **argv)
     oputs("#ifndef DC_PARAM_LAYOUT_TABLE_DEFINED\n");
     oputs("#define DC_PARAM_LAYOUT_TABLE_DEFINED\n\n");
     for (i = 0u; i < nblocks; i++) {
-        oprintf("param_layout_%u_t g_param_ram_%u;\n", i, i);
+        if ((blocks[i].flags & FLAG_SRAM) != 0u) {
+            oprintf("param_layout_%u_t g_param_ram_%u;\n", i, i);
+        }
     }
     oputs("\n");
     oputs("const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;\n\n");
     oputs("const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {\n");
-    for (i = 0u; i < nblocks; i++) {
-        oprintf("    { PARAM_LAYOUT_BLOCK_%u_EE_OFF, "
-                "(uint8_t *)&g_param_ram_%u, (uint16_t)sizeof(g_param_ram_%u), "
-                "0x%02Xu }",
-                i, i, i, (unsigned)blocks[i].flags);
-        if ((i + 1u) < nblocks) {
-            oputs(",");
+    {
+        const char *prev_lab = 0;
+
+        for (i = 0u; i < nblocks; i++) {
+            const char *lab = store_label(blocks[i].flags);
+            unsigned has_sram = ((blocks[i].flags & FLAG_SRAM) != 0u) ? 1u : 0u;
+
+            if ((prev_lab == 0) || (strcmp(prev_lab, lab) != 0)) {
+                oprintf("    /* %s */\n", lab);
+                prev_lab = lab;
+            }
+            if (has_sram != 0u) {
+                oprintf("    { PARAM_LAYOUT_BLOCK_%u_EE_OFF, "
+                        "(uint8_t *)&g_param_ram_%u, (uint16_t)sizeof(g_param_ram_%u), "
+                        "0x%02Xu }",
+                        i, i, i, (unsigned)blocks[i].flags);
+            } else {
+                oprintf("    { PARAM_LAYOUT_BLOCK_%u_EE_OFF, "
+                        "NULL, (uint16_t)PARAM_LAYOUT_BLOCK_%u_LEN, "
+                        "0x%02Xu }",
+                        i, i, (unsigned)blocks[i].flags);
+            }
+            if ((i + 1u) < nblocks) {
+                oputs(",");
+            }
+            oputs("\n");
         }
-        oputs("\n");
     }
     oputs("};\n\n");
     oputs("const uint16_t tParamBlockTableCount = (uint16_t)PARAM_LAYOUT_BLOCK_COUNT;\n\n");

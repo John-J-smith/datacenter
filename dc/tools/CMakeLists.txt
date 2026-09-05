@@ -61,19 +61,19 @@ message(STATUS "DC_ALIAS_LAYOUT_H=${DC_ALIAS_LAYOUT_H}")
 # host 工具：读 cfg 里的 VAR_LIST_* / PARAM 表，输出 layout 头文件
 add_executable(dc_variable_pack dc_variable_pack.c)
 target_include_directories(dc_variable_pack PRIVATE
-    "${DC_ROOT}/include"   # dc_variable.h 等公共类型
+    "${DC_ROOT}/inc"   # dc_variable.h 等公共类型
     "${DC_PORT_DIR}"       # dc_variable_cfg.h（catalog；不含 storage）
 )
 
 add_executable(dc_param_pack dc_param_pack.c)
 target_include_directories(dc_param_pack PRIVATE
-    "${DC_ROOT}/include"
+    "${DC_ROOT}/inc"
     "${DC_PORT_DIR}"
 )
 
 add_executable(dc_alias_pack dc_alias_pack.c)
 target_include_directories(dc_alias_pack PRIVATE
-    "${DC_ROOT}/include"
+    "${DC_ROOT}/inc"
     "${DC_PORT_DIR}"
 )
 
@@ -82,7 +82,7 @@ add_custom_target(dc_variable_layout
     COMMAND $<TARGET_FILE:dc_variable_pack> "${DC_VARIABLE_LAYOUT_H}"
     DEPENDS dc_variable_pack
             "${DC_PORT_DIR}/dc_variable_cfg.h"
-            "${DC_ROOT}/include/dc_variable.h"
+            "${DC_ROOT}/inc/dc_variable.h"
             "${DC_TOOLS_DIR}/dc_variable_pack.c"
     BYPRODUCTS "${DC_VARIABLE_LAYOUT_H}"
     COMMENT "Generating dc_variable_layout.h -> ${DC_PORT_DIR}"
@@ -93,7 +93,7 @@ add_custom_target(dc_param_layout
     COMMAND $<TARGET_FILE:dc_param_pack> "${DC_PARAM_LAYOUT_H}"
     DEPENDS dc_param_pack
             "${DC_PORT_DIR}/dc_param_cfg.h"
-            "${DC_ROOT}/include/dc_param.h"
+            "${DC_ROOT}/inc/dc_param.h"
             "${DC_TOOLS_DIR}/dc_param_pack.c"
     BYPRODUCTS "${DC_PARAM_LAYOUT_H}"
     COMMENT "Generating dc_param_layout.h -> ${DC_PORT_DIR}"
@@ -106,7 +106,7 @@ add_custom_target(dc_alias_layout
     DEPENDS dc_alias_pack
             "${DC_PORT_DIR}/dc_variable_cfg.h"
             "${DC_PORT_DIR}/dc_param_cfg.h"
-            "${DC_ROOT}/include/dc_param.h"
+            "${DC_ROOT}/inc/dc_param.h"
             "${DC_TOOLS_DIR}/dc_alias_pack.c"
     BYPRODUCTS "${DC_ALIAS_LAYOUT_H}"
     COMMENT "Generating dc_alias_layout.h -> ${DC_PORT_DIR}"

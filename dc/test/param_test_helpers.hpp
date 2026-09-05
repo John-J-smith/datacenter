@@ -10,6 +10,7 @@ extern "C" {
 #include "datacenter.h"
 #include "dc_param_attr.h"
 #include "dc_test_param.h"
+#include "dc_test_storage.h"
 }
 
 #define PARAM_TEST_NAME_CASE(name, ...) \
@@ -144,6 +145,7 @@ class ParamTestBase : public ::testing::Test
 protected:
     void SetUp() override
     {
+        DcTestStorageReset();
         DcTestParamReset();
     }
 };

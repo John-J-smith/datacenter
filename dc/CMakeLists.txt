@@ -21,7 +21,7 @@ set(DC_ALIAS_LAYOUT_H ${DC_PORT_DIR}/dc_alias_layout.h)
 add_executable(dc_variable_pack tools/dc_variable_pack.c)
 set_property(TARGET dc_variable_pack PROPERTY C_STANDARD 99)
 target_include_directories(dc_variable_pack PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
     ${DC_PORT_DIR}
 )
 
@@ -29,7 +29,7 @@ add_custom_target(dc_variable_layout ALL
     COMMAND $<TARGET_FILE:dc_variable_pack> "${DC_VARIABLE_LAYOUT_H}"
     DEPENDS dc_variable_pack
             ${DC_PORT_DIR}/dc_variable_cfg.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_variable.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_variable.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_variable_pack.c
     BYPRODUCTS ${DC_VARIABLE_LAYOUT_H}
     COMMENT "Generating dc_variable_layout.h in port dir"
@@ -47,7 +47,7 @@ add_custom_target(dc_variable_dump
 add_executable(dc_param_pack tools/dc_param_pack.c)
 set_property(TARGET dc_param_pack PROPERTY C_STANDARD 99)
 target_include_directories(dc_param_pack PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
     ${DC_PORT_DIR}
 )
 
@@ -55,9 +55,9 @@ add_custom_target(dc_param_layout ALL
     COMMAND $<TARGET_FILE:dc_param_pack> "${DC_PARAM_LAYOUT_H}"
     DEPENDS dc_param_pack
             ${DC_PORT_DIR}/dc_param_cfg.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_attr.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param_cfg_macros.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_param.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_param_attr.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_param_cfg_macros.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_param_pack.c
     BYPRODUCTS ${DC_PARAM_LAYOUT_H}
     COMMENT "Generating dc_param_layout.h in port dir"
@@ -75,7 +75,7 @@ add_custom_target(dc_param_dump
 add_executable(dc_alias_pack tools/dc_alias_pack.c)
 set_property(TARGET dc_alias_pack PROPERTY C_STANDARD 99)
 target_include_directories(dc_alias_pack PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/inc
     ${DC_PORT_DIR}
 )
 
@@ -84,7 +84,7 @@ add_custom_target(dc_alias_layout ALL
     DEPENDS dc_alias_pack
             ${DC_PORT_DIR}/dc_variable_cfg.h
             ${DC_PORT_DIR}/dc_param_cfg.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/include/dc_param.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_param.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_alias_pack.c
     BYPRODUCTS ${DC_ALIAS_LAYOUT_H}
     COMMENT "Generating dc_alias_layout.h in port dir"
@@ -102,7 +102,7 @@ add_library(datacenter
     src/dc_record.c
 )
 target_include_directories(datacenter
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc
            ${DC_PORT_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src
 )

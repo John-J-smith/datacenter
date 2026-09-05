@@ -22,7 +22,15 @@ typedef enum {
 #include "dc_param_cfg_macros.h"
 #include "dc_param_cfg.h"
 
+#ifndef DC_PARAM_PACK
+PARAM_ITEM_LIST(_PARAM_ATTR_EMIT_)
+#endif
+
 #define PARAM_BLOCK_PAYLOAD_MAX (PARAM_BLOCK_SIZE - PARAM_CRC_BYTES_BLOCK)
+
+/* Round a byte length up to PARAM_EE_PAGE_SIZE. */
+#define PARAM_EE_TOTAL_ALIGN(len) \
+    ((((len) + (PARAM_EE_PAGE_SIZE) - 1u) / (PARAM_EE_PAGE_SIZE)) * (PARAM_EE_PAGE_SIZE))
 
 #define PARAM_BLOCK_NULL_EE_OFF  (0xFFFFFFFFu)
 

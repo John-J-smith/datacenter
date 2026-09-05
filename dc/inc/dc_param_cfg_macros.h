@@ -1,8 +1,6 @@
 #ifndef DC_PARAM_CFG_MACROS_H
 #define DC_PARAM_CFG_MACROS_H
 
-#include "dc_param.h"
-
 /* RAM EE双备份 */
 #define PARAM_STORE_RAM_EE_BK   (FLAG_SRAM | FLAG_EEPROM | FLAG_EEPROM_BAK)
 /* RAM EE单备份 */

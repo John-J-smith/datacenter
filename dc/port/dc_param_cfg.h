@@ -3,6 +3,7 @@
 #define DC_PARAM_CFG_H
 
 #include <stdint.h>
+#include "dc_param_cfg_macros.h"
 
 /* eeprom一页的大小，必须是 PARAM_BLOCK_SIZE 的整数倍 */
 #define PARAM_EE_PAGE_SIZE  (128u) 
@@ -13,12 +14,20 @@ typedef char _param_block_check[(PARAM_EE_PAGE_SIZE % PARAM_BLOCK_SIZE) ? -1 : 1
 
 /* Subclass IDs are assigned 0..N-1 by dc_param_pack (list order). */
 
-#define PARAM_ITEM_LIST(X) \
-    PARAM_INT(X, PARAM_SEASON_SWTIME, 7u, PARAM_STORE_FULL)
+#define PARAM_ITEM_LIST_RAM_EE_BK(X) \
+    PARAM_INT(X, PARAM_SEASON_SWTIME, 7u, PARAM_STORE_RAM_EE_BK)
 
-#if !defined(DC_PARAM_PACK)
-PARAM_ITEM_LIST(_PARAM_ATTR_EMIT_)
-#endif
+#define PARAM_ITEM_LIST_EE_BK(X)
+
+#define PARAM_ITEM_LIST_RAM_EE(X)
+
+#define PARAM_ITEM_LIST_EE(X)
+
+#define PARAM_ITEM_LIST(X) \
+    PARAM_ITEM_LIST_RAM_EE_BK(X) \
+    PARAM_ITEM_LIST_EE_BK(X) \
+    PARAM_ITEM_LIST_RAM_EE(X) \
+    PARAM_ITEM_LIST_EE(X)
 
 #if defined(DC_PARAM_PACK)
 

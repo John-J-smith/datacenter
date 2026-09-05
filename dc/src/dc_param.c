@@ -12,6 +12,7 @@
 #include <string.h>
 
 static uint8_t s_param_inited;
+static uint8_t s_param_scratch[PARAM_BLOCK_SIZE];
 
 /**
  * @brief 按块下标查找块表项
@@ -39,8 +40,11 @@ static uint16_t param_block_payload_len(const ST_PARAM_BLOCK_TABLE *block)
     return (uint16_t)(block->ucBlockLen - (uint16_t)PARAM_CRC_BYTES_BLOCK);
 }
 
+static uint8_t *param_block_working(const ST_PARAM_BLOCK_TABLE *block);
+static void param_block_apply_defaults(uint8_t blk);
+
 /**
- * @brief 校验块 RAM 尾部 CRC16 是否正确
+ * @brief 校验工作缓冲尾部 CRC16 是否正确
  *
  * @param block 块表项
  * @return 非 0 表示 CRC 与 payload 一致
@@ -50,15 +54,17 @@ static int param_block_crc_ok(const ST_PARAM_BLOCK_TABLE *block)
     uint16_t payload;
     uint16_t stored;
     uint16_t calc;
+    const uint8_t *ram;
 
-    if ((block == NULL) || (block->ram == NULL))
+    if ((block == NULL) || (block->ucBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
     {
         return 0;
     }
+    ram = param_block_working(block);
     payload = param_block_payload_len(block);
-    stored = (uint16_t)block->ram[payload] |
-             (uint16_t)((uint16_t)block->ram[payload + 1u] << 8);
-    calc = dc_crc16_ccitt(block->ram, payload);
+    stored = (uint16_t)ram[payload] |
+             (uint16_t)((uint16_t)ram[payload + 1u] << 8);
+    calc = dc_crc16_ccitt(ram, payload);
     return stored == calc;
 }
 
@@ -73,15 +79,126 @@ static void param_block_crc_fill(const ST_PARAM_BLOCK_TABLE *block)
     uint16_t crc;
     uint8_t *ram;
 
-    if ((block == NULL) || (block->ram == NULL))
+    if ((block == NULL) || (block->ucBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
     {
         return;
     }
-    ram = block->ram;
+    ram = param_block_working(block);
     payload = param_block_payload_len(block);
     crc = dc_crc16_ccitt(ram, payload);
     ram[payload] = (uint8_t)(crc & 0xFFu);
     ram[payload + 1u] = (uint8_t)(crc >> 8);
+}
+
+/**
+ * @brief 工作缓冲：有 SRAM 用块 RAM，否则用 scratch
+ */
+static uint8_t *param_block_working(const ST_PARAM_BLOCK_TABLE *block)
+{
+    if ((block == NULL) || (block->ram == NULL))
+    {
+        return s_param_scratch;
+    }
+    return block->ram;
+}
+
+/**
+ * @brief 主槽绝对地址
+ */
+static uint32_t param_block_ee_addr(const ST_PARAM_BLOCK_TABLE *block)
+{
+    return PARAM_EEPROM_ORIGIN + block->uBlockEeOff;
+}
+
+/**
+ * @brief 备份区 2 绝对地址（不入 table：PARAM_EE_BAK_BASE + 主槽相对偏移）
+ */
+static uint32_t param_block_ee_bak_addr(const ST_PARAM_BLOCK_TABLE *block)
+{
+    return PARAM_EEPROM_ORIGIN + (uint32_t)PARAM_EE_BAK_BASE + block->uBlockEeOff;
+}
+
+/**
+ * @brief 从指定 EE 槽读入 working 并校验 CRC
+ *
+ * @param bak 非 0 读备份区 2
+ */
+static int param_block_try_restore_ee(const ST_PARAM_BLOCK_TABLE *block, int bak)
+{
+    uint32_t addr;
+    int16_t n;
+    uint8_t *ram;
+
+    if ((block == NULL) || (block->ucBlockLen == 0u))
+    {
+        return 0;
+    }
+    if ((block->ucFlag & FLAG_EEPROM) == 0u)
+    {
+        return 0;
+    }
+    if (block->uBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
+    {
+        return 0;
+    }
+    if ((bak != 0) && ((block->ucFlag & FLAG_EEPROM_BAK) == 0u))
+    {
+        return 0;
+    }
+    ram = param_block_working(block);
+    addr = (bak != 0) ? param_block_ee_bak_addr(block) : param_block_ee_addr(block);
+    n = DC_STORAGE_READ(addr, ram, block->ucBlockLen);
+    if (n != (int16_t)block->ucBlockLen)
+    {
+        return 0;
+    }
+    return param_block_crc_ok(block);
+}
+
+/**
+ * @brief 将 working 写入主槽；双备份时再写备份区 2
+ */
+static void param_block_commit_ee(const ST_PARAM_BLOCK_TABLE *block)
+{
+    uint8_t *src;
+
+    if ((block == NULL) || ((block->ucFlag & FLAG_EEPROM) == 0u))
+    {
+        return;
+    }
+    if (block->uBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
+    {
+        return;
+    }
+    src = param_block_working(block);
+    (void)DC_STORAGE_WRITE(param_block_ee_addr(block), src, block->ucBlockLen);
+    if ((block->ucFlag & FLAG_EEPROM_BAK) != 0u)
+    {
+        (void)DC_STORAGE_WRITE(param_block_ee_bak_addr(block), src, block->ucBlockLen);
+    }
+}
+
+/**
+ * @brief EE-only 块：主槽 → 备份区 2 → pDefault / 0xFF（不写 EE）
+ */
+static void param_block_load_ee_only(const ST_PARAM_BLOCK_TABLE *block)
+{
+    uint8_t blk;
+
+    if ((block == NULL) || (block->ram != NULL))
+    {
+        return;
+    }
+    if (param_block_try_restore_ee(block, 0) != 0)
+    {
+        return;
+    }
+    if (param_block_try_restore_ee(block, 1) != 0)
+    {
+        return;
+    }
+    blk = (uint8_t)(block - &tParamBlockTable[0]);
+    param_block_apply_defaults(blk);
 }
 
 /**
@@ -95,14 +212,16 @@ static void param_block_apply_defaults(uint8_t blk)
     const ST_PARAM_BLOCK_TABLE *block;
     uint16_t payload;
     uint16_t i;
+    uint8_t *ram;
 
     block = param_find_block(blk);
-    if ((block == NULL) || (block->ram == NULL))
+    if ((block == NULL) || (block->ucBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
     {
         return;
     }
     payload = param_block_payload_len(block);
-    memset(block->ram, 0xFF, payload);
+    ram = param_block_working(block);
+    memset(ram, 0xFF, payload);
     for (i = 0u; i < tParamApiTableCount; i++)
     {
         const ST_PARAM_TABLE *item;
@@ -112,48 +231,16 @@ static void param_block_apply_defaults(uint8_t blk)
         {
             continue;
         }
-        memcpy(block->ram + item->uParamOffset, item->pDefault, item->ucParamLen);
+        memcpy(ram + item->uParamOffset, item->pDefault, item->ucParamLen);
     }
     param_block_crc_fill(block);
 }
 
 /**
- * @brief 从 EE 读回整块 RAM 并校验 CRC
- *
- * @param block 块表项（须带 FLAG_EEPROM 且 uBlockEeOff 有效）
- * @return 非 0 表示读回且 CRC 正确
- */
-static int param_block_try_restore_ee(const ST_PARAM_BLOCK_TABLE *block)
-{
-    uint32_t addr;
-    int16_t n;
-
-    if ((block == NULL) || (block->ram == NULL))
-    {
-        return 0;
-    }
-    if ((block->ucFlag & FLAG_EEPROM) == 0u)
-    {
-        return 0;
-    }
-    if (block->uBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
-    {
-        return 0;
-    }
-    addr = PARAM_EEPROM_ORIGIN + block->uBlockEeOff;
-    n = DC_STORAGE_READ(addr, block->ram, block->ucBlockLen);
-    if (n != (int16_t)block->ucBlockLen)
-    {
-        return 0;
-    }
-    return param_block_crc_ok(block);
-}
-
-/**
- * @brief 参变量块上电初始化（SRAM noinit：先校验 ram 块 CRC，失败才恢复）
- *   CRC 正确 → 保留 RAM 内容
- *   CRC 错误且有 EE → 从 EE 读回并再验 CRC
- *   仍失败     → 按 pDefault 填默认（无默认项为 0xFF）并写 CRC
+ * @brief 参变量块上电初始化
+ *   FLAG_SRAM 且 RAM CRC 正确 → 保留 RAM
+ *   否则主槽 EE → 备份区 2（FLAG_EEPROM_BAK）→ pDefault / 0xFF
+ *   不写 EEPROM；仅 dc_write 路径落盘
  */
 static void param_ensure_init(void)
 {
@@ -168,11 +255,16 @@ static void param_ensure_init(void)
         const ST_PARAM_BLOCK_TABLE *block;
 
         block = &tParamBlockTable[i];
-        if (param_block_crc_ok(block))
+        if (((block->ucFlag & FLAG_SRAM) != 0u) && (block->ram != NULL) &&
+            (param_block_crc_ok(block) != 0))
         {
             continue;
         }
-        if (param_block_try_restore_ee(block))
+        if (param_block_try_restore_ee(block, 0) != 0)
+        {
+            continue;
+        }
+        if (param_block_try_restore_ee(block, 1) != 0)
         {
             continue;
         }
@@ -224,6 +316,8 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *item,
     uint8_t per_page;
     uint16_t i;
     uint16_t copied;
+    uint8_t *ram;
+    uint8_t last_page;
 
     attr = item->pAttr;
     k = attr[3];
@@ -238,6 +332,8 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *item,
     }
 
     copied = 0u;
+    last_page = 0xFFu;
+    ram = NULL;
     for (i = 0u; i < usLen; i++)
     {
         uint16_t rec;
@@ -250,33 +346,42 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *item,
         page = (uint8_t)(rec / (uint16_t)per_page);
         slot = (uint8_t)(rec % (uint16_t)per_page);
         block = param_find_block((uint8_t)(item->eBlockName + page));
-        if ((block == NULL) || (block->ram == NULL))
+        if (block == NULL)
         {
             return DC_RET_ALIAS_ERR;
+        }
+        if (page != last_page)
+        {
+            if ((writing != 0) && (last_page != 0xFFu))
+            {
+                const ST_PARAM_BLOCK_TABLE *prev;
+
+                prev = param_find_block((uint8_t)(item->eBlockName + last_page));
+                param_block_crc_fill(prev);
+                param_block_commit_ee(prev);
+            }
+            param_block_load_ee_only(block);
+            ram = param_block_working(block);
+            last_page = page;
         }
         off = (uint16_t)slot * (uint16_t)k;
         if (writing != 0)
         {
-            memcpy(block->ram + off, ro + copied, k);
+            memcpy(ram + off, ro + copied, k);
         }
         else
         {
-            memcpy(rw + copied, block->ram + off, k);
+            memcpy(rw + copied, ram + off, k);
         }
         copied = (uint16_t)(copied + k);
     }
-    if (writing != 0)
+    if ((writing != 0) && (last_page != 0xFFu))
     {
-        uint8_t start_page;
-        uint8_t end_page;
-        uint8_t page;
+        const ST_PARAM_BLOCK_TABLE *block;
 
-        start_page = (uint8_t)(index / per_page);
-        end_page = (uint8_t)(((uint16_t)index + usLen - 1u) / (uint16_t)per_page);
-        for (page = start_page; page <= end_page; page++)
-        {
-            param_block_crc_fill(param_find_block((uint8_t)(item->eBlockName + page)));
-        }
+        block = param_find_block((uint8_t)(item->eBlockName + last_page));
+        param_block_crc_fill(block);
+        param_block_commit_ee(block);
     }
     return (int16_t)copied;
 }
@@ -304,6 +409,7 @@ static int16_t param_xfer_struct(const ST_PARAM_TABLE *item,
     uint16_t copied;
     uint16_t i;
     uint8_t idx;
+    uint8_t *ram;
 
     copied = 0u;
     idx = index;
@@ -318,13 +424,14 @@ static int16_t param_xfer_struct(const ST_PARAM_TABLE *item,
             return DC_RET_PARAM_ERR;
         }
         off = (uint16_t)(item->uParamOffset + param_attr_struct_field_off(item, idx));
+        ram = param_block_working(block);
         if (writing != 0)
         {
-            memcpy(block->ram + off, ro + copied, eb);
+            memcpy(ram + off, ro + copied, eb);
         }
         else
         {
-            memcpy(rw + copied, block->ram + off, eb);
+            memcpy(rw + copied, ram + off, eb);
         }
         copied = (uint16_t)(copied + eb);
         idx = (uint8_t)(idx + 1u);
@@ -332,6 +439,7 @@ static int16_t param_xfer_struct(const ST_PARAM_TABLE *item,
     if (writing != 0)
     {
         param_block_crc_fill(block);
+        param_block_commit_ee(block);
     }
     return (int16_t)copied;
 }
@@ -362,6 +470,7 @@ static int16_t param_xfer(uint32_t alias,
     uint16_t nbytes;
     uint16_t off;
     uint8_t elem_bytes;
+    uint8_t *ram;
 
     param_ensure_init();
 
@@ -377,10 +486,12 @@ static int16_t param_xfer(uint32_t alias,
     }
 
     block = param_find_block(item->eBlockName);
-    if ((block == NULL) || (block->ram == NULL))
+    if (block == NULL)
     {
         return DC_RET_ALIAS_ERR;
     }
+    param_block_load_ee_only(block);
+    ram = param_block_working(block);
 
     dtype = param_attr_type(item);
     index_max = param_attr_index_count(item);
@@ -429,12 +540,13 @@ static int16_t param_xfer(uint32_t alias,
 
     if (writing != 0)
     {
-        memcpy(block->ram + off, ro, nbytes);
+        memcpy(ram + off, ro, nbytes);
         param_block_crc_fill(block);
+        param_block_commit_ee(block);
     }
     else
     {
-        memcpy(rw, block->ram + off, nbytes);
+        memcpy(rw, ram + off, nbytes);
     }
     return (int16_t)nbytes;
 }

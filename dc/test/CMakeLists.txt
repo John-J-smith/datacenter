@@ -13,7 +13,7 @@ enable_testing()
 add_library(dc_test_port STATIC port/dc_storage_sim.c)
 target_include_directories(dc_test_port PUBLIC
     ${DC_PORT_DIR}
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/inc
 )
 
 target_include_directories(datacenter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -27,6 +27,7 @@ add_executable(dc_tests
     param_rw_test.cpp
     param_default_test.cpp
     param_layout_test.cpp
+    param_storage_test.cpp
 )
 target_include_directories(dc_tests PRIVATE ${DC_PORT_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(dc_tests PRIVATE DC_TEST)
