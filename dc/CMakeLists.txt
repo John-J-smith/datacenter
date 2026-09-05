@@ -15,6 +15,7 @@ set(DC_PORT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test/port" CACHE PATH
     "Port cfg headers and generated layout (storage cfg, variable cfg, *_layout.h)")
 
 set(DC_VARIABLE_LAYOUT_H ${DC_PORT_DIR}/dc_variable_layout.h)
+set(DC_LAYOUT_MD ${DC_PORT_DIR}/dc_layout.md)
 set(DC_PARAM_LAYOUT_H ${DC_PORT_DIR}/dc_param_layout.h)
 set(DC_ALIAS_LAYOUT_H ${DC_PORT_DIR}/dc_alias_layout.h)
 
@@ -54,12 +55,13 @@ target_include_directories(dc_param_pack PRIVATE
 add_custom_target(dc_param_layout ALL
     COMMAND $<TARGET_FILE:dc_param_pack> "${DC_PARAM_LAYOUT_H}"
     DEPENDS dc_param_pack
+            dc_variable_layout
             ${DC_PORT_DIR}/dc_param_cfg.h
             ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_param.h
             ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_param_attr.h
             ${CMAKE_CURRENT_SOURCE_DIR}/inc/dc_param_cfg_macros.h
             ${CMAKE_CURRENT_SOURCE_DIR}/tools/dc_param_pack.c
-    BYPRODUCTS ${DC_PARAM_LAYOUT_H}
+    BYPRODUCTS ${DC_PARAM_LAYOUT_H} ${DC_LAYOUT_MD}
     COMMENT "Generating dc_param_layout.h in port dir"
     VERBATIM
 )

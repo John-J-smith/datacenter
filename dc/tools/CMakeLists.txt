@@ -9,6 +9,7 @@ cmake_minimum_required(VERSION 3.16)
 #
 # DC_PORT_DIR 须含 dc_variable_cfg.h、dc_param_cfg.h；
 # 输出: DC_PORT_DIR/dc_variable_layout.h、dc_param_layout.h、dc_alias_layout.h
+#       以及合并文档 dc_layout.md（各 pack upsert 自己的段）
 
 project(dc_layout_gen C)
 
@@ -49,6 +50,7 @@ endif()
 
 # 生成物路径（写回 port，供固件 include）
 set(DC_VARIABLE_LAYOUT_H "${DC_PORT_DIR}/dc_variable_layout.h")
+set(DC_LAYOUT_MD "${DC_PORT_DIR}/dc_layout.md")
 set(DC_PARAM_LAYOUT_H "${DC_PORT_DIR}/dc_param_layout.h")
 set(DC_ALIAS_LAYOUT_H "${DC_PORT_DIR}/dc_alias_layout.h")
 
@@ -92,10 +94,11 @@ add_custom_target(dc_variable_layout
 add_custom_target(dc_param_layout
     COMMAND $<TARGET_FILE:dc_param_pack> "${DC_PARAM_LAYOUT_H}"
     DEPENDS dc_param_pack
+            dc_variable_layout
             "${DC_PORT_DIR}/dc_param_cfg.h"
             "${DC_ROOT}/inc/dc_param.h"
             "${DC_TOOLS_DIR}/dc_param_pack.c"
-    BYPRODUCTS "${DC_PARAM_LAYOUT_H}"
+    BYPRODUCTS "${DC_PARAM_LAYOUT_H}" "${DC_LAYOUT_MD}"
     COMMENT "Generating dc_param_layout.h -> ${DC_PORT_DIR}"
     VERBATIM
 )

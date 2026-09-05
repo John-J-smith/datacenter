@@ -1,6 +1,7 @@
 #define DC_PARAM_PACK
 #include "dc_param.h"
 #include "dc_param_attr.h"
+#include "dc_storage_cfg.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -515,6 +516,33 @@ static int file_same(const char *path, const char *data, size_t len)
     return same;
 }
 
+static void replace_ext(const char *src, const char *ext, char *dst, size_t cap)
+{
+    const char *slash;
+    const char *dot;
+    int n;
+
+    slash = strrchr(src, '/');
+#ifdef _WIN32
+    {
+        const char *bslash = strrchr(src, '\\');
+
+        if ((bslash != 0) && ((slash == 0) || (bslash > slash))) {
+            slash = bslash;
+        }
+    }
+#endif
+    dot = strrchr(src, '.');
+    if ((dot == 0) || ((slash != 0) && (dot < slash))) {
+        n = snprintf(dst, cap, "%s%s", src, ext);
+    } else {
+        n = snprintf(dst, cap, "%.*s%s", (int)(dot - src), src, ext);
+    }
+    if ((n < 0) || ((size_t)n >= cap)) {
+        die("path too long");
+    }
+}
+
 static const char *dtype_name(uint8_t dtype)
 {
     switch ((E_PARAM_STORAGE_DATATYPE)dtype) {
@@ -643,6 +671,332 @@ static unsigned pack_param_blocks(pack_block_t blocks[PACK_MAX_BLOCKS],
     return nblocks;
 }
 
+
+static void fmt_off(char *buf, size_t cap, uint32_t off)
+{
+    int n;
+
+    n = snprintf(buf, cap, "0x%X(%u)", (unsigned)off, (unsigned)off);
+    if ((n < 0) || ((size_t)n >= cap)) {
+        die("fmt_off overflow");
+    }
+}
+
+static void combined_md_path(const char *h_path, char *dst, size_t cap)
+{
+    const char *slash;
+    size_t dir_len;
+    int n;
+
+    slash = strrchr(h_path, '/');
+#ifdef _WIN32
+    {
+        const char *bslash = strrchr(h_path, '\\');
+
+        if ((bslash != 0) && ((slash == 0) || (bslash > slash))) {
+            slash = bslash;
+        }
+    }
+#endif
+    if (slash == 0) {
+        n = snprintf(dst, cap, "dc_layout.md");
+        if ((n < 0) || ((size_t)n >= cap)) {
+            die("md path too long");
+        }
+        return;
+    }
+    dir_len = (size_t)(slash - h_path + 1);
+    if (dir_len + 12u >= cap) {
+        die("md path too long");
+    }
+    memcpy(dst, h_path, dir_len);
+    memcpy(dst + dir_len, "dc_layout.md", 13u);
+}
+
+static void upsert_md_section(const char *md_path, const char *begin, const char *end,
+                              const char *body)
+{
+    FILE *fp;
+    char *old = 0;
+    size_t old_len = 0u;
+    char *out;
+    size_t out_cap;
+    size_t out_len = 0u;
+    const char *post;
+    size_t begin_len;
+    size_t end_len;
+    size_t body_len;
+    char *bpos;
+    char *epos;
+
+    begin_len = strlen(begin);
+    end_len = strlen(end);
+    body_len = strlen(body);
+
+    fp = fopen(md_path, "rb");
+    if (fp != 0) {
+        if (fseek(fp, 0, SEEK_END) == 0) {
+            long sz = ftell(fp);
+
+            if (sz > 0) {
+                old_len = (size_t)sz;
+                old = (char *)malloc(old_len + 1u);
+                if (old == 0) {
+                    fclose(fp);
+                    die("out of memory");
+                }
+                if (fseek(fp, 0, SEEK_SET) != 0) {
+                    free(old);
+                    fclose(fp);
+                    die("seek failed: %s", md_path);
+                }
+                if (fread(old, 1, old_len, fp) != old_len) {
+                    free(old);
+                    fclose(fp);
+                    die("read failed: %s", md_path);
+                }
+                old[old_len] = '\0';
+            }
+        }
+        fclose(fp);
+    }
+
+    out_cap = old_len + body_len + begin_len + end_len + 64u;
+    out = (char *)malloc(out_cap);
+    if (out == 0) {
+        free(old);
+        die("out of memory");
+    }
+
+    bpos = (old != 0) ? strstr(old, begin) : 0;
+    epos = (bpos != 0) ? strstr(bpos, end) : 0;
+    if ((bpos != 0) && (epos != 0)) {
+        post = epos + end_len;
+        while ((*post == '\r') || (*post == '\n')) {
+            post++;
+        }
+        memcpy(out, old, (size_t)(bpos - old));
+        out_len = (size_t)(bpos - old);
+    } else if (old != 0) {
+        memcpy(out, old, old_len);
+        out_len = old_len;
+        if ((out_len > 0u) && (out[out_len - 1u] != '\n')) {
+            out[out_len++] = '\n';
+        }
+        if (out_len > 0u) {
+            out[out_len++] = '\n';
+        }
+        post = 0;
+    } else {
+        out_len = 0u;
+        post = 0;
+    }
+
+    if (out_len + begin_len + 1u + body_len + end_len + 2u >= out_cap) {
+        free(old);
+        free(out);
+        die("md buffer overflow");
+    }
+    memcpy(out + out_len, begin, begin_len);
+    out_len += begin_len;
+    out[out_len++] = '\n';
+    memcpy(out + out_len, body, body_len);
+    out_len += body_len;
+    if ((body_len == 0u) || (body[body_len - 1u] != '\n')) {
+        out[out_len++] = '\n';
+    }
+    memcpy(out + out_len, end, end_len);
+    out_len += end_len;
+    out[out_len++] = '\n';
+
+    if ((bpos != 0) && (epos != 0) && (old != 0)) {
+        size_t post_len = (size_t)((old + old_len) - post);
+
+        if (out_len + post_len >= out_cap) {
+            free(old);
+            free(out);
+            die("md buffer overflow");
+        }
+        if (post_len > 0u) {
+            memcpy(out + out_len, post, post_len);
+            out_len += post_len;
+        }
+    }
+
+    free(old);
+    fp = fopen(md_path, "wb");
+    if (fp == 0) {
+        free(out);
+        die("cannot write %s", md_path);
+    }
+    if (fwrite(out, 1, out_len, fp) != out_len) {
+        fclose(fp);
+        free(out);
+        die("write failed: %s", md_path);
+    }
+    fclose(fp);
+    free(out);
+}
+
+static char *read_section_file(const char *path, size_t *out_len)
+{
+    FILE *fp;
+    char *body;
+    long sz;
+
+    fp = fopen(path, "rb");
+    if (fp == 0) {
+        die("cannot read %s", path);
+    }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        die("seek failed: %s", path);
+    }
+    sz = ftell(fp);
+    if (sz < 0) {
+        fclose(fp);
+        die("ftell failed: %s", path);
+    }
+    body = (char *)malloc((size_t)sz + 1u);
+    if (body == 0) {
+        fclose(fp);
+        die("out of memory");
+    }
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        free(body);
+        fclose(fp);
+        die("seek failed: %s", path);
+    }
+    if (fread(body, 1, (size_t)sz, fp) != (size_t)sz) {
+        free(body);
+        fclose(fp);
+        die("read failed: %s", path);
+    }
+    body[sz] = '\0';
+    fclose(fp);
+    *out_len = (size_t)sz;
+    return body;
+}
+
+static char *dup_marked_section(const char *src, const char *begin, const char *end,
+                                size_t *out_len)
+{
+    const char *b;
+    const char *e;
+    size_t n;
+    char *d;
+
+    *out_len = 0u;
+    if (src == 0) {
+        return 0;
+    }
+    b = strstr(src, begin);
+    if (b == 0) {
+        return 0;
+    }
+    e = strstr(b, end);
+    if (e == 0) {
+        return 0;
+    }
+    e += strlen(end);
+    n = (size_t)(e - b);
+    d = (char *)malloc(n + 1u);
+    if (d == 0) {
+        die("out of memory");
+    }
+    memcpy(d, b, n);
+    d[n] = '\0';
+    *out_len = n;
+    return d;
+}
+
+static void append_md(char **dst, size_t *len, size_t *cap, const char *s, size_t n)
+{
+    if ((s == 0) || (n == 0u)) {
+        return;
+    }
+    if (*len + n + 4u >= *cap) {
+        *cap = (*len + n + 256u) * 2u;
+        *dst = (char *)realloc(*dst, *cap);
+        if (*dst == 0) {
+            die("out of memory");
+        }
+    }
+    memcpy(*dst + *len, s, n);
+    *len += n;
+}
+
+static void reorder_layout_md(const char *md_path)
+{
+    char *old;
+    size_t old_len;
+    char *sv;
+    char *sp;
+    char *vv;
+    char *pp;
+    size_t lsv;
+    size_t lsp;
+    size_t lvv;
+    size_t lpp;
+    char *out;
+    size_t out_len;
+    size_t cap;
+    FILE *fp;
+    const char *hdr = "# 布局总览\n\n";
+
+    old = read_section_file(md_path, &old_len);
+    sv = dup_marked_section(old, "<!-- BEGIN:SUMMARY:VARIABLE -->",
+                            "<!-- END:SUMMARY:VARIABLE -->", &lsv);
+    sp = dup_marked_section(old, "<!-- BEGIN:SUMMARY:PARAM -->",
+                            "<!-- END:SUMMARY:PARAM -->", &lsp);
+    vv = dup_marked_section(old, "<!-- BEGIN:VARIABLE -->",
+                            "<!-- END:VARIABLE -->", &lvv);
+    pp = dup_marked_section(old, "<!-- BEGIN:PARAM -->",
+                            "<!-- END:PARAM -->", &lpp);
+    free(old);
+
+    cap = strlen(hdr) + lsv + lsp + lvv + lpp + 32u;
+    out = (char *)malloc(cap);
+    if (out == 0) {
+        die("out of memory");
+    }
+    out_len = 0u;
+    append_md(&out, &out_len, &cap, hdr, strlen(hdr));
+    if (sv != 0) {
+        append_md(&out, &out_len, &cap, sv, lsv);
+        append_md(&out, &out_len, &cap, "\n", 1u);
+    }
+    if (sp != 0) {
+        append_md(&out, &out_len, &cap, sp, lsp);
+        append_md(&out, &out_len, &cap, "\n", 1u);
+    }
+    if (vv != 0) {
+        append_md(&out, &out_len, &cap, vv, lvv);
+        append_md(&out, &out_len, &cap, "\n", 1u);
+    }
+    if (pp != 0) {
+        append_md(&out, &out_len, &cap, pp, lpp);
+        append_md(&out, &out_len, &cap, "\n", 1u);
+    }
+    free(sv);
+    free(sp);
+    free(vv);
+    free(pp);
+
+    fp = fopen(md_path, "wb");
+    if (fp == 0) {
+        free(out);
+        die("cannot write %s", md_path);
+    }
+    if (fwrite(out, 1, out_len, fp) != out_len) {
+        fclose(fp);
+        free(out);
+        die("write failed: %s", md_path);
+    }
+    fclose(fp);
+    free(out);
+}
+
 static const char *store_label(uint8_t flags)
 {
     if (((flags & FLAG_SRAM) != 0u) && ((flags & FLAG_EEPROM_BAK) != 0u)) {
@@ -674,92 +1028,367 @@ static uint32_t pack_bak_span(const pack_block_t *blocks, unsigned nblocks)
     return span;
 }
 
-static void dump_layout(unsigned nitems, unsigned nblocks,
+static uint32_t pack_primary_ee_offs(const pack_block_t *blocks, unsigned nblocks,
+                                    uint32_t *blk_ee)
+{
+    uint32_t ee_off = 0u;
+    unsigned i;
+
+    for (i = 0u; i < nblocks; i++) {
+        if ((blocks[i].flags & FLAG_EEPROM) != 0u) {
+            blk_ee[i] = ee_off;
+            ee_off += (uint32_t)PARAM_BLOCK_SIZE;
+        } else {
+            blk_ee[i] = PARAM_BLOCK_NULL_EE_OFF;
+        }
+    }
+    return ee_off;
+}
+
+static int store_kind(uint8_t flags)
+{
+    if (((flags & FLAG_SRAM) != 0u) && ((flags & FLAG_EEPROM_BAK) != 0u)) {
+        return 0;
+    }
+    if (((flags & FLAG_SRAM) != 0u) && ((flags & FLAG_EEPROM) != 0u)) {
+        return 2;
+    }
+    if ((flags & FLAG_EEPROM_BAK) != 0u) {
+        return 1;
+    }
+    if ((flags & FLAG_EEPROM) != 0u) {
+        return 3;
+    }
+    return -1;
+}
+
+static void dump_off_cell(FILE *out, int has, uint32_t off)
+{
+    char s[32];
+
+    if (!has) {
+        fputs(" - |", out);
+        return;
+    }
+    fmt_off(s, sizeof s, off);
+    fprintf(out, " %s |", s);
+}
+
+static void dump_param_ee_row(FILE *out, const char *name, unsigned ram,
+                              int has_pri, uint32_t pri_lo, uint32_t pri_hi,
+                              int has_bak, uint32_t bak_lo, uint32_t bak_hi,
+                              uint32_t ee_bytes)
+{
+    fprintf(out, "| %s | %u |", name, ram);
+    dump_off_cell(out, has_pri, pri_lo);
+    dump_off_cell(out, has_pri, pri_hi);
+    dump_off_cell(out, has_bak, bak_lo);
+    dump_off_cell(out, has_bak, bak_hi);
+    fprintf(out, " %u |\n", (unsigned)ee_bytes);
+}
+
+static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks)
+{
+    static const char *names[4] = { "RAM_EE_BK", "EE_BK", "RAM_EE", "EE" };
+    unsigned ram[4];
+    uint32_t ee_bytes[4];
+    uint32_t pri_lo[4];
+    uint32_t pri_hi[4];
+    uint32_t bak_lo[4];
+    uint32_t bak_hi[4];
+    int has_pri[4];
+    int has_bak[4];
+    uint32_t blk_ee[PACK_MAX_BLOCKS];
+    uint32_t primary_raw;
+    uint32_t ee_total;
+    uint32_t bak_span;
+    unsigned ram_total;
+    uint32_t ee_bytes_total;
+    int tot_pri;
+    int tot_bak;
+    uint32_t tot_pri_lo;
+    uint32_t tot_pri_hi;
+    uint32_t tot_bak_lo;
+    uint32_t tot_bak_hi;
+    unsigned i;
+    int k;
+
+    for (k = 0; k < 4; k++) {
+        ram[k] = 0u;
+        ee_bytes[k] = 0u;
+        pri_lo[k] = 0u;
+        pri_hi[k] = 0u;
+        bak_lo[k] = 0u;
+        bak_hi[k] = 0u;
+        has_pri[k] = 0;
+        has_bak[k] = 0;
+    }
+
+    primary_raw = pack_primary_ee_offs(blocks, nblocks, blk_ee);
+    ee_total = PARAM_EE_TOTAL_ALIGN(primary_raw);
+    bak_span = pack_bak_span(blocks, nblocks);
+
+    for (i = 0u; i < nblocks; i++) {
+        unsigned compact;
+        uint32_t start;
+        uint32_t last;
+
+        k = store_kind(blocks[i].flags);
+        if (k < 0) {
+            continue;
+        }
+        compact = (unsigned)blocks[i].payload + (unsigned)PARAM_CRC_BYTES_BLOCK;
+        if ((blocks[i].flags & FLAG_SRAM) != 0u) {
+            ram[k] += compact;
+        }
+        if (blk_ee[i] == PARAM_BLOCK_NULL_EE_OFF) {
+            continue;
+        }
+        start = blk_ee[i];
+        last = start + (uint32_t)PARAM_BLOCK_SIZE - 1u;
+        if (!has_pri[k] || (start < pri_lo[k])) {
+            pri_lo[k] = start;
+        }
+        if (!has_pri[k] || (last > pri_hi[k])) {
+            pri_hi[k] = last;
+        }
+        has_pri[k] = 1;
+        ee_bytes[k] += (uint32_t)PARAM_BLOCK_SIZE;
+        if ((blocks[i].flags & FLAG_EEPROM_BAK) != 0u) {
+            start = ee_total + blk_ee[i];
+            last = start + (uint32_t)PARAM_BLOCK_SIZE - 1u;
+            if (!has_bak[k] || (start < bak_lo[k])) {
+                bak_lo[k] = start;
+            }
+            if (!has_bak[k] || (last > bak_hi[k])) {
+                bak_hi[k] = last;
+            }
+            has_bak[k] = 1;
+            ee_bytes[k] += (uint32_t)PARAM_BLOCK_SIZE;
+        }
+    }
+
+    ram_total = 0u;
+    ee_bytes_total = 0u;
+    tot_pri = 0;
+    tot_bak = 0;
+    tot_pri_lo = 0u;
+    tot_pri_hi = 0u;
+    tot_bak_lo = 0u;
+    tot_bak_hi = 0u;
+    for (k = 0; k < 4; k++) {
+        ram_total += ram[k];
+        ee_bytes_total += ee_bytes[k];
+        if (has_pri[k]) {
+            if (!tot_pri || (pri_lo[k] < tot_pri_lo)) {
+                tot_pri_lo = pri_lo[k];
+            }
+            if (!tot_pri || (pri_hi[k] > tot_pri_hi)) {
+                tot_pri_hi = pri_hi[k];
+            }
+            tot_pri = 1;
+        }
+        if (has_bak[k]) {
+            if (!tot_bak || (bak_lo[k] < tot_bak_lo)) {
+                tot_bak_lo = bak_lo[k];
+            }
+            if (!tot_bak || (bak_hi[k] > tot_bak_hi)) {
+                tot_bak_hi = bak_hi[k];
+            }
+            tot_bak = 1;
+        }
+    }
+    if (tot_pri && (primary_raw > 0u)) {
+        tot_pri_lo = 0u;
+        tot_pri_hi = primary_raw - 1u;
+    }
+    if (tot_bak && (bak_span > 0u)) {
+        tot_bak_lo = ee_total;
+        tot_bak_hi = ee_total + bak_span - 1u;
+    }
+
+    fprintf(out, "## 参变量分类消耗\n\n");
+    fprintf(out, "RAM 为 SRAM 工作区（compact：payload + CRC）；无 SRAM 的类型为 0。\n");
+    fprintf(out, "EE 偏移相对 `PARAM_EEPROM_BASE`，结束为末字节（含）。\n");
+    fprintf(out, "有 BAK 的类型另计备份槽（`PARAM_EE_TOTAL` + 主槽偏移）；EE占用 含主槽与备份槽。\n\n");
+    fprintf(out, "| 类型 | RAM | 主槽起始 | 主槽结束 | 备份起始 | 备份结束 | EE占用 |\n");
+    fprintf(out, "|------|-----|----------|----------|----------|----------|--------|\n");
+    for (k = 0; k < 4; k++) {
+        dump_param_ee_row(out, names[k], ram[k],
+                          has_pri[k], pri_lo[k], pri_hi[k],
+                          has_bak[k], bak_lo[k], bak_hi[k],
+                          ee_bytes[k]);
+    }
+    dump_param_ee_row(out, "合计", ram_total,
+                      tot_pri, tot_pri_lo, tot_pri_hi,
+                      tot_bak, tot_bak_lo, tot_bak_hi,
+                      ee_bytes_total);
+    fprintf(out, "\n");
+}
+
+static void dump_layout(FILE *out, unsigned nitems, unsigned nblocks,
                         const pack_block_t *blocks, const pack_place_t *place)
 {
     unsigned bi;
     unsigned i;
-    uint32_t ee_off = 0u;
-    uint32_t ee_total = 0u;
+    uint32_t blk_ee[PACK_MAX_BLOCKS];
+    uint32_t primary_raw;
+    uint32_t ee_total;
     uint32_t bak_span;
+    char off_s[32];
+    char bak_s[32];
+    size_t def_len;
 
-    printf("=== param layout (host dump) ===\n");
-    printf("=== blocks (%u) ===\n", nblocks);
+    primary_raw = pack_primary_ee_offs(blocks, nblocks, blk_ee);
+    ee_total = PARAM_EE_TOTAL_ALIGN(primary_raw);
+    bak_span = pack_bak_span(blocks, nblocks);
+
+    fprintf(out, "# 参变量布局\n\n");
+    fprintf(out, "## 存储类型说明\n\n");
+    fprintf(out, "| 类型 | flags | 说明 |\n");
+    fprintf(out, "|------|-------|------|\n");
+    fprintf(out, "| RAM_EE_BK | SRAM+EE+BAK | SRAM 工作区；EE 备份区 1 + 备份区 2 |\n");
+    fprintf(out, "| EE_BK | EE+BAK | 无 SRAM；EE 备份区 1 + 备份区 2 |\n");
+    fprintf(out, "| RAM_EE | SRAM+EE | SRAM 工作区；仅 EE 备份区 1 |\n");
+    fprintf(out, "| EE | EE | 无 SRAM；仅 EE 备份区 1 |\n\n");
+    fprintf(out, "EE 偏移相对 `PARAM_EEPROM_BASE`。\n");
+    fprintf(out, "条目 `ee_off` = 块主槽起点 + 块内字段偏移。\n");
+    fprintf(out, "双备份：备份槽 = `PARAM_EE_TOTAL` + 主槽偏移（与固件 bak2 一致）。\n\n");
+
+    fprintf(out, "## EE 分区\n\n");
+    fprintf(out, "| 项 | bytes |\n");
+    fprintf(out, "|----|-------|\n");
+    fmt_off(off_s, sizeof off_s, primary_raw);
+    fprintf(out, "| primary_raw | %s |\n", off_s);
+    fmt_off(off_s, sizeof off_s, ee_total);
+    fprintf(out, "| primary_aligned (`PARAM_EE_TOTAL`) | %s |\n", off_s);
+    fmt_off(off_s, sizeof off_s, bak_span);
+    fprintf(out, "| bak_span | %s |\n", off_s);
+    fmt_off(off_s, sizeof off_s, ee_total + bak_span);
+    fprintf(out, "| map_end | %s |\n\n", off_s);
+
+    fprintf(out, "## 块\n\n");
+    fprintf(out, "主槽编号 0..N-1；备份槽接在主槽之后继续编号。\n\n");
+    fprintf(out, "| blk_id | role | of | store | compact | ee_off | blk_size |\n");
+    fprintf(out, "|--------|------|----|-------|---------|--------|----------|\n");
     for (bi = 0u; bi < nblocks; bi++) {
-        unsigned f;
         unsigned compact;
-        uint32_t ee_this;
-        unsigned has_sram;
 
         compact = (unsigned)blocks[bi].payload + (unsigned)PARAM_CRC_BYTES_BLOCK;
-        has_sram = ((blocks[bi].flags & FLAG_SRAM) != 0u) ? 1u : 0u;
-        ee_this = PARAM_BLOCK_NULL_EE_OFF;
-        if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
-            ee_this = ee_off;
-            ee_off += (uint32_t)PARAM_BLOCK_SIZE;
+        if (blk_ee[bi] == PARAM_BLOCK_NULL_EE_OFF) {
+            fprintf(out, "| %u | primary | - | %s | %u | - | %u |\n",
+                    bi, store_label(blocks[bi].flags),
+                    compact, (unsigned)PARAM_BLOCK_SIZE);
+            continue;
         }
-
-        printf("  block %u: store=%s flags=0x%02X payload=%u ram=%s compact=%u "
-               "ee_slot=%u ee_off=%u fields=%u\n",
-               bi,
-               store_label(blocks[bi].flags),
-               (unsigned)blocks[bi].flags,
-               (unsigned)blocks[bi].payload,
-               has_sram ? "yes" : "NULL",
-               compact,
-               (unsigned)PARAM_BLOCK_SIZE,
-               ee_this,
-               blocks[bi].nfields);
-        for (f = 0u; f < blocks[bi].nfields; f++) {
-            unsigned ii = blocks[bi].item_i[f];
-
-            printf("    %s[%u]\n", s_items[ii].name,
-                   (unsigned)blocks[bi].field_len[f]);
-        }
+        fmt_off(off_s, sizeof off_s, blk_ee[bi]);
+        fprintf(out, "| %u | primary | - | %s | %u | %s | %u |\n",
+                bi, store_label(blocks[bi].flags),
+                compact, off_s, (unsigned)PARAM_BLOCK_SIZE);
     }
+    {
+        unsigned bak_id = nblocks;
 
-    bak_span = pack_bak_span(blocks, nblocks);
-    ee_total = PARAM_EE_TOTAL_ALIGN(ee_off);
-    printf("=== EE map (relative to PARAM_EEPROM_BASE) ===\n");
-    printf("  primary_raw=%u primary_aligned=%u bak_span=%u map_end=%u\n",
-           (unsigned)ee_off, (unsigned)ee_total, (unsigned)bak_span,
-           (unsigned)(ee_total + bak_span));
-    ee_off = 0u;
-    for (bi = 0u; bi < nblocks; bi++) {
-        if ((blocks[bi].flags & FLAG_EEPROM) != 0u) {
-            printf("  block %u primary @+%u size=%u store=%s\n",
-                   bi, (unsigned)ee_off, (unsigned)PARAM_BLOCK_SIZE,
-                   store_label(blocks[bi].flags));
-            if ((blocks[bi].flags & FLAG_EEPROM_BAK) != 0u) {
-                printf("           bak     @+%u size=%u\n",
-                       (unsigned)(ee_total + ee_off), (unsigned)PARAM_BLOCK_SIZE);
+        for (bi = 0u; bi < nblocks; bi++) {
+            unsigned compact;
+
+            if ((blocks[bi].flags & FLAG_EEPROM_BAK) == 0u) {
+                continue;
             }
-            ee_off += (uint32_t)PARAM_BLOCK_SIZE;
+            if (blk_ee[bi] == PARAM_BLOCK_NULL_EE_OFF) {
+                continue;
+            }
+            compact = (unsigned)blocks[bi].payload + (unsigned)PARAM_CRC_BYTES_BLOCK;
+            fmt_off(bak_s, sizeof bak_s, ee_total + blk_ee[bi]);
+            fprintf(out, "| %u | bak | %u | %s | %u | %s | %u |\n",
+                    bak_id, bi, store_label(blocks[bi].flags),
+                    compact, bak_s, (unsigned)PARAM_BLOCK_SIZE);
+            bak_id++;
         }
     }
 
-    printf("=== param items (%u) ===\n", nitems);
+    fprintf(out, "\n## 条目\n\n");
+    fprintf(out, "| name | id | store | type | idx | len | default | ee_bk1 | ee_bk2 |\n");
+    fprintf(out, "|------|----|-------|------|-----|-----|---------|--------|--------|\n");
     for (i = 0u; i < nitems; i++) {
-        printf("  %-22s id=%u blk=%u off=%u blk_len=%u type=%s idx=%u",
-               s_items[i].name,
-               (unsigned)s_items[i].id,
-               (unsigned)place[i].blk,
-               (unsigned)place[i].off,
-               (unsigned)place[i].blk_len,
-               dtype_name(s_items[i].dtype),
-               (unsigned)s_items[i].index_count);
+        unsigned blk;
+        uint32_t ee_item;
+        uint8_t flags;
+        const char *has_def;
 
-        if (s_items[i].dtype == (uint8_t)DATATYPE_LINKARRAY) {
-            printf("  N=%u M=%u K=%u total=%u blk%u..%u",
-                   (unsigned)s_items[i].link_n,
-                   (unsigned)s_items[i].link_m,
-                   (unsigned)s_items[i].link_k,
-                   (unsigned)s_items[i].total_len,
-                   (unsigned)place[i].blk,
-                   (unsigned)(place[i].blk + s_items[i].link_n - 1u));
+        blk = (unsigned)place[i].blk;
+        flags = blocks[blk].flags;
+        has_def = (lookup_def(s_items[i].name, &def_len) != 0) ? "✔" : " ";
+        fprintf(out, "| %s | %u | %s | %s | %u | %u | %s |",
+                s_items[i].name, (unsigned)s_items[i].id,
+                store_label(flags), dtype_name(s_items[i].dtype),
+                (unsigned)s_items[i].index_count, (unsigned)s_items[i].total_len,
+                has_def);
+        if (blk_ee[blk] == PARAM_BLOCK_NULL_EE_OFF) {
+            fprintf(out, " - | - |\n");
+            continue;
         }
-        printf("\n");
+        ee_item = blk_ee[blk] + (uint32_t)place[i].off;
+        fmt_off(off_s, sizeof off_s, ee_item);
+        if ((flags & FLAG_EEPROM_BAK) != 0u) {
+            fmt_off(bak_s, sizeof bak_s, ee_total + ee_item);
+            fprintf(out, " %s | %s |\n", off_s, bak_s);
+        } else {
+            fprintf(out, " %s | - |\n", off_s);
+        }
     }
+}
+
+static void dump_layout_stdout(unsigned nitems, unsigned nblocks,
+                               const pack_block_t *blocks, const pack_place_t *place)
+{
+    dump_summary(stdout, nblocks, blocks);
+    dump_layout(stdout, nitems, nblocks, blocks, place);
+}
+
+static void dump_layout_md(const char *h_path, unsigned nitems, unsigned nblocks,
+                           const pack_block_t *blocks, const pack_place_t *place)
+{
+    char md_path[512];
+    char tmp_path[540];
+    char *body;
+    size_t body_len;
+    FILE *fp;
+    int n;
+
+    combined_md_path(h_path, md_path, sizeof md_path);
+    n = snprintf(tmp_path, sizeof tmp_path, "%s.param.tmp", md_path);
+    if ((n < 0) || ((size_t)n >= sizeof tmp_path)) {
+        die("tmp path too long");
+    }
+
+    fp = fopen(tmp_path, "wb");
+    if (fp == 0) {
+        die("cannot write %s", tmp_path);
+    }
+    dump_summary(fp, nblocks, blocks);
+    fclose(fp);
+    body = read_section_file(tmp_path, &body_len);
+    upsert_md_section(md_path,
+                      "<!-- BEGIN:SUMMARY:PARAM -->",
+                      "<!-- END:SUMMARY:PARAM -->",
+                      body);
+    free(body);
+
+    fp = fopen(tmp_path, "wb");
+    if (fp == 0) {
+        die("cannot write %s", tmp_path);
+    }
+    dump_layout(fp, nitems, nblocks, blocks, place);
+    fclose(fp);
+    body = read_section_file(tmp_path, &body_len);
+    remove(tmp_path);
+    upsert_md_section(md_path,
+                      "<!-- BEGIN:PARAM -->",
+                      "<!-- END:PARAM -->",
+                      body);
+    free(body);
+    reorder_layout_md(md_path);
 }
 
 int main(int argc, char **argv)
@@ -790,7 +1419,7 @@ int main(int argc, char **argv)
     nblocks = pack_param_blocks(blocks, place, nitems, payload_max);
 
     if (argc == 2 && strcmp(argv[1], "--dump") == 0) {
-        dump_layout(nitems, nblocks, blocks, place);
+        dump_layout_stdout(nitems, nblocks, blocks, place);
         return 0;
     }
 
@@ -899,15 +1528,27 @@ int main(int argc, char **argv)
     oputs("const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;\n\n");
     oputs("const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {\n");
     {
-        const char *prev_lab = 0;
+        char prev_lab[24];
+        char lab_buf[24];
+        int have_prev = 0;
 
+        prev_lab[0] = '\0';
+
+        /* Primary slots first. Dual-backup stores are tagged BK1. */
         for (i = 0u; i < nblocks; i++) {
-            const char *lab = store_label(blocks[i].flags);
+            const char *base = store_label(blocks[i].flags);
             unsigned has_sram = ((blocks[i].flags & FLAG_SRAM) != 0u) ? 1u : 0u;
+            unsigned has_bak = ((blocks[i].flags & FLAG_EEPROM_BAK) != 0u) ? 1u : 0u;
 
-            if ((prev_lab == 0) || (strcmp(prev_lab, lab) != 0)) {
-                oprintf("    /* %s */\n", lab);
-                prev_lab = lab;
+            if (has_bak != 0u) {
+                snprintf(lab_buf, sizeof lab_buf, "%s1", base);
+            } else {
+                snprintf(lab_buf, sizeof lab_buf, "%s", base);
+            }
+            if ((have_prev == 0) || (strcmp(prev_lab, lab_buf) != 0)) {
+                oprintf("    /* %s */\n", lab_buf);
+                snprintf(prev_lab, sizeof prev_lab, "%s", lab_buf);
+                have_prev = 1;
             }
             if (has_sram != 0u) {
                 oprintf("    { PARAM_LAYOUT_BLOCK_%u_EE_OFF, "
@@ -925,27 +1566,65 @@ int main(int argc, char **argv)
             }
             oputs("\n");
         }
+
+        /* Backup slots last, commented out (docs only; not in table).
+         * Logical block ids continue after primaries: N, N+1, ... */
+        have_prev = 0;
+        prev_lab[0] = '\0';
+        {
+            unsigned bak_id = nblocks;
+
+            for (i = 0u; i < nblocks; i++) {
+                const char *base = store_label(blocks[i].flags);
+                unsigned has_sram = ((blocks[i].flags & FLAG_SRAM) != 0u) ? 1u : 0u;
+                unsigned has_bak = ((blocks[i].flags & FLAG_EEPROM_BAK) != 0u) ? 1u : 0u;
+
+                if (has_bak == 0u) {
+                    continue;
+                }
+                snprintf(lab_buf, sizeof lab_buf, "%s2", base);
+                if ((have_prev == 0) || (strcmp(prev_lab, lab_buf) != 0)) {
+                    oprintf("    /* %s */\n", lab_buf);
+                    snprintf(prev_lab, sizeof prev_lab, "%s", lab_buf);
+                    have_prev = 1;
+                }
+                if (has_sram != 0u) {
+                    oprintf("    /* block %u (bak of %u): "
+                            "{ PARAM_LAYOUT_BLOCK_%u_EE_BK_OFF, "
+                            "(uint8_t *)&g_param_ram_%u, (uint16_t)sizeof(g_param_ram_%u), "
+                            "0x%02Xu }, */\n",
+                            bak_id, i, i, i, i, (unsigned)blocks[i].flags);
+                } else {
+                    oprintf("    /* block %u (bak of %u): "
+                            "{ PARAM_LAYOUT_BLOCK_%u_EE_BK_OFF, "
+                            "NULL, (uint16_t)PARAM_LAYOUT_BLOCK_%u_LEN, "
+                            "0x%02Xu }, */\n",
+                            bak_id, i, i, i, (unsigned)blocks[i].flags);
+                }
+                bak_id++;
+            }
+        }
     }
     oputs("};\n\n");
+
     oputs("const uint16_t tParamBlockTableCount = (uint16_t)PARAM_LAYOUT_BLOCK_COUNT;\n\n");
     emit_param_api_table(nitems, place);
     oputs("const uint16_t tParamApiTableCount = (uint16_t)PARAM_LAYOUT_ITEM_COUNT;\n\n");
     oputs("#endif /* DC_PARAM_LAYOUT_TABLE_DEFINED */\n");
     oputs("#endif /* DC_PARAM_LAYOUT_DEFINE */\n");
 
-    if (file_same(path, s_out, s_out_len)) {
-        dump_layout(nitems, nblocks, blocks, place);
-        return 0;
-    }
-    fp = fopen(path, "wb");
-    if (fp == 0) {
-        die("cannot write %s", path);
-    }
-    if (fwrite(s_out, 1, s_out_len, fp) != s_out_len) {
+    if (file_same(path, s_out, s_out_len) == 0) {
+        fp = fopen(path, "wb");
+        if (fp == 0) {
+            die("cannot write %s", path);
+        }
+        if (fwrite(s_out, 1, s_out_len, fp) != s_out_len) {
+            fclose(fp);
+            die("write failed: %s", path);
+        }
         fclose(fp);
-        die("write failed: %s", path);
     }
-    fclose(fp);
-    dump_layout(nitems, nblocks, blocks, place);
+    dump_layout_stdout(nitems, nblocks, blocks, place);
+    dump_layout_md(path, nitems, nblocks, blocks, place);
     return 0;
 }

@@ -94,7 +94,7 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 
 **读写**：INT / ARRAY / STRUCT / LINKARRAY（跨连续块、按记录分页）。EE-only 经 `PARAM_BLOCK_SIZE` scratch 装主槽/备份，失败再套默认。**仅 `dc_write_*` 落盘**：刷新块 CRC 后写主槽；有 BAK 再写备份区 2。
 
-**pack dump**：`dc_param_pack --dump` 打印每块 `store=`、主槽与 `bak @+`。
+**pack dump**：生成 `dc_*_layout.h` 时同步打印，并 upsert 同目录 `dc_layout.md`。文件开头为分类消耗（各类 RAM、相对 EE 起止与占用；参变量含备份槽）；其后为变量段 / 参变量段。明细偏移格式 `十六进制(十进制)`，相对各自 EE 起点。参变量块表在 md 与注释掉的 `.h` 行中体现备份槽。`--dump` 只打 stdout（含分类消耗）。
 
 ### 别名入口
 
