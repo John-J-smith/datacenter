@@ -54,14 +54,15 @@ TEST_F(ParamTestBase, Write_EeBk_NoSram_PersistsAcrossReinit)
 TEST_F(ParamTestBase, Write_RamEe_NoBakSlot)
 {
     const uint8_t custom[] = {0x31u, 0x32u, 0x33u, 0x34u};
-    const ST_PARAM_TABLE *entry = ParamFindEntry(PARAM_UN);
+    /* PARAM_IMAX is RAM_EE (no BAK). PARAM_UN is now RAM_EE_BK. */
+    const ST_PARAM_TABLE *entry = ParamFindEntry(PARAM_IMAX);
     const ST_PARAM_BLOCK_TABLE *block;
     uint32_t bak_addr;
 
     ASSERT_NE(entry, nullptr);
     block = &tParamBlockTable[entry->eBlockName];
     EXPECT_EQ(block->ucFlag & FLAG_EEPROM_BAK, 0u);
-    ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_UN, custom, 1u, 0u), 4);
+    ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_IMAX, custom, 1u, 0u), 4);
 
     EXPECT_EQ(std::memcmp(DcTestStoragePtr() + PARAM_EEPROM_ORIGIN + block->uBlockEeOff +
                               entry->uParamOffset,

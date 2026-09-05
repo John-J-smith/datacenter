@@ -72,20 +72,21 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
 /* Pack-only: total_len in X(...) — derive byte count from shared attrib (STRUCT *_USE). */
 #define PARAM_TOTAL_FROM_ATTR  (0xFFFFu)
 
-#define PARAM_INT(X, name, len, store) \
-    X(name, DATATYPE_INT, (len), (store), _PARAM_ATTR_INT)
+/* ST is the list-bound store (PARAM_ITEM_LIST_*_ROWS second arg). Do not pass PARAM_STORE_*. */
+#define PARAM_INT(X, ST, name, len) \
+    X(name, DATATYPE_INT, (len), (ST), _PARAM_ATTR_INT)
 
-#define PARAM_STRUCT(X, name, store, n, ...) \
+#define PARAM_STRUCT(X, ST, name, n, ...) \
     PARAM_STRUCT_ATTR(name, n, __VA_ARGS__) \
-    X(name, DATATYPE_STRUCT, DC_PARAM_SUM(__VA_ARGS__), (store), _param_attr_##name)
+    X(name, DATATYPE_STRUCT, DC_PARAM_SUM(__VA_ARGS__), (ST), _param_attr_##name)
 
-#define PARAM_ARRAY(X, name, n, elem, store) \
+#define PARAM_ARRAY(X, ST, name, n, elem) \
     PARAM_ARRAY_ATTR(name, n, elem) \
-    X(name, DATATYPE_ARRAY, (n) * (elem), (store), _param_attr_##name)
+    X(name, DATATYPE_ARRAY, (n) * (elem), (ST), _param_attr_##name)
 
-#define PARAM_LINK(X, name, n, elem, store) \
+#define PARAM_LINK(X, ST, name, n, elem) \
     PARAM_LINK_ATTR(name, n, elem) \
-    X(name, DATATYPE_LINKARRAY, (n) * (elem), (store), _param_attr_##name)
+    X(name, DATATYPE_LINKARRAY, (n) * (elem), (ST), _param_attr_##name)
 
 /* Shared attribute tables — one tag, many PARAM_*_USE rows. */
 #define PARAM_ATTR_STRUCT(tag, n, ...) \
@@ -97,14 +98,14 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
 #define PARAM_ATTR_LINK(tag, n, elem) \
     static const uint8_t _param_attr_##tag[] = { DATATYPE_LINKARRAY, 0u, 0u, (elem) };
 
-#define PARAM_STRUCT_USE(X, name, store, tag) \
-    X(name, DATATYPE_STRUCT, PARAM_TOTAL_FROM_ATTR, (store), _param_attr_##tag)
+#define PARAM_STRUCT_USE(X, ST, name, tag) \
+    X(name, DATATYPE_STRUCT, PARAM_TOTAL_FROM_ATTR, (ST), _param_attr_##tag)
 
-#define PARAM_ARRAY_USE(X, name, n, elem, store, tag) \
-    X(name, DATATYPE_ARRAY, (n) * (elem), (store), _param_attr_##tag)
+#define PARAM_ARRAY_USE(X, ST, name, n, elem, tag) \
+    X(name, DATATYPE_ARRAY, (n) * (elem), (ST), _param_attr_##tag)
 
-#define PARAM_LINK_USE(X, name, n, elem, store, tag) \
-    X(name, DATATYPE_LINKARRAY, (n) * (elem), (store), _param_attr_##tag)
+#define PARAM_LINK_USE(X, ST, name, n, elem, tag) \
+    X(name, DATATYPE_LINKARRAY, (n) * (elem), (ST), _param_attr_##tag)
 
 #if !defined(DC_PARAM_PACK)
 #define _PARAM_ATTR_EMIT_(name, dt, total, store, attr)

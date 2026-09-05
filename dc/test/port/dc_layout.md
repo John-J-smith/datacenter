@@ -20,15 +20,16 @@ EE 偏移相对 `VAR_EEPROM_BASE`，结束为末字节（含）。A/B 占用含�
 
 RAM 为 SRAM 工作区（compact：payload + CRC）；无 SRAM 的类型为 0。
 EE 偏移相对 `PARAM_EEPROM_BASE`，结束为末字节（含）。
-有 BAK 的类型另计备份槽（`PARAM_EE_TOTAL` + 主槽偏移）；`EE占用` 含主槽与备份槽。
+有 BAK 的类型另计备份槽（`PARAM_EE_TOTAL` + 主槽偏移）；EE占用 含主槽与备份槽。
+`reserve` = `blk_size` − `compact`，合计含备份槽内的尾部空洞。
 
-| 类型 | RAM | 主槽起始 | 主槽结束 | 备份起始 | 备份结束 | EE占用 |
-|------|-----|----------|----------|----------|----------|--------|
-| RAM_EE_BK | 216 | 0x0(0) | 0xFF(255) | 0x280(640) | 0x37F(895) | 512 |
-| EE_BK | 0 | 0x100(256) | 0x13F(319) | 0x380(896) | 0x3BF(959) | 128 |
-| RAM_EE | 76 | 0x140(320) | 0x1BF(447) | - | - | 128 |
-| EE | 0 | 0x1C0(448) | 0x23F(575) | - | - | 128 |
-| 合计 | 292 | 0x0(0) | 0x23F(575) | 0x280(640) | 0x3BF(959) | 896 |
+| 类型 | RAM | 主槽起始 | 主槽结束 | 备份起始 | 备份结束 | EE占用 | 预留 |
+|------|-----|----------|----------|----------|----------|--------|------|
+| RAM_EE_BK | 181 | 0x0(0) | 0xFF(255) | 0x500(1280) | 0x5FF(1535) | 512 | 150 |
+| EE_BK | 0 | 0x100(256) | 0x23F(575) | 0x600(1536) | 0x73F(1855) | 640 | 212 |
+| RAM_EE | 180 | 0x240(576) | 0x37F(895) | - | - | 320 | 140 |
+| EE | 0 | 0x380(896) | 0x4BF(1215) | - | - | 320 | 143 |
+| 合计 | 361 | 0x0(0) | 0x4BF(1215) | 0x500(1280) | 0x73F(1855) | 1792 | 645 |
 
 <!-- END:SUMMARY:PARAM -->
 <!-- BEGIN:VARIABLE -->
@@ -121,47 +122,68 @@ EE 偏移相对 `PARAM_EEPROM_BASE`。
 
 | 项 | bytes |
 |----|-------|
-| primary_raw | 0x240(576) |
-| primary_aligned (`PARAM_EE_TOTAL`) | 0x280(640) |
-| bak_span | 0x140(320) |
-| map_end | 0x3C0(960) |
+| primary_raw | 0x4C0(1216) |
+| primary_aligned (`PARAM_EE_TOTAL`) | 0x500(1280) |
+| bak_span | 0x240(576) |
+| map_end | 0x740(1856) |
 
 ## 块
 
-主槽编号 0..N-1；备份槽接在主槽之后继续编号。
+主槽编号 0..N-1；备份槽接在主槽之后继续编号。`reserve` = `blk_size` − `compact`。
 
-| blk_id | role | of | store | compact | ee_off | blk_size |
-|--------|------|----|-------|---------|--------|----------|
-| 0 | primary | - | RAM_EE_BK | 60 | 0x0(0) | 64 |
-| 1 | primary | - | RAM_EE_BK | 62 | 0x40(64) | 64 |
-| 2 | primary | - | RAM_EE_BK | 62 | 0x80(128) | 64 |
-| 3 | primary | - | RAM_EE_BK | 32 | 0xC0(192) | 64 |
-| 4 | primary | - | EE_BK | 23 | 0x100(256) | 64 |
-| 5 | primary | - | RAM_EE | 14 | 0x140(320) | 64 |
-| 6 | primary | - | RAM_EE | 62 | 0x180(384) | 64 |
-| 7 | primary | - | EE | 62 | 0x1C0(448) | 64 |
-| 8 | primary | - | EE | 38 | 0x200(512) | 64 |
-| 9 | bak | 0 | RAM_EE_BK | 60 | 0x280(640) | 64 |
-| 10 | bak | 1 | RAM_EE_BK | 62 | 0x2C0(704) | 64 |
-| 11 | bak | 2 | RAM_EE_BK | 62 | 0x300(768) | 64 |
-| 12 | bak | 3 | RAM_EE_BK | 32 | 0x340(832) | 64 |
-| 13 | bak | 4 | EE_BK | 23 | 0x380(896) | 64 |
+| blk_id | role | of | store | compact | reserve | ee_off | blk_size |
+|--------|------|----|-------|---------|---------|--------|----------|
+| 0 | primary | - | RAM_EE_BK | 25 | 39 | 0x0(0) | 64 |
+| 1 | primary | - | RAM_EE_BK | 62 | 2 | 0x40(64) | 64 |
+| 2 | primary | - | RAM_EE_BK | 62 | 2 | 0x80(128) | 64 |
+| 3 | primary | - | RAM_EE_BK | 32 | 32 | 0xC0(192) | 64 |
+| 4 | primary | - | EE_BK | 59 | 5 | 0x100(256) | 64 |
+| 5 | primary | - | EE_BK | 9 | 55 | 0x140(320) | 64 |
+| 6 | primary | - | EE_BK | 62 | 2 | 0x180(384) | 64 |
+| 7 | primary | - | EE_BK | 50 | 14 | 0x1C0(448) | 64 |
+| 8 | primary | - | EE_BK | 34 | 30 | 0x200(512) | 64 |
+| 9 | primary | - | RAM_EE | 6 | 58 | 0x240(576) | 64 |
+| 10 | primary | - | RAM_EE | 62 | 2 | 0x280(640) | 64 |
+| 11 | primary | - | RAM_EE | 62 | 2 | 0x2C0(704) | 64 |
+| 12 | primary | - | RAM_EE | 42 | 22 | 0x300(768) | 64 |
+| 13 | primary | - | RAM_EE | 8 | 56 | 0x340(832) | 64 |
+| 14 | primary | - | EE | 62 | 2 | 0x380(896) | 64 |
+| 15 | primary | - | EE | 38 | 26 | 0x3C0(960) | 64 |
+| 16 | primary | - | EE | 6 | 58 | 0x400(1024) | 64 |
+| 17 | primary | - | EE | 62 | 2 | 0x440(1088) | 64 |
+| 18 | primary | - | EE | 9 | 55 | 0x480(1152) | 64 |
+| 19 | bak | 0 | RAM_EE_BK | 25 | 39 | 0x500(1280) | 64 |
+| 20 | bak | 1 | RAM_EE_BK | 62 | 2 | 0x540(1344) | 64 |
+| 21 | bak | 2 | RAM_EE_BK | 62 | 2 | 0x580(1408) | 64 |
+| 22 | bak | 3 | RAM_EE_BK | 32 | 32 | 0x5C0(1472) | 64 |
+| 23 | bak | 4 | EE_BK | 59 | 5 | 0x600(1536) | 64 |
+| 24 | bak | 5 | EE_BK | 9 | 55 | 0x640(1600) | 64 |
+| 25 | bak | 6 | EE_BK | 62 | 2 | 0x680(1664) | 64 |
+| 26 | bak | 7 | EE_BK | 50 | 14 | 0x6C0(1728) | 64 |
+| 27 | bak | 8 | EE_BK | 34 | 30 | 0x700(1792) | 64 |
 
 ## 条目
 
 | name | id | store | type | idx | len | default | ee_bk1 | ee_bk2 |
 |------|----|-------|------|-----|-----|---------|--------|--------|
-| PARAM_REMOTECTRL | 0 | RAM_EE_BK | STRUCT | 2 | 6 |   | 0x0(0) | 0x280(640) |
-| PARAM_LOCALCTRL | 1 | RAM_EE_BK | STRUCT | 2 | 6 |   | 0x6(6) | 0x286(646) |
-| PARAM_TCP_UDP_SETUP | 2 | RAM_EE_BK | STRUCT | 5 | 39 |   | 0xC(12) | 0x28C(652) |
-| PARAM_SEASON_SWTIME | 3 | RAM_EE_BK | INT | 1 | 7 | ✔ | 0x33(51) | 0x2B3(691) |
-| PARAM_LINK_TEST | 4 | RAM_EE_BK | LINKARRAY | 5 | 150 |   | 0x40(64) | 0x2C0(704) |
-| PARAM_DAY_SWTIME | 5 | EE_BK | INT | 1 | 7 | ✔ | 0x100(256) | 0x380(896) |
-| PARAM_FEE_SWTIME | 6 | EE_BK | INT | 1 | 7 | ✔ | 0x107(263) | 0x387(903) |
-| PARAM_LADDER_SWTIME | 7 | EE_BK | INT | 1 | 7 | ✔ | 0x10E(270) | 0x38E(910) |
-| PARAM_UN | 8 | RAM_EE | INT | 1 | 4 |   | 0x140(320) | - |
-| PARAM_IB | 9 | RAM_EE | INT | 1 | 4 |   | 0x144(324) | - |
-| PARAM_IMAX | 10 | RAM_EE | INT | 1 | 4 |   | 0x148(328) | - |
-| PARAM_HOLIDAY_DATA | 11 | RAM_EE | ARRAY | 5 | 60 |   | 0x180(384) | - |
-| PARAM_CALIB_DATA | 12 | EE | LINKARRAY | 8 | 96 |   | 0x1C0(448) | - |
+| PARAM_UN | 0 | RAM_EE_BK | INT | 1 | 4 |   | 0x0(0) | 0x500(1280) |
+| PARAM_REMOTECTRL | 1 | RAM_EE_BK | STRUCT | 2 | 6 |   | 0x4(4) | 0x504(1284) |
+| PARAM_LOCALCTRL | 2 | RAM_EE_BK | STRUCT | 2 | 6 |   | 0xA(10) | 0x50A(1290) |
+| PARAM_SEASON_SWTIME | 3 | RAM_EE_BK | INT | 1 | 7 | ✔ | 0x10(16) | 0x510(1296) |
+| PARAM_LINK_TEST | 4 | RAM_EE_BK | LINKARRAY | 5 | 150 |   | 0x40(64) | 0x540(1344) |
+| PARAM_IB | 5 | EE_BK | INT | 1 | 4 |   | 0x100(256) | 0x600(1536) |
+| PARAM_TCP_UDP_SETUP | 6 | EE_BK | STRUCT | 5 | 39 |   | 0x104(260) | 0x604(1540) |
+| PARAM_DAY_SWTIME | 7 | EE_BK | INT | 1 | 7 | ✔ | 0x12B(299) | 0x62B(1579) |
+| PARAM_FEE_SWTIME | 8 | EE_BK | INT | 1 | 7 | ✔ | 0x132(306) | 0x632(1586) |
+| PARAM_LADDER_SWTIME | 9 | EE_BK | INT | 1 | 7 | ✔ | 0x140(320) | 0x640(1600) |
+| PARAM_DATA1 | 10 | EE_BK | ARRAY | 5 | 60 |   | 0x180(384) | 0x680(1664) |
+| PARAM_LINK_TEST2 | 11 | EE_BK | LINKARRAY | 5 | 80 |   | 0x1C0(448) | 0x6C0(1728) |
+| PARAM_IMAX | 12 | RAM_EE | INT | 1 | 4 |   | 0x240(576) | - |
+| PARAM_HOLIDAY_DATA | 13 | RAM_EE | ARRAY | 5 | 60 |   | 0x280(640) | - |
+| PARAM_LINK_TEST3 | 14 | RAM_EE | LINKARRAY | 5 | 100 |   | 0x2C0(704) | - |
+| PARAM_TESTCTRL | 15 | RAM_EE | STRUCT | 2 | 6 |   | 0x340(832) | - |
+| PARAM_CALIB_DATA | 16 | EE | LINKARRAY | 8 | 96 |   | 0x380(896) | - |
+| PARAM_TEST_IMAX | 17 | EE | INT | 1 | 4 |   | 0x400(1024) | - |
+| PARAM_TEST_DATA | 18 | EE | ARRAY | 5 | 60 |   | 0x440(1088) | - |
+| PARAM_UDP_SETUP | 19 | EE | STRUCT | 4 | 7 |   | 0x480(1152) | - |
 <!-- END:PARAM -->

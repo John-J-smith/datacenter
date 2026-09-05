@@ -73,7 +73,7 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 
 ### 数据类 / 参变量（`dc_param.c`）
 
-清单：`dc_param_cfg.h` 四段宏拼成 `PARAM_ITEM_LIST`（顺序即小类 ID 与装箱顺序）。默认：`PARAM_ITEM_DEFAULTS` + `*_def[]`（仅 pack 编译）。布局：`dc_param_pack` → `dc_param_layout.h`。
+清单：`dc_param_cfg.h` 四段 `*_ROWS` 拼成 `PARAM_ITEM_LIST`（顺序即小类 ID 与装箱顺序）；每段第二个参数绑定 store，行里写 `ST`。`dc_param_pack` 按段核对 flags。默认：`PARAM_ITEM_DEFAULTS` + `*_def[]`（仅 pack 编译）。布局：`dc_param_pack` → `dc_param_layout.h`。
 
 **几何**：`PARAM_BLOCK_SIZE` 一块（含 2 字节 CRC）；`PARAM_EE_PAGE_SIZE` 必须是其整数倍。主区槽步进为 `PARAM_BLOCK_SIZE`；`PARAM_EE_TOTAL` 向上对齐到页；`PARAM_EE_BAK_BASE = PARAM_EE_TOTAL`，`PARAM_EE_BAK_SPAN` 为带 `FLAG_EEPROM_BAK` 的块所占主区长度。
 
@@ -94,7 +94,7 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 
 **读写**：INT / ARRAY / STRUCT / LINKARRAY（跨连续块、按记录分页）。EE-only 经 `PARAM_BLOCK_SIZE` scratch 装主槽/备份，失败再套默认。**仅 `dc_write_*` 落盘**：刷新块 CRC 后写主槽；有 BAK 再写备份区 2。
 
-**pack dump**：生成 `dc_*_layout.h` 时同步打印，并 upsert 同目录 `dc_layout.md`。文件开头为分类消耗（各类 RAM、相对 EE 起止与占用；参变量含备份槽）；其后为变量段 / 参变量段。明细偏移格式 `十六进制(十进制)`，相对各自 EE 起点。参变量块表在 md 与注释掉的 `.h` 行中体现备份槽。`--dump` 只打 stdout（含分类消耗）。
+**pack dump**：生成 `dc_*_layout.h` 时同步打印，并 upsert 同目录 `dc_layout.md`。文件开头为分类消耗（各类 RAM、相对 EE 起止与占用、参变量 `reserve`；参变量含备份槽）；其后为变量段 / 参变量段。块表 `reserve` = `blk_size` − `compact`。明细偏移格式 `十六进制(十进制)`，相对各自 EE 起点。参变量块表在 md 与注释掉的 `.h` 行中体现备份槽。`--dump` 只打 stdout（含分类消耗）。
 
 ### 别名入口
 

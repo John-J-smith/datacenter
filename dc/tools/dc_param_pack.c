@@ -31,6 +31,9 @@ typedef struct {
 
 #define PACK_ROW(tok, dt, total, fl, atab) \
     do { \
+        if (s_expect_on && ((uint8_t)(fl) != s_expect_store)) { \
+            die("%s: store does not match list class", #tok); \
+        } \
         if (s_nitems >= PACK_MAX_ITEMS) { \
             die("too many param items"); \
         } \
@@ -52,13 +55,24 @@ typedef struct {
 
 static pack_item_t s_items[PACK_MAX_ITEMS];
 static unsigned s_nitems;
+static uint8_t s_expect_store;
+static int s_expect_on;
 
 static void die(const char *fmt, ...);
 
 static void load_param_items(void)
 {
     s_nitems = 0u;
-    PARAM_ITEM_LIST(PACK_ROW)
+    s_expect_on = 1;
+    s_expect_store = (uint8_t)PARAM_STORE_RAM_EE_BK;
+    PARAM_ITEM_LIST_RAM_EE_BK_ROWS(PACK_ROW, PARAM_STORE_RAM_EE_BK)
+    s_expect_store = (uint8_t)PARAM_STORE_EE_BK;
+    PARAM_ITEM_LIST_EE_BK_ROWS(PACK_ROW, PARAM_STORE_EE_BK)
+    s_expect_store = (uint8_t)PARAM_STORE_RAM_EE;
+    PARAM_ITEM_LIST_RAM_EE_ROWS(PACK_ROW, PARAM_STORE_RAM_EE)
+    s_expect_store = (uint8_t)PARAM_STORE_EE;
+    PARAM_ITEM_LIST_EE_ROWS(PACK_ROW, PARAM_STORE_EE)
+    s_expect_on = 0;
 }
 
 #undef PACK_ROW
@@ -1077,14 +1091,14 @@ static void dump_off_cell(FILE *out, int has, uint32_t off)
 static void dump_param_ee_row(FILE *out, const char *name, unsigned ram,
                               int has_pri, uint32_t pri_lo, uint32_t pri_hi,
                               int has_bak, uint32_t bak_lo, uint32_t bak_hi,
-                              uint32_t ee_bytes)
+                              uint32_t ee_bytes, uint32_t reserve)
 {
     fprintf(out, "| %s | %u |", name, ram);
     dump_off_cell(out, has_pri, pri_lo);
     dump_off_cell(out, has_pri, pri_hi);
     dump_off_cell(out, has_bak, bak_lo);
     dump_off_cell(out, has_bak, bak_hi);
-    fprintf(out, " %u |\n", (unsigned)ee_bytes);
+    fprintf(out, " %u | %u |\n", (unsigned)ee_bytes, (unsigned)reserve);
 }
 
 static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks)
@@ -1092,6 +1106,7 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
     static const char *names[4] = { "RAM_EE_BK", "EE_BK", "RAM_EE", "EE" };
     unsigned ram[4];
     uint32_t ee_bytes[4];
+    uint32_t reserve[4];
     uint32_t pri_lo[4];
     uint32_t pri_hi[4];
     uint32_t bak_lo[4];
@@ -1104,6 +1119,7 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
     uint32_t bak_span;
     unsigned ram_total;
     uint32_t ee_bytes_total;
+    uint32_t reserve_total;
     int tot_pri;
     int tot_bak;
     uint32_t tot_pri_lo;
@@ -1116,6 +1132,7 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
     for (k = 0; k < 4; k++) {
         ram[k] = 0u;
         ee_bytes[k] = 0u;
+        reserve[k] = 0u;
         pri_lo[k] = 0u;
         pri_hi[k] = 0u;
         bak_lo[k] = 0u;
@@ -1144,6 +1161,14 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
         if (blk_ee[i] == PARAM_BLOCK_NULL_EE_OFF) {
             continue;
         }
+        {
+            uint32_t pad = (uint32_t)PARAM_BLOCK_SIZE - (uint32_t)compact;
+
+            reserve[k] += pad;
+            if ((blocks[i].flags & FLAG_EEPROM_BAK) != 0u) {
+                reserve[k] += pad;
+            }
+        }
         start = blk_ee[i];
         last = start + (uint32_t)PARAM_BLOCK_SIZE - 1u;
         if (!has_pri[k] || (start < pri_lo[k])) {
@@ -1170,6 +1195,7 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
 
     ram_total = 0u;
     ee_bytes_total = 0u;
+    reserve_total = 0u;
     tot_pri = 0;
     tot_bak = 0;
     tot_pri_lo = 0u;
@@ -1179,6 +1205,7 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
     for (k = 0; k < 4; k++) {
         ram_total += ram[k];
         ee_bytes_total += ee_bytes[k];
+        reserve_total += reserve[k];
         if (has_pri[k]) {
             if (!tot_pri || (pri_lo[k] < tot_pri_lo)) {
                 tot_pri_lo = pri_lo[k];
@@ -1210,19 +1237,20 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
     fprintf(out, "## 参变量分类消耗\n\n");
     fprintf(out, "RAM 为 SRAM 工作区（compact：payload + CRC）；无 SRAM 的类型为 0。\n");
     fprintf(out, "EE 偏移相对 `PARAM_EEPROM_BASE`，结束为末字节（含）。\n");
-    fprintf(out, "有 BAK 的类型另计备份槽（`PARAM_EE_TOTAL` + 主槽偏移）；EE占用 含主槽与备份槽。\n\n");
-    fprintf(out, "| 类型 | RAM | 主槽起始 | 主槽结束 | 备份起始 | 备份结束 | EE占用 |\n");
-    fprintf(out, "|------|-----|----------|----------|----------|----------|--------|\n");
+    fprintf(out, "有 BAK 的类型另计备份槽（`PARAM_EE_TOTAL` + 主槽偏移）；EE占用 含主槽与备份槽。\n");
+    fprintf(out, "`reserve` = `blk_size` − `compact`，合计含备份槽内的尾部空洞。\n\n");
+    fprintf(out, "| 类型 | RAM | 主槽起始 | 主槽结束 | 备份起始 | 备份结束 | EE占用 | 预留 |\n");
+    fprintf(out, "|------|-----|----------|----------|----------|----------|--------|------|\n");
     for (k = 0; k < 4; k++) {
         dump_param_ee_row(out, names[k], ram[k],
                           has_pri[k], pri_lo[k], pri_hi[k],
                           has_bak[k], bak_lo[k], bak_hi[k],
-                          ee_bytes[k]);
+                          ee_bytes[k], reserve[k]);
     }
     dump_param_ee_row(out, "合计", ram_total,
                       tot_pri, tot_pri_lo, tot_pri_hi,
                       tot_bak, tot_bak_lo, tot_bak_hi,
-                      ee_bytes_total);
+                      ee_bytes_total, reserve_total);
     fprintf(out, "\n");
 }
 
@@ -1268,29 +1296,32 @@ static void dump_layout(FILE *out, unsigned nitems, unsigned nblocks,
     fprintf(out, "| map_end | %s |\n\n", off_s);
 
     fprintf(out, "## 块\n\n");
-    fprintf(out, "主槽编号 0..N-1；备份槽接在主槽之后继续编号。\n\n");
-    fprintf(out, "| blk_id | role | of | store | compact | ee_off | blk_size |\n");
-    fprintf(out, "|--------|------|----|-------|---------|--------|----------|\n");
+    fprintf(out, "主槽编号 0..N-1；备份槽接在主槽之后继续编号。`reserve` = `blk_size` − `compact`。\n\n");
+    fprintf(out, "| blk_id | role | of | store | compact | reserve | ee_off | blk_size |\n");
+    fprintf(out, "|--------|------|----|-------|---------|---------|--------|----------|\n");
     for (bi = 0u; bi < nblocks; bi++) {
         unsigned compact;
+        unsigned pad;
 
         compact = (unsigned)blocks[bi].payload + (unsigned)PARAM_CRC_BYTES_BLOCK;
+        pad = (unsigned)PARAM_BLOCK_SIZE - compact;
         if (blk_ee[bi] == PARAM_BLOCK_NULL_EE_OFF) {
-            fprintf(out, "| %u | primary | - | %s | %u | - | %u |\n",
+            fprintf(out, "| %u | primary | - | %s | %u | %u | - | %u |\n",
                     bi, store_label(blocks[bi].flags),
-                    compact, (unsigned)PARAM_BLOCK_SIZE);
+                    compact, pad, (unsigned)PARAM_BLOCK_SIZE);
             continue;
         }
         fmt_off(off_s, sizeof off_s, blk_ee[bi]);
-        fprintf(out, "| %u | primary | - | %s | %u | %s | %u |\n",
+        fprintf(out, "| %u | primary | - | %s | %u | %u | %s | %u |\n",
                 bi, store_label(blocks[bi].flags),
-                compact, off_s, (unsigned)PARAM_BLOCK_SIZE);
+                compact, pad, off_s, (unsigned)PARAM_BLOCK_SIZE);
     }
     {
         unsigned bak_id = nblocks;
 
         for (bi = 0u; bi < nblocks; bi++) {
             unsigned compact;
+            unsigned pad;
 
             if ((blocks[bi].flags & FLAG_EEPROM_BAK) == 0u) {
                 continue;
@@ -1299,10 +1330,11 @@ static void dump_layout(FILE *out, unsigned nitems, unsigned nblocks,
                 continue;
             }
             compact = (unsigned)blocks[bi].payload + (unsigned)PARAM_CRC_BYTES_BLOCK;
+            pad = (unsigned)PARAM_BLOCK_SIZE - compact;
             fmt_off(bak_s, sizeof bak_s, ee_total + blk_ee[bi]);
-            fprintf(out, "| %u | bak | %u | %s | %u | %s | %u |\n",
+            fprintf(out, "| %u | bak | %u | %s | %u | %u | %s | %u |\n",
                     bak_id, bi, store_label(blocks[bi].flags),
-                    compact, bak_s, (unsigned)PARAM_BLOCK_SIZE);
+                    compact, pad, bak_s, (unsigned)PARAM_BLOCK_SIZE);
             bak_id++;
         }
     }
