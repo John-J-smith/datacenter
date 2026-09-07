@@ -20,7 +20,7 @@ typedef struct {
     uint8_t flags;
     const char *attr_sym;
     const uint8_t *attr;
-    uint8_t index_count;
+    uint8_t elem_count;
     uint8_t elem_bytes;
     uint8_t link_n;
     uint8_t link_m;
@@ -44,7 +44,7 @@ typedef struct {
         s_items[s_nitems].flags = (uint8_t)(fl); \
         s_items[s_nitems].attr_sym = #atab; \
         s_items[s_nitems].attr = (const uint8_t *)(atab); \
-        s_items[s_nitems].index_count = 0u; \
+        s_items[s_nitems].elem_count = 0u; \
         s_items[s_nitems].elem_bytes = 0u; \
         s_items[s_nitems].link_n = 0u; \
         s_items[s_nitems].link_m = 0u; \
@@ -120,7 +120,7 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
         if (item->total_len == 0u) {
             die("%s: INT total_len 0", item->name);
         }
-        item->index_count = 1u;
+        item->elem_count = 1u;
         item->elem_bytes = (uint8_t)item->total_len;
         break;
 
@@ -132,7 +132,7 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
             die("%s: ARRAY %u*%u != total_len %u", item->name,
                 (unsigned)attr[1], (unsigned)attr[2], (unsigned)item->total_len);
         }
-        item->index_count = attr[1];
+        item->elem_count = attr[1];
         item->elem_bytes = attr[2];
         break;
 
@@ -153,7 +153,7 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
             die("%s: STRUCT %u bytes exceeds payload %u", item->name,
                 sum, (unsigned)payload_max);
         }
-        item->index_count = attr[1];
+        item->elem_count = attr[1];
         item->elem_bytes = 0u;
         break;
     }
@@ -214,7 +214,7 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
         item->link_n = (uint8_t)npage;
         item->link_m = (uint8_t)per_page;
         item->link_k = (uint8_t)k;
-        item->index_count = (uint8_t)nrec;
+        item->elem_count = (uint8_t)nrec;
         item->elem_bytes = (uint8_t)k;
         break;
     }
@@ -447,6 +447,41 @@ static void emit_param_defaults(unsigned nitems)
     }
 }
 
+static void fill_primary_store_section(uint8_t flags, char *dst, size_t cap)
+{
+    const char *base;
+
+    if (((flags & FLAG_SRAM) != 0u) && ((flags & FLAG_EEPROM_BAK) != 0u)) {
+        base = "RAM_EE_BK";
+    } else if ((flags & FLAG_SRAM) != 0u) {
+        base = "RAM_EE";
+    } else if ((flags & FLAG_EEPROM_BAK) != 0u) {
+        base = "EE_BK";
+    } else if ((flags & FLAG_EEPROM) != 0u) {
+        base = "EE";
+    } else {
+        base = "?";
+    }
+    if ((flags & FLAG_EEPROM_BAK) != 0u) {
+        snprintf(dst, cap, "%s1", base);
+    } else {
+        snprintf(dst, cap, "%s", base);
+    }
+}
+
+static void emit_store_section_if_changed(const char *indent, uint8_t flags,
+                                          char *prev, size_t prev_cap, int *have_prev)
+{
+    char lab[24];
+
+    fill_primary_store_section(flags, lab, sizeof lab);
+    if ((*have_prev == 0) || (strcmp(prev, lab) != 0)) {
+        oprintf("%s/* %s */\n", indent, lab);
+        snprintf(prev, prev_cap, "%s", lab);
+        *have_prev = 1;
+    }
+}
+
 static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
 {
     param_tbl_cols_t c;
@@ -457,10 +492,15 @@ static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
     const char *attr_ref;
     const char *def_ref;
 
+    char prev_lab[24];
+    int have_prev;
+
     c = param_api_col_widths(nitems, place);
     emit_resolved_attr_tables(nitems);
     emit_param_defaults(nitems);
     oputs("const ST_PARAM_TABLE tParamApiTable[] = {\n");
+    prev_lab[0] = '\0';
+    have_prev = 0;
     for (i = 0u; i < nitems; i++) {
         const uint8_t *def;
         size_t deflen;
@@ -478,6 +518,8 @@ static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
         } else {
             def_ref = "NULL";
         }
+        emit_store_section_if_changed("    ", s_items[i].flags, prev_lab,
+                                      sizeof prev_lab, &have_prev);
         oprintf("    { %-*s, ", (int)c.name, s_items[i].name);
         snprintf(num_buf, sizeof num_buf, "%uu", (unsigned)place[i].blk);
         oprintf("%-*s, ", (int)c.blk, num_buf);
@@ -609,7 +651,7 @@ static unsigned pack_param_blocks(pack_block_t blocks[PACK_MAX_BLOCKS],
             unsigned def_off;
 
             k = (unsigned)s_items[i].link_k;
-            nrec = (unsigned)s_items[i].index_count;
+            nrec = (unsigned)s_items[i].elem_count;
             per_page = (unsigned)s_items[i].link_m;
             npage = (unsigned)s_items[i].link_n;
             if (nblocks > (255u - npage)) {
@@ -1354,7 +1396,7 @@ static void dump_layout(FILE *out, unsigned nitems, unsigned nblocks,
         fprintf(out, "| %s | %u | %s | %s | %u | %u | %s |",
                 s_items[i].name, (unsigned)s_items[i].id,
                 store_label(flags), dtype_name(s_items[i].dtype),
-                (unsigned)s_items[i].index_count, (unsigned)s_items[i].total_len,
+                (unsigned)s_items[i].elem_count, (unsigned)s_items[i].total_len,
                 has_def);
         if (blk_ee[blk] == PARAM_BLOCK_NULL_EE_OFF) {
             fprintf(out, " - | - |\n");
@@ -1568,15 +1610,9 @@ int main(int argc, char **argv)
 
         /* Primary slots first. Dual-backup stores are tagged BK1. */
         for (i = 0u; i < nblocks; i++) {
-            const char *base = store_label(blocks[i].flags);
             unsigned has_sram = ((blocks[i].flags & FLAG_SRAM) != 0u) ? 1u : 0u;
-            unsigned has_bak = ((blocks[i].flags & FLAG_EEPROM_BAK) != 0u) ? 1u : 0u;
 
-            if (has_bak != 0u) {
-                snprintf(lab_buf, sizeof lab_buf, "%s1", base);
-            } else {
-                snprintf(lab_buf, sizeof lab_buf, "%s", base);
-            }
+            fill_primary_store_section(blocks[i].flags, lab_buf, sizeof lab_buf);
             if ((have_prev == 0) || (strcmp(prev_lab, lab_buf) != 0)) {
                 oprintf("    /* %s */\n", lab_buf);
                 snprintf(prev_lab, sizeof prev_lab, "%s", lab_buf);

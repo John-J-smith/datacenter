@@ -327,11 +327,13 @@ const uint8_t g_default_PARAM_LADDER_SWTIME[7u] = {
 };
 
 const ST_PARAM_TABLE tParamApiTable[] = {
+    /* RAM_EE_BK1 */
     { PARAM_UN           , 0u , 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
     { PARAM_REMOTECTRL   , 0u , 4u , 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
     { PARAM_LOCALCTRL    , 0u , 10u, 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
     { PARAM_SEASON_SWTIME, 0u , 16u, 7u  , _PARAM_ATTR_INT                , g_default_PARAM_SEASON_SWTIME },
     { PARAM_LINK_TEST    , 1u , 0u , 150u, g_param_attr_PARAM_LINK_TEST   , NULL                          },
+    /* EE_BK1 */
     { PARAM_IB           , 4u , 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
     { PARAM_TCP_UDP_SETUP, 4u , 4u , 39u , _param_attr_PARAM_TCP_UDP_SETUP, NULL                          },
     { PARAM_DAY_SWTIME   , 4u , 43u, 7u  , _PARAM_ATTR_INT                , g_default_PARAM_DAY_SWTIME    },
@@ -339,10 +341,12 @@ const ST_PARAM_TABLE tParamApiTable[] = {
     { PARAM_LADDER_SWTIME, 5u , 0u , 7u  , _PARAM_ATTR_INT                , g_default_PARAM_LADDER_SWTIME },
     { PARAM_DATA1        , 6u , 0u , 60u , _param_attr_PARAM_DATA1        , NULL                          },
     { PARAM_LINK_TEST2   , 7u , 0u , 80u , g_param_attr_PARAM_LINK_TEST2  , NULL                          },
+    /* RAM_EE */
     { PARAM_IMAX         , 9u , 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
     { PARAM_HOLIDAY_DATA , 10u, 0u , 60u , _param_attr_PARAM_HOLIDAY_DATA , NULL                          },
     { PARAM_LINK_TEST3   , 11u, 0u , 100u, g_param_attr_PARAM_LINK_TEST3  , NULL                          },
     { PARAM_TESTCTRL     , 13u, 0u , 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
+    /* EE */
     { PARAM_CALIB_DATA   , 14u, 0u , 96u , g_param_attr_PARAM_CALIB_DATA  , NULL                          },
     { PARAM_TEST_IMAX    , 16u, 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
     { PARAM_TEST_DATA    , 17u, 0u , 60u , _param_attr_PARAM_TEST_DATA    , NULL                          },

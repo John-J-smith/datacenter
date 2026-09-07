@@ -15,7 +15,7 @@
 static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
 #endif
 
-/* Sum 1..16 field byte widths for PARAM_STRUCT total_len. */
+/* 对 PARAM_STRUCT 各字段字节宽求和，得到 total_len（最多 16 项）。 */
 #define DC_PARAM_NARG_( \
     _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, N, ...) N
 #define DC_PARAM_NARG(...) \
@@ -51,13 +51,12 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
     DC_PARAM_SUM_EXPAND1(DC_PARAM_NARG(__VA_ARGS__))(__VA_ARGS__)
 
 /*
- * Unified catalog macros: emit _param_attr_* and expand list row X(...) in one step.
+ * 统一清单宏：一次展开同时生成 _param_attr_* 并输出 X(...) 行。
  *
- * Shared ATTR: declare once with PARAM_ATTR_* (tag), reference with PARAM_*_USE.
+ * 共享属性表：用 PARAM_ATTR_*（tag）声明一次，用 PARAM_*_USE 引用。
  *
- * Firmware (non-pack) includes dc_param_cfg.h which calls
- * PARAM_ITEM_LIST(_PARAM_ATTR_EMIT_) so attrs exist at file scope.
- * dc_param_pack expands the same list with PACK_ROW inside load_param_items().
+ * 固件（非 pack）包含 dc_param_cfg.h 时调用 PARAM_ITEM_LIST(_PARAM_ATTR_EMIT_)，
+ * 在文件作用域生成属性表。dc_param_pack 在 load_param_items() 里用 PACK_ROW 展开同一清单。
  */
 
 #define PARAM_STRUCT_ATTR(name, n, ...) \
@@ -69,10 +68,10 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
 #define PARAM_LINK_ATTR(name, n, elem) \
     static const uint8_t _param_attr_##name[] = { DATATYPE_LINKARRAY, 0u, 0u, (elem) };
 
-/* Pack-only: total_len in X(...) — derive byte count from shared attrib (STRUCT *_USE). */
+/* 仅 pack：X(...) 的 total_len 哨兵，从共享属性表推导字节数（STRUCT *_USE）。 */
 #define PARAM_TOTAL_FROM_ATTR  (0xFFFFu)
 
-/* ST is the list-bound store (PARAM_ITEM_LIST_*_ROWS second arg). Do not pass PARAM_STORE_*. */
+/* ST 为清单绑定的存储类型（PARAM_ITEM_LIST_*_ROWS 的第二参数），行内不要写 PARAM_STORE_*。 */
 #define PARAM_INT(X, ST, name, len) \
     X(name, DATATYPE_INT, (len), (ST), _PARAM_ATTR_INT)
 
@@ -88,7 +87,7 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
     PARAM_LINK_ATTR(name, n, elem) \
     X(name, DATATYPE_LINKARRAY, (n) * (elem), (ST), _param_attr_##name)
 
-/* Shared attribute tables — one tag, many PARAM_*_USE rows. */
+/* 共享属性表：一个 tag，多行 PARAM_*_USE 引用。 */
 #define PARAM_ATTR_STRUCT(tag, n, ...) \
     static const uint8_t _param_attr_##tag[] = { DATATYPE_STRUCT, (n), __VA_ARGS__ };
 
