@@ -95,11 +95,24 @@ static void die(const char *fmt, ...)
 
 static void oappend(const char *s, size_t n)
 {
-    if (s_out_len + n >= OUT_CAP) {
-        die("generated alias layout larger than buffer");
+    size_t i;
+
+    for (i = 0u; i < n; i++) {
+#ifdef _WIN32
+        if ((s[i] == '\n') && ((i == 0u) || (s[i - 1u] != '\r'))) {
+            if (s_out_len + 2u >= OUT_CAP) {
+                die("generated alias layout larger than buffer");
+            }
+            s_out[s_out_len++] = '\r';
+            s_out[s_out_len++] = '\n';
+            continue;
+        }
+#endif
+        if (s_out_len + 1u >= OUT_CAP) {
+            die("generated alias layout larger than buffer");
+        }
+        s_out[s_out_len++] = s[i];
     }
-    memcpy(s_out + s_out_len, s, n);
-    s_out_len += n;
 }
 
 static void oputs(const char *s)

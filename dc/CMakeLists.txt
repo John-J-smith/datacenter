@@ -25,6 +25,7 @@ target_include_directories(dc_variable_pack PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/inc
     ${DC_PORT_DIR}
 )
+# pack 只读 port 清单 cfg；不要把 dc/port 加进 include（避免吃到产品 dc_storage_cfg.h）
 
 add_custom_target(dc_variable_layout ALL
     COMMAND $<TARGET_FILE:dc_variable_pack> "${DC_VARIABLE_LAYOUT_H}"

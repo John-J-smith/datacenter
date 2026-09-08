@@ -206,7 +206,7 @@ DcTestParamReset();    // 参数 RAM / init 标志清零
 
 - 测试 cfg / layout：`dc/test/port/`（CMake 变量 `DC_PORT_DIR`）
 - EE 模拟：`port/dc_storage_sim.c` 实现 `DcCfgStorageRead` / `DcCfgStorageWrite`
-- **`dc_storage_cfg.h` 须 pack 安全**：仅地址宏与函数声明，**不在头文件中** `#include` 产品 HAL；驱动头文件只出现在 port 的 `.c` 中
+- **pack 不编译** `dc/port/dc_storage_cfg.h`；产品 storage 头给固件用，可含 HAL。生成的 layout 仍 include 该头。
 
 Layout 生成见 `dc/tools/CMakeLists.txt` 与 `dc/tools/gen_layouts.cmd`。
 

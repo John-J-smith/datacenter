@@ -63,9 +63,10 @@ message(STATUS "DC_ALIAS_LAYOUT_H=${DC_ALIAS_LAYOUT_H}")
 # host 工具：读 cfg 里的 VAR_LIST_* / PARAM 表，输出 layout 头文件
 add_executable(dc_variable_pack dc_variable_pack.c)
 target_include_directories(dc_variable_pack PRIVATE
-    "${DC_ROOT}/inc"   # dc_variable.h 等公共类型
-    "${DC_PORT_DIR}"       # dc_variable_cfg.h（catalog；不含 storage）
+    "${DC_ROOT}/inc"
+    "${DC_PORT_DIR}"
 )
+# pack 只读 DC_PORT_DIR 清单 cfg，不包含 dc/port/dc_storage_cfg.h
 
 add_executable(dc_param_pack dc_param_pack.c)
 target_include_directories(dc_param_pack PRIVATE

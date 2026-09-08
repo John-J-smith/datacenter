@@ -49,6 +49,8 @@ _Avoid_: 把 D 类也做 RAM shadow, 运行时再算 layout
 
 CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。编译库与测试均需将 `${DC_PORT_DIR}` 加入 include 路径。
 
+**pack 不包含** `dc/port/dc_storage_cfg.h`（也不在 pack 源文件里 `#include` storage）。host 工具只读 `DC_PORT_DIR` 下的 `dc_variable_cfg.h` / `dc_param_cfg.h`。生成的 `dc_*_layout.h` 仍 `#include "dc_storage_cfg.h"`，由固件编译用产品 port 解析。产品 storage 头可以含驱动/HAL，不必为 pack 保持“无 HAL”。
+
 ### 统一 storage
 
 - 接口：`DcCfgStorageRead` / `DcCfgStorageWrite`（`dc_storage_cfg.h`）

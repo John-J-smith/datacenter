@@ -1,7 +1,6 @@
 #define DC_PARAM_PACK
 #include "dc_param.h"
 #include "dc_param_attr.h"
-#include "dc_storage_cfg.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -341,11 +340,45 @@ static void die(const char *fmt, ...)
 
 static void oappend(const char *s, size_t n)
 {
-    if (s_out_len + n >= OUT_CAP) {
-        die("generated layout larger than buffer");
+    size_t i;
+
+    for (i = 0u; i < n; i++) {
+#ifdef _WIN32
+        if ((s[i] == '\n') && ((i == 0u) || (s[i - 1u] != '\r'))) {
+            if (s_out_len + 2u >= OUT_CAP) {
+                die("generated layout larger than buffer");
+            }
+            s_out[s_out_len++] = '\r';
+            s_out[s_out_len++] = '\n';
+            continue;
+        }
+#endif
+        if (s_out_len + 1u >= OUT_CAP) {
+            die("generated layout larger than buffer");
+        }
+        s_out[s_out_len++] = s[i];
     }
-    memcpy(s_out + s_out_len, s, n);
-    s_out_len += n;
+}
+
+static int fwrite_host_text(FILE *fp, const char *s, size_t n)
+{
+#ifdef _WIN32
+    size_t i;
+
+    for (i = 0u; i < n; i++) {
+        if ((s[i] == '\n') && ((i == 0u) || (s[i - 1u] != '\r'))) {
+            if (fputc('\r', fp) == EOF) {
+                return -1;
+            }
+        }
+        if (fputc((unsigned char)s[i], fp) == EOF) {
+            return -1;
+        }
+    }
+    return 0;
+#else
+    return (fwrite(s, 1, n, fp) == n) ? 0 : -1;
+#endif
 }
 
 static void oputs(const char *s)
@@ -1032,7 +1065,7 @@ static void upsert_md_section(const char *md_path, const char *begin, const char
         free(out);
         die("cannot write %s", md_path);
     }
-    if (fwrite(out, 1, out_len, fp) != out_len) {
+    if (fwrite_host_text(fp, out, out_len) != 0) {
         fclose(fp);
         free(out);
         die("write failed: %s", md_path);
@@ -1191,7 +1224,7 @@ static void reorder_layout_md(const char *md_path)
         free(out);
         die("cannot write %s", md_path);
     }
-    if (fwrite(out, 1, out_len, fp) != out_len) {
+    if (fwrite_host_text(fp, out, out_len) != 0) {
         fclose(fp);
         free(out);
         die("write failed: %s", md_path);
