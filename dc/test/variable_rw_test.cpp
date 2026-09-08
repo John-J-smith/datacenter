@@ -130,6 +130,7 @@ TEST_F(VariableTestBase, IndexAllReadsFullElement)
     uint8_t wbuf[6];
     uint8_t rbuf[6];
 
+    // 1. 上电初始化
     InitVariableModule();
 
     FillVarWritePattern(wbuf, 6u, 0u, 0u);
@@ -138,10 +139,13 @@ TEST_F(VariableTestBase, IndexAllReadsFullElement)
     wbuf[4] = 0x33u;
     wbuf[5] = 0x44u;
 
+    // 2. VAR_INDEX_ALL 一次写入三相
     ASSERT_EQ(WriteVar(VAR_RMS_VOLTAGE, VAR_INDEX_ALL, wbuf, 1u), 6);
+    // 3. ALL 读回与缓冲一致
     ASSERT_EQ(ReadVar(VAR_RMS_VOLTAGE, VAR_INDEX_ALL, rbuf, 1u), 6);
     EXPECT_EQ(std::memcmp(wbuf, rbuf, 6u), 0);
 
+    // 4. 分 index 读 L1/L2 对应切片
     ASSERT_EQ(ReadVar(VAR_RMS_VOLTAGE, 0, rbuf, 1u), 2);
     EXPECT_EQ(rbuf[0], wbuf[0]);
     EXPECT_EQ(rbuf[1], wbuf[1]);

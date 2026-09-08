@@ -23,6 +23,7 @@ dc/test/
   README.md                    # 本规范
   CMakeLists.txt
   dc_test_variable.h           # 变量 test hook 声明（不进 dc/include/）
+  dc_test_param.h              # 参数 test hook 声明（不进 dc/include/）
   variable_test_helpers.hpp  # 变量 helper + VariableTestBase
   param_test_helpers.hpp     # 参数 helper + ParamTestBase
   variable_layout_test.cpp   # 8.2.1 布局与映射表
@@ -30,7 +31,10 @@ dc/test/
   variable_recovery_test.cpp # 上电 / 运行中恢复
   variable_backup_test.cpp   # 定时 / 掉电备份
   param_layout_test.cpp      # 参数 layout / block 表
-  param_rw_test.cpp          # 参数读写（经别名）
+  param_rw_test.cpp          # 参数读写（经别名，含全表与 INDEX_ALL）
+  param_default_test.cpp     # 出厂默认与 noinit 恢复
+  param_storage_test.cpp     # 主槽 / bak / 无 SRAM 落盘
+  param_list_test.cpp        # LIST attrib 与 xF / 0xFF
   port/                      # 测试用 cfg、layout、storage 模拟
     dc_*_cfg.h
     dc_*_layout.h
@@ -81,7 +85,12 @@ DcTestVarReset();      // SRAM、计时器、dirty 清零
 
 ### 4.2 参数类
 
-继承 `ParamTestBase`（当前无额外 SetUp；若后续依赖 storage 再扩展）。
+继承 `ParamTestBase`，`SetUp` 固定为：
+
+```cpp
+DcTestStorageReset();  // EE 模拟区复位
+DcTestParamReset();    // 参数 RAM / init 标志清零
+```
 
 ### 4.3 Layout 测试
 
@@ -130,7 +139,8 @@ DcTestVarReset();      // SRAM、计时器、dirty 清零
 | Helper | 用途 |
 |--------|------|
 | `MakeParamIoBuffer` / `FillParamWritePattern` | buffer 与写图案 |
-| `ParamIndexCount` / `ParamElemBytes` | 经 `dc_param_attr.h` 读映射表元数据 |
+| `ParamIndexCount` / `ParamElemBytes` / `ParamIoIndex` | 经 `dc_param_attr.h` 读映射表元数据（LIST 用 xy） |
+| `ParamFindEntry` / `ParamCorruptBlockCrc` | 按小类找行、破坏 SRAM 块 CRC |
 
 **原则**：可复用逻辑放进 helper；用例本体只保留 Arrange / Act / Assert。
 
@@ -213,7 +223,10 @@ add_executable(dc_tests
     variable_recovery_test.cpp
     variable_backup_test.cpp
     param_rw_test.cpp
+    param_default_test.cpp
     param_layout_test.cpp
+    param_storage_test.cpp
+    param_list_test.cpp
 )
 target_compile_definitions(datacenter PRIVATE DC_TEST)
 target_compile_definitions(dc_tests PRIVATE DC_TEST)

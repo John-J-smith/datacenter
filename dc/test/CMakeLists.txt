@@ -28,6 +28,7 @@ add_executable(dc_tests
     param_default_test.cpp
     param_layout_test.cpp
     param_storage_test.cpp
+    param_list_test.cpp
 )
 target_include_directories(dc_tests PRIVATE ${DC_PORT_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(dc_tests PRIVATE DC_TEST)

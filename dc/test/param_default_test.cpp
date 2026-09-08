@@ -47,9 +47,11 @@ TEST_F(ParamTestBase, FirstRead_SharedBlock_MixedDefaultsAndFill)
     std::array<uint8_t, 7u> swtime{};
     std::array<uint8_t, 4u> remote{};
 
+    // 1. 同块读 SEASON_SWTIME 与 REMOTECTRL 字段 0
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, swtime.data(), 1u, 0u), 7);
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_REMOTECTRL_0, remote.data(), 1u, 0u), 4);
 
+    // 2. swtime 为 catalog 默认，remote 为 0xFF
     EXPECT_EQ(std::memcmp(swtime.data(), g_default_PARAM_SEASON_SWTIME, swtime.size()), 0);
     for (uint8_t b : remote)
     {
@@ -129,14 +131,17 @@ TEST_F(ParamTestBase, Noinit_BadBlockCrc_RestoresFromEe)
     const uint8_t custom[] = {0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x66u, 0x77u};
     std::array<uint8_t, 7u> buf{};
 
+    // 1. 冷启动读默认并写入自定义值（写路径会刷新块 CRC）
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
     ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), 7);
 
     const ST_PARAM_TABLE *entry = ParamFindEntry(PARAM_SEASON_SWTIME);
     ASSERT_NE(entry, nullptr);
+    // 2. 破坏 SRAM 块 CRC 后清 init，模拟 noinit
     ParamCorruptBlockCrc(entry->eBlockName);
     DcTestParamReinit();
 
+    // 3. 再读应从主槽 EE 恢复为写入值
     std::fill(buf.begin(), buf.end(), 0u);
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
     EXPECT_EQ(std::memcmp(buf.data(), custom, sizeof(custom)), 0);
@@ -148,6 +153,7 @@ TEST_F(ParamTestBase, Noinit_BadRamAndEe_RestoresCatalogDefault)
     const uint8_t custom[] = {0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x66u, 0x77u};
     std::array<uint8_t, 7u> buf{};
 
+    // 1. 写入自定义值后破坏 RAM CRC 与双 EE 槽 CRC
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
     ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), 7);
 
@@ -159,8 +165,10 @@ TEST_F(ParamTestBase, Noinit_BadRamAndEe_RestoresCatalogDefault)
                        (block->ucBlockLen - PARAM_CRC_BYTES_BLOCK)] ^= 0xFFu;
     DcTestStoragePtr()[PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + block->uBlockEeOff +
                        (block->ucBlockLen - PARAM_CRC_BYTES_BLOCK)] ^= 0xFFu;
+    // 2. noinit 后再读
     DcTestParamReinit();
 
+    // 3. 断言恢复为 catalog 默认而非 custom
     std::fill(buf.begin(), buf.end(), 0u);
     ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
     EXPECT_EQ(std::memcmp(buf.data(), g_default_PARAM_SEASON_SWTIME, buf.size()), 0);

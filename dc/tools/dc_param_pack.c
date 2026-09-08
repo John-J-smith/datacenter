@@ -158,6 +158,63 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
         break;
     }
 
+    case DATATYPE_LIST: {
+        unsigned n;
+        unsigned i;
+        unsigned sum;
+        unsigned xy;
+        unsigned ln;
+        unsigned expect_g;
+        unsigned expect_y;
+
+        n = (unsigned)attr[1];
+        if (n == 0u) {
+            die("%s: LIST leaf count 0", item->name);
+        }
+        sum = 0u;
+        expect_g = 0u;
+        expect_y = 0u;
+        for (i = 0u; i < n; i++) {
+            xy = (unsigned)attr[2u + (i * 2u)];
+            ln = (unsigned)attr[3u + (i * 2u)];
+            if (ln == 0u) {
+                die("%s: LIST leaf len 0", item->name);
+            }
+            if ((xy & 0x0Fu) == 0x0Fu) {
+                die("%s: LIST attrib must not contain xF", item->name);
+            }
+            if ((xy >> 4) != expect_g) {
+                if (((xy >> 4) != (expect_g + 1u)) || (expect_y == 0u) ||
+                    ((xy & 0x0Fu) != 0u)) {
+                    die("%s: LIST subindex 0x%02X not sequential", item->name, xy);
+                }
+                expect_g = xy >> 4;
+                expect_y = 0u;
+            }
+            if ((xy & 0x0Fu) != expect_y) {
+                die("%s: LIST subindex 0x%02X expected y=%u", item->name, xy, expect_y);
+            }
+            expect_y++;
+            if (expect_y > 15u) {
+                die("%s: LIST group %u too many fields", item->name, expect_g);
+            }
+            sum += ln;
+        }
+        if (item->total_len == PARAM_TOTAL_FROM_ATTR) {
+            item->total_len = (uint16_t)sum;
+        } else if (sum != (unsigned)item->total_len) {
+            die("%s: LIST field sum %u != total_len %u", item->name,
+                sum, (unsigned)item->total_len);
+        }
+        if (sum > (unsigned)payload_max) {
+            die("%s: LIST %u bytes exceeds payload %u", item->name,
+                sum, (unsigned)payload_max);
+        }
+        item->elem_count = (uint8_t)n;
+        item->elem_bytes = 0u;
+        break;
+    }
+
     case DATATYPE_LINKARRAY: {
         unsigned k;
         unsigned nrec;
@@ -218,9 +275,6 @@ static void resolve_item_attr(pack_item_t *item, uint16_t payload_max)
         item->elem_bytes = (uint8_t)k;
         break;
     }
-
-    case DATATYPE_LIST:
-        die("%s: DATATYPE_LIST not supported", item->name);
 
     default:
         die("%s: unknown dtype %u", item->name, (unsigned)item->dtype);
@@ -346,6 +400,84 @@ static unsigned str_width(const char *s)
     return (unsigned)strlen(s);
 }
 
+static unsigned attr_table_len(const pack_item_t *item)
+{
+    if ((item->dtype == (uint8_t)DATATYPE_STRUCT) && (item->attr != 0)) {
+        return 2u + (unsigned)item->attr[1];
+    }
+    if ((item->dtype == (uint8_t)DATATYPE_LIST) && (item->attr != 0)) {
+        return 2u + (2u * (unsigned)item->attr[1]);
+    }
+    return 0u;
+}
+
+static int layout_uses_g_param_attr(const pack_item_t *item)
+{
+    if (item->attr_resolved != 0u) {
+        return 1;
+    }
+    return (item->dtype == (uint8_t)DATATYPE_STRUCT) ||
+           (item->dtype == (uint8_t)DATATYPE_LIST);
+}
+
+static void fill_layout_attr_sym(const pack_item_t *item, char *dst, size_t cap)
+{
+    static const char prefix[] = "_param_attr_";
+
+    if (item->attr_resolved != 0u) {
+        snprintf(dst, cap, "g_param_attr_%s", item->name);
+        return;
+    }
+    if (((item->dtype == (uint8_t)DATATYPE_STRUCT) ||
+         (item->dtype == (uint8_t)DATATYPE_LIST)) &&
+        (strncmp(item->attr_sym, prefix, sizeof(prefix) - 1u) == 0)) {
+        snprintf(dst, cap, "g_param_attr_%s", item->attr_sym + (sizeof(prefix) - 1u));
+        return;
+    }
+    snprintf(dst, cap, "%s", item->attr_sym);
+}
+
+static int attr_table_already_emitted(unsigned idx)
+{
+    unsigned j;
+
+    for (j = 0u; j < idx; j++) {
+        if (strcmp(s_items[j].attr_sym, s_items[idx].attr_sym) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void emit_u8_init(const uint8_t *p, unsigned n)
+{
+    unsigned i;
+
+    oputs("{ ");
+    for (i = 0u; i < n; i++) {
+        oprintf("%uu", (unsigned)p[i]);
+        if ((i + 1u) < n) {
+            oputs(", ");
+        }
+    }
+    oputs(" }");
+}
+
+static void emit_list_attr_init(const uint8_t *attr)
+{
+    unsigned n;
+    unsigned i;
+
+    n = (unsigned)attr[1];
+    oprintf("{ %uu, %uu", (unsigned)attr[0], n);
+    for (i = 0u; i < n; i++) {
+        oprintf(",\n    0x%02Xu, %uu",
+                (unsigned)attr[2u + (i * 2u)],
+                (unsigned)attr[3u + (i * 2u)]);
+    }
+    oputs(" }");
+}
+
 static unsigned uint_text_width(unsigned v)
 {
     char buf[16];
@@ -381,13 +513,10 @@ static param_tbl_cols_t param_api_col_widths(unsigned nitems, const pack_place_t
         if (uint_text_width((unsigned)place[i].blk_len) > c.len) {
             c.len = uint_text_width((unsigned)place[i].blk_len);
         }
-        if (str_width(s_items[i].attr_sym) > c.attr) {
-            c.attr = str_width(s_items[i].attr_sym);
-        }
-        if (s_items[i].attr_resolved != 0u) {
+        {
             char gen[64];
 
-            snprintf(gen, sizeof gen, "g_param_attr_%s", s_items[i].name);
+            fill_layout_attr_sym(&s_items[i], gen, sizeof gen);
             if (str_width(gen) > c.attr) {
                 c.attr = str_width(gen);
             }
@@ -414,13 +543,35 @@ static param_tbl_cols_t param_api_col_widths(unsigned nitems, const pack_place_t
 static void emit_resolved_attr_tables(unsigned nitems)
 {
     unsigned i;
+    char gen[64];
 
     for (i = 0u; i < nitems; i++) {
-        if (s_items[i].attr_resolved == 0u) {
+        if (layout_uses_g_param_attr(&s_items[i]) == 0) {
             continue;
         }
-        oprintf("const uint8_t g_param_attr_%s[] = { %uu, %uu, %uu, %uu };\n\n",
-                s_items[i].name,
+        if (s_items[i].attr_resolved == 0u) {
+            unsigned n;
+
+            if (attr_table_already_emitted(i) != 0) {
+                continue;
+            }
+            n = attr_table_len(&s_items[i]);
+            if (n == 0u) {
+                die("%s: empty attrib table", s_items[i].name);
+            }
+            fill_layout_attr_sym(&s_items[i], gen, sizeof gen);
+            oprintf("const uint8_t %s[] = ", gen);
+            if (s_items[i].dtype == (uint8_t)DATATYPE_LIST) {
+                emit_list_attr_init(s_items[i].attr);
+            } else {
+                emit_u8_init(s_items[i].attr, n);
+            }
+            oputs(";\n\n");
+            continue;
+        }
+        fill_layout_attr_sym(&s_items[i], gen, sizeof gen);
+        oprintf("const uint8_t %s[] = { %uu, %uu, %uu, %uu };\n\n",
+                gen,
                 (unsigned)s_items[i].resolved_attr[0],
                 (unsigned)s_items[i].resolved_attr[1],
                 (unsigned)s_items[i].resolved_attr[2],
@@ -505,12 +656,8 @@ static void emit_param_api_table(unsigned nitems, const pack_place_t *place)
         const uint8_t *def;
         size_t deflen;
 
-        if (s_items[i].attr_resolved != 0u) {
-            snprintf(attr_buf, sizeof attr_buf, "g_param_attr_%s", s_items[i].name);
-            attr_ref = attr_buf;
-        } else {
-            attr_ref = s_items[i].attr_sym;
-        }
+        fill_layout_attr_sym(&s_items[i], attr_buf, sizeof attr_buf);
+        attr_ref = attr_buf;
         def = lookup_def(s_items[i].name, &deflen);
         if (def != 0) {
             snprintf(def_buf, sizeof def_buf, "g_default_%s", s_items[i].name);
@@ -1558,6 +1705,25 @@ int main(int argc, char **argv)
                         "(PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_%u_EE_OFF)\n",
                         i, i);
             }
+        }
+        oputs("#define PARAM_LAYOUT_BAK_OFFS");
+        {
+            unsigned bak_n;
+
+            bak_n = 0u;
+            for (i = 0u; i < nblocks; i++) {
+                if ((blocks[i].flags & FLAG_EEPROM_BAK) == 0u) {
+                    continue;
+                }
+                if (bak_n == 0u) {
+                    oputs(" \\\n    ");
+                } else {
+                    oputs(", \\\n    ");
+                }
+                oprintf("PARAM_LAYOUT_BLOCK_%u_EE_BK_OFF", i);
+                bak_n++;
+            }
+            oputs("\n");
         }
         oputs("\n");
 

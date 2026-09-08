@@ -13,7 +13,8 @@
 typedef char _param_block_check[(PARAM_EE_PAGE_SIZE % PARAM_BLOCK_SIZE) ? -1 : 1];
 
 /* Subclass IDs are assigned 0..N-1 by dc_param_pack (list order).
- * Store is bound once per list (`ST`); rows must use `ST`, not PARAM_STORE_*. */
+ * Store is bound once per list (`ST`); rows must use `ST`, not PARAM_STORE_*.
+ * LIST: PARAM_LIST(X, ST, name, PARAM_LG(n, len0, ...), ...); must fit one block. */
 
 #define PARAM_ITEM_LIST_RAM_EE_BK_ROWS(X, ST) \
     PARAM_INT(X, ST, PARAM_SEASON_SWTIME, 7u)

@@ -12,27 +12,33 @@ typedef enum {
     PARAM_REMOTECTRL = 1u,
     PARAM_LOCALCTRL = 2u,
     PARAM_SEASON_SWTIME = 3u,
-    PARAM_LINK_TEST = 4u,
-    PARAM_IB = 5u,
-    PARAM_TCP_UDP_SETUP = 6u,
-    PARAM_DAY_SWTIME = 7u,
-    PARAM_FEE_SWTIME = 8u,
-    PARAM_LADDER_SWTIME = 9u,
-    PARAM_DATA1 = 10u,
-    PARAM_LINK_TEST2 = 11u,
-    PARAM_IMAX = 12u,
-    PARAM_HOLIDAY_DATA = 13u,
-    PARAM_LINK_TEST3 = 14u,
-    PARAM_TESTCTRL = 15u,
-    PARAM_CALIB_DATA = 16u,
-    PARAM_TEST_IMAX = 17u,
-    PARAM_TEST_DATA = 18u,
-    PARAM_UDP_SETUP = 19u,
+    PARAM_LIST_DEMO = 4u,
+    PARAM_OVER_VOLTAGE_EVENT = 5u,
+    PARAM_IO_RS485 = 6u,
+    PARAM_LINK_TEST = 7u,
+    PARAM_IB = 8u,
+    PARAM_TCP_UDP_SETUP = 9u,
+    PARAM_DAY_SWTIME = 10u,
+    PARAM_FEE_SWTIME = 11u,
+    PARAM_LADDER_SWTIME = 12u,
+    PARAM_DATA1 = 13u,
+    PARAM_OVER_CURRENT_EVENT = 14u,
+    PARAM_LINK_TEST2 = 15u,
+    PARAM_IMAX = 16u,
+    PARAM_POWER_DOWN_EVENT = 17u,
+    PARAM_HOLIDAY_DATA = 18u,
+    PARAM_LINK_TEST3 = 19u,
+    PARAM_TESTCTRL = 20u,
+    PARAM_CALIB_DATA = 21u,
+    PARAM_TEST_IMAX = 22u,
+    PARAM_TEST_DATA = 23u,
+    PARAM_UDP_SETUP = 24u,
+    PARAM_MAGNET_EVENT = 25u,
     PARAM_ID_SENTINEL
 } E_PARAMETER_TYPE;
 
-#define PARAM_LAYOUT_BLOCK_COUNT (19u)
-#define PARAM_LAYOUT_ITEM_COUNT (20u)
+#define PARAM_LAYOUT_BLOCK_COUNT (21u)
+#define PARAM_LAYOUT_ITEM_COUNT (26u)
 
 #define PARAM_LAYOUT_BLOCK_0_EE_OFF (0u)
 #define PARAM_LAYOUT_BLOCK_1_EE_OFF (PARAM_LAYOUT_BLOCK_0_EE_OFF + PARAM_BLOCK_SIZE)
@@ -53,9 +59,11 @@ typedef enum {
 #define PARAM_LAYOUT_BLOCK_16_EE_OFF (PARAM_LAYOUT_BLOCK_15_EE_OFF + PARAM_BLOCK_SIZE)
 #define PARAM_LAYOUT_BLOCK_17_EE_OFF (PARAM_LAYOUT_BLOCK_16_EE_OFF + PARAM_BLOCK_SIZE)
 #define PARAM_LAYOUT_BLOCK_18_EE_OFF (PARAM_LAYOUT_BLOCK_17_EE_OFF + PARAM_BLOCK_SIZE)
-#define PARAM_EE_TOTAL (PARAM_EE_TOTAL_ALIGN(PARAM_LAYOUT_BLOCK_18_EE_OFF + PARAM_BLOCK_SIZE))
+#define PARAM_LAYOUT_BLOCK_19_EE_OFF (PARAM_LAYOUT_BLOCK_18_EE_OFF + PARAM_BLOCK_SIZE)
+#define PARAM_LAYOUT_BLOCK_20_EE_OFF (PARAM_LAYOUT_BLOCK_19_EE_OFF + PARAM_BLOCK_SIZE)
+#define PARAM_EE_TOTAL (PARAM_EE_TOTAL_ALIGN(PARAM_LAYOUT_BLOCK_20_EE_OFF + PARAM_BLOCK_SIZE))
 #define PARAM_EE_BAK_BASE (PARAM_EE_TOTAL)
-#define PARAM_EE_BAK_SPAN (576u)
+#define PARAM_EE_BAK_SPAN (704u)
 #define PARAM_EE_MAP_END (PARAM_EE_BAK_BASE + PARAM_EE_BAK_SPAN)
 #define PARAM_LAYOUT_BLOCK_0_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_0_EE_OFF)
 #define PARAM_LAYOUT_BLOCK_1_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_1_EE_OFF)
@@ -66,25 +74,41 @@ typedef enum {
 #define PARAM_LAYOUT_BLOCK_6_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_6_EE_OFF)
 #define PARAM_LAYOUT_BLOCK_7_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_7_EE_OFF)
 #define PARAM_LAYOUT_BLOCK_8_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_8_EE_OFF)
+#define PARAM_LAYOUT_BLOCK_9_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_9_EE_OFF)
+#define PARAM_LAYOUT_BLOCK_10_EE_BK_OFF (PARAM_EE_BAK_BASE + PARAM_LAYOUT_BLOCK_10_EE_OFF)
+#define PARAM_LAYOUT_BAK_OFFS \
+    PARAM_LAYOUT_BLOCK_0_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_1_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_2_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_3_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_4_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_5_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_6_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_7_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_8_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_9_EE_BK_OFF, \
+    PARAM_LAYOUT_BLOCK_10_EE_BK_OFF
 
 /* tParamBlockTable: primary slots only. bak2 = PARAM_EE_BAK_BASE + uBlockEeOff */
-#define PARAM_LAYOUT_BLOCK_0_PAYLOAD (23u)
-#define PARAM_LAYOUT_BLOCK_0_LEN (25u)
+#define PARAM_LAYOUT_BLOCK_0_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_0_LEN (62u)
 
 typedef struct {
     uint8_t PARAM_UN[4u];
     uint8_t PARAM_REMOTECTRL[6u];
     uint8_t PARAM_LOCALCTRL[6u];
     uint8_t PARAM_SEASON_SWTIME[7u];
+    uint8_t PARAM_LIST_DEMO[24u];
+    uint8_t PARAM_OVER_VOLTAGE_EVENT[13u];
     uint8_t crc[2u];
 } param_layout_0_t;
 typedef char param_layout_0_szchk[(sizeof(param_layout_0_t) == (size_t)PARAM_LAYOUT_BLOCK_0_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_1_PAYLOAD (60u)
-#define PARAM_LAYOUT_BLOCK_1_LEN (62u)
+#define PARAM_LAYOUT_BLOCK_1_PAYLOAD (44u)
+#define PARAM_LAYOUT_BLOCK_1_LEN (46u)
 
 typedef struct {
-    uint8_t PARAM_LINK_TEST[60u];
+    uint8_t PARAM_IO_RS485[44u];
     uint8_t crc[2u];
 } param_layout_1_t;
 typedef char param_layout_1_szchk[(sizeof(param_layout_1_t) == (size_t)PARAM_LAYOUT_BLOCK_1_LEN) ? 1 : -1];
@@ -98,17 +122,26 @@ typedef struct {
 } param_layout_2_t;
 typedef char param_layout_2_szchk[(sizeof(param_layout_2_t) == (size_t)PARAM_LAYOUT_BLOCK_2_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_3_PAYLOAD (30u)
-#define PARAM_LAYOUT_BLOCK_3_LEN (32u)
+#define PARAM_LAYOUT_BLOCK_3_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_3_LEN (62u)
 
 typedef struct {
-    uint8_t PARAM_LINK_TEST[30u];
+    uint8_t PARAM_LINK_TEST[60u];
     uint8_t crc[2u];
 } param_layout_3_t;
 typedef char param_layout_3_szchk[(sizeof(param_layout_3_t) == (size_t)PARAM_LAYOUT_BLOCK_3_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_4_PAYLOAD (57u)
-#define PARAM_LAYOUT_BLOCK_4_LEN (59u)
+#define PARAM_LAYOUT_BLOCK_4_PAYLOAD (30u)
+#define PARAM_LAYOUT_BLOCK_4_LEN (32u)
+
+typedef struct {
+    uint8_t PARAM_LINK_TEST[30u];
+    uint8_t crc[2u];
+} param_layout_4_t;
+typedef char param_layout_4_szchk[(sizeof(param_layout_4_t) == (size_t)PARAM_LAYOUT_BLOCK_4_LEN) ? 1 : -1];
+
+#define PARAM_LAYOUT_BLOCK_5_PAYLOAD (57u)
+#define PARAM_LAYOUT_BLOCK_5_LEN (59u)
 
 typedef struct {
     uint8_t PARAM_IB[4u];
@@ -116,134 +149,145 @@ typedef struct {
     uint8_t PARAM_DAY_SWTIME[7u];
     uint8_t PARAM_FEE_SWTIME[7u];
     uint8_t crc[2u];
-} param_layout_4_t;
-typedef char param_layout_4_szchk[(sizeof(param_layout_4_t) == (size_t)PARAM_LAYOUT_BLOCK_4_LEN) ? 1 : -1];
+} param_layout_5_t;
+typedef char param_layout_5_szchk[(sizeof(param_layout_5_t) == (size_t)PARAM_LAYOUT_BLOCK_5_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_5_PAYLOAD (7u)
-#define PARAM_LAYOUT_BLOCK_5_LEN (9u)
+#define PARAM_LAYOUT_BLOCK_6_PAYLOAD (7u)
+#define PARAM_LAYOUT_BLOCK_6_LEN (9u)
 
 typedef struct {
     uint8_t PARAM_LADDER_SWTIME[7u];
     uint8_t crc[2u];
-} param_layout_5_t;
-typedef char param_layout_5_szchk[(sizeof(param_layout_5_t) == (size_t)PARAM_LAYOUT_BLOCK_5_LEN) ? 1 : -1];
+} param_layout_6_t;
+typedef char param_layout_6_szchk[(sizeof(param_layout_6_t) == (size_t)PARAM_LAYOUT_BLOCK_6_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_6_PAYLOAD (60u)
-#define PARAM_LAYOUT_BLOCK_6_LEN (62u)
+#define PARAM_LAYOUT_BLOCK_7_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_7_LEN (62u)
 
 typedef struct {
     uint8_t PARAM_DATA1[60u];
     uint8_t crc[2u];
-} param_layout_6_t;
-typedef char param_layout_6_szchk[(sizeof(param_layout_6_t) == (size_t)PARAM_LAYOUT_BLOCK_6_LEN) ? 1 : -1];
-
-#define PARAM_LAYOUT_BLOCK_7_PAYLOAD (48u)
-#define PARAM_LAYOUT_BLOCK_7_LEN (50u)
-
-typedef struct {
-    uint8_t PARAM_LINK_TEST2[48u];
-    uint8_t crc[2u];
 } param_layout_7_t;
 typedef char param_layout_7_szchk[(sizeof(param_layout_7_t) == (size_t)PARAM_LAYOUT_BLOCK_7_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_8_PAYLOAD (32u)
-#define PARAM_LAYOUT_BLOCK_8_LEN (34u)
+#define PARAM_LAYOUT_BLOCK_8_PAYLOAD (13u)
+#define PARAM_LAYOUT_BLOCK_8_LEN (15u)
 
 typedef struct {
-    uint8_t PARAM_LINK_TEST2[32u];
+    uint8_t PARAM_OVER_CURRENT_EVENT[13u];
     uint8_t crc[2u];
 } param_layout_8_t;
 typedef char param_layout_8_szchk[(sizeof(param_layout_8_t) == (size_t)PARAM_LAYOUT_BLOCK_8_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_9_PAYLOAD (4u)
-#define PARAM_LAYOUT_BLOCK_9_LEN (6u)
+#define PARAM_LAYOUT_BLOCK_9_PAYLOAD (48u)
+#define PARAM_LAYOUT_BLOCK_9_LEN (50u)
 
 typedef struct {
-    uint8_t PARAM_IMAX[4u];
+    uint8_t PARAM_LINK_TEST2[48u];
     uint8_t crc[2u];
 } param_layout_9_t;
 typedef char param_layout_9_szchk[(sizeof(param_layout_9_t) == (size_t)PARAM_LAYOUT_BLOCK_9_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_10_PAYLOAD (60u)
-#define PARAM_LAYOUT_BLOCK_10_LEN (62u)
+#define PARAM_LAYOUT_BLOCK_10_PAYLOAD (32u)
+#define PARAM_LAYOUT_BLOCK_10_LEN (34u)
 
 typedef struct {
-    uint8_t PARAM_HOLIDAY_DATA[60u];
+    uint8_t PARAM_LINK_TEST2[32u];
     uint8_t crc[2u];
 } param_layout_10_t;
 typedef char param_layout_10_szchk[(sizeof(param_layout_10_t) == (size_t)PARAM_LAYOUT_BLOCK_10_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_11_PAYLOAD (60u)
-#define PARAM_LAYOUT_BLOCK_11_LEN (62u)
+#define PARAM_LAYOUT_BLOCK_11_PAYLOAD (17u)
+#define PARAM_LAYOUT_BLOCK_11_LEN (19u)
 
 typedef struct {
-    uint8_t PARAM_LINK_TEST3[60u];
+    uint8_t PARAM_IMAX[4u];
+    uint8_t PARAM_POWER_DOWN_EVENT[13u];
     uint8_t crc[2u];
 } param_layout_11_t;
 typedef char param_layout_11_szchk[(sizeof(param_layout_11_t) == (size_t)PARAM_LAYOUT_BLOCK_11_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_12_PAYLOAD (40u)
-#define PARAM_LAYOUT_BLOCK_12_LEN (42u)
+#define PARAM_LAYOUT_BLOCK_12_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_12_LEN (62u)
 
 typedef struct {
-    uint8_t PARAM_LINK_TEST3[40u];
+    uint8_t PARAM_HOLIDAY_DATA[60u];
     uint8_t crc[2u];
 } param_layout_12_t;
 typedef char param_layout_12_szchk[(sizeof(param_layout_12_t) == (size_t)PARAM_LAYOUT_BLOCK_12_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_13_PAYLOAD (6u)
-#define PARAM_LAYOUT_BLOCK_13_LEN (8u)
+#define PARAM_LAYOUT_BLOCK_13_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_13_LEN (62u)
 
 typedef struct {
-    uint8_t PARAM_TESTCTRL[6u];
+    uint8_t PARAM_LINK_TEST3[60u];
     uint8_t crc[2u];
 } param_layout_13_t;
 typedef char param_layout_13_szchk[(sizeof(param_layout_13_t) == (size_t)PARAM_LAYOUT_BLOCK_13_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_14_PAYLOAD (60u)
-#define PARAM_LAYOUT_BLOCK_14_LEN (62u)
+#define PARAM_LAYOUT_BLOCK_14_PAYLOAD (40u)
+#define PARAM_LAYOUT_BLOCK_14_LEN (42u)
 
 typedef struct {
-    uint8_t PARAM_CALIB_DATA[60u];
+    uint8_t PARAM_LINK_TEST3[40u];
     uint8_t crc[2u];
 } param_layout_14_t;
 typedef char param_layout_14_szchk[(sizeof(param_layout_14_t) == (size_t)PARAM_LAYOUT_BLOCK_14_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_15_PAYLOAD (36u)
-#define PARAM_LAYOUT_BLOCK_15_LEN (38u)
+#define PARAM_LAYOUT_BLOCK_15_PAYLOAD (6u)
+#define PARAM_LAYOUT_BLOCK_15_LEN (8u)
 
 typedef struct {
-    uint8_t PARAM_CALIB_DATA[36u];
+    uint8_t PARAM_TESTCTRL[6u];
     uint8_t crc[2u];
 } param_layout_15_t;
 typedef char param_layout_15_szchk[(sizeof(param_layout_15_t) == (size_t)PARAM_LAYOUT_BLOCK_15_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_16_PAYLOAD (4u)
-#define PARAM_LAYOUT_BLOCK_16_LEN (6u)
+#define PARAM_LAYOUT_BLOCK_16_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_16_LEN (62u)
 
 typedef struct {
-    uint8_t PARAM_TEST_IMAX[4u];
+    uint8_t PARAM_CALIB_DATA[60u];
     uint8_t crc[2u];
 } param_layout_16_t;
 typedef char param_layout_16_szchk[(sizeof(param_layout_16_t) == (size_t)PARAM_LAYOUT_BLOCK_16_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_17_PAYLOAD (60u)
-#define PARAM_LAYOUT_BLOCK_17_LEN (62u)
+#define PARAM_LAYOUT_BLOCK_17_PAYLOAD (36u)
+#define PARAM_LAYOUT_BLOCK_17_LEN (38u)
 
 typedef struct {
-    uint8_t PARAM_TEST_DATA[60u];
+    uint8_t PARAM_CALIB_DATA[36u];
     uint8_t crc[2u];
 } param_layout_17_t;
 typedef char param_layout_17_szchk[(sizeof(param_layout_17_t) == (size_t)PARAM_LAYOUT_BLOCK_17_LEN) ? 1 : -1];
 
-#define PARAM_LAYOUT_BLOCK_18_PAYLOAD (7u)
-#define PARAM_LAYOUT_BLOCK_18_LEN (9u)
+#define PARAM_LAYOUT_BLOCK_18_PAYLOAD (4u)
+#define PARAM_LAYOUT_BLOCK_18_LEN (6u)
 
 typedef struct {
-    uint8_t PARAM_UDP_SETUP[7u];
+    uint8_t PARAM_TEST_IMAX[4u];
     uint8_t crc[2u];
 } param_layout_18_t;
 typedef char param_layout_18_szchk[(sizeof(param_layout_18_t) == (size_t)PARAM_LAYOUT_BLOCK_18_LEN) ? 1 : -1];
+
+#define PARAM_LAYOUT_BLOCK_19_PAYLOAD (60u)
+#define PARAM_LAYOUT_BLOCK_19_LEN (62u)
+
+typedef struct {
+    uint8_t PARAM_TEST_DATA[60u];
+    uint8_t crc[2u];
+} param_layout_19_t;
+typedef char param_layout_19_szchk[(sizeof(param_layout_19_t) == (size_t)PARAM_LAYOUT_BLOCK_19_LEN) ? 1 : -1];
+
+#define PARAM_LAYOUT_BLOCK_20_PAYLOAD (20u)
+#define PARAM_LAYOUT_BLOCK_20_LEN (22u)
+
+typedef struct {
+    uint8_t PARAM_UDP_SETUP[7u];
+    uint8_t PARAM_MAGNET_EVENT[13u];
+    uint8_t crc[2u];
+} param_layout_20_t;
+typedef char param_layout_20_szchk[(sizeof(param_layout_20_t) == (size_t)PARAM_LAYOUT_BLOCK_20_LEN) ? 1 : -1];
 
 #endif /* DC_PARAM_LAYOUT_H */
 
@@ -255,11 +299,12 @@ param_layout_0_t g_param_ram_0;
 param_layout_1_t g_param_ram_1;
 param_layout_2_t g_param_ram_2;
 param_layout_3_t g_param_ram_3;
-param_layout_9_t g_param_ram_9;
-param_layout_10_t g_param_ram_10;
+param_layout_4_t g_param_ram_4;
 param_layout_11_t g_param_ram_11;
 param_layout_12_t g_param_ram_12;
 param_layout_13_t g_param_ram_13;
+param_layout_14_t g_param_ram_14;
+param_layout_15_t g_param_ram_15;
 
 const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;
 
@@ -269,46 +314,84 @@ const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {
     { PARAM_LAYOUT_BLOCK_1_EE_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x0Bu },
     { PARAM_LAYOUT_BLOCK_2_EE_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x0Bu },
     { PARAM_LAYOUT_BLOCK_3_EE_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x0Bu },
+    { PARAM_LAYOUT_BLOCK_4_EE_OFF, (uint8_t *)&g_param_ram_4, (uint16_t)sizeof(g_param_ram_4), 0x0Bu },
     /* EE_BK1 */
-    { PARAM_LAYOUT_BLOCK_4_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_4_LEN, 0x0Au },
     { PARAM_LAYOUT_BLOCK_5_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_5_LEN, 0x0Au },
     { PARAM_LAYOUT_BLOCK_6_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_6_LEN, 0x0Au },
     { PARAM_LAYOUT_BLOCK_7_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_7_LEN, 0x0Au },
     { PARAM_LAYOUT_BLOCK_8_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_8_LEN, 0x0Au },
+    { PARAM_LAYOUT_BLOCK_9_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_9_LEN, 0x0Au },
+    { PARAM_LAYOUT_BLOCK_10_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_10_LEN, 0x0Au },
     /* RAM_EE */
-    { PARAM_LAYOUT_BLOCK_9_EE_OFF, (uint8_t *)&g_param_ram_9, (uint16_t)sizeof(g_param_ram_9), 0x03u },
-    { PARAM_LAYOUT_BLOCK_10_EE_OFF, (uint8_t *)&g_param_ram_10, (uint16_t)sizeof(g_param_ram_10), 0x03u },
     { PARAM_LAYOUT_BLOCK_11_EE_OFF, (uint8_t *)&g_param_ram_11, (uint16_t)sizeof(g_param_ram_11), 0x03u },
     { PARAM_LAYOUT_BLOCK_12_EE_OFF, (uint8_t *)&g_param_ram_12, (uint16_t)sizeof(g_param_ram_12), 0x03u },
     { PARAM_LAYOUT_BLOCK_13_EE_OFF, (uint8_t *)&g_param_ram_13, (uint16_t)sizeof(g_param_ram_13), 0x03u },
+    { PARAM_LAYOUT_BLOCK_14_EE_OFF, (uint8_t *)&g_param_ram_14, (uint16_t)sizeof(g_param_ram_14), 0x03u },
+    { PARAM_LAYOUT_BLOCK_15_EE_OFF, (uint8_t *)&g_param_ram_15, (uint16_t)sizeof(g_param_ram_15), 0x03u },
     /* EE */
-    { PARAM_LAYOUT_BLOCK_14_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_14_LEN, 0x02u },
-    { PARAM_LAYOUT_BLOCK_15_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_15_LEN, 0x02u },
     { PARAM_LAYOUT_BLOCK_16_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_16_LEN, 0x02u },
     { PARAM_LAYOUT_BLOCK_17_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_17_LEN, 0x02u },
-    { PARAM_LAYOUT_BLOCK_18_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_18_LEN, 0x02u }
+    { PARAM_LAYOUT_BLOCK_18_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_18_LEN, 0x02u },
+    { PARAM_LAYOUT_BLOCK_19_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_19_LEN, 0x02u },
+    { PARAM_LAYOUT_BLOCK_20_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_20_LEN, 0x02u }
     /* RAM_EE_BK2 */
-    /* block 19 (bak of 0): { PARAM_LAYOUT_BLOCK_0_EE_BK_OFF, (uint8_t *)&g_param_ram_0, (uint16_t)sizeof(g_param_ram_0), 0x0Bu }, */
-    /* block 20 (bak of 1): { PARAM_LAYOUT_BLOCK_1_EE_BK_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x0Bu }, */
-    /* block 21 (bak of 2): { PARAM_LAYOUT_BLOCK_2_EE_BK_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x0Bu }, */
-    /* block 22 (bak of 3): { PARAM_LAYOUT_BLOCK_3_EE_BK_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x0Bu }, */
+    /* block 21 (bak of 0): { PARAM_LAYOUT_BLOCK_0_EE_BK_OFF, (uint8_t *)&g_param_ram_0, (uint16_t)sizeof(g_param_ram_0), 0x0Bu }, */
+    /* block 22 (bak of 1): { PARAM_LAYOUT_BLOCK_1_EE_BK_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x0Bu }, */
+    /* block 23 (bak of 2): { PARAM_LAYOUT_BLOCK_2_EE_BK_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x0Bu }, */
+    /* block 24 (bak of 3): { PARAM_LAYOUT_BLOCK_3_EE_BK_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x0Bu }, */
+    /* block 25 (bak of 4): { PARAM_LAYOUT_BLOCK_4_EE_BK_OFF, (uint8_t *)&g_param_ram_4, (uint16_t)sizeof(g_param_ram_4), 0x0Bu }, */
     /* EE_BK2 */
-    /* block 23 (bak of 4): { PARAM_LAYOUT_BLOCK_4_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_4_LEN, 0x0Au }, */
-    /* block 24 (bak of 5): { PARAM_LAYOUT_BLOCK_5_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_5_LEN, 0x0Au }, */
-    /* block 25 (bak of 6): { PARAM_LAYOUT_BLOCK_6_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_6_LEN, 0x0Au }, */
-    /* block 26 (bak of 7): { PARAM_LAYOUT_BLOCK_7_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_7_LEN, 0x0Au }, */
-    /* block 27 (bak of 8): { PARAM_LAYOUT_BLOCK_8_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_8_LEN, 0x0Au }, */
+    /* block 26 (bak of 5): { PARAM_LAYOUT_BLOCK_5_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_5_LEN, 0x0Au }, */
+    /* block 27 (bak of 6): { PARAM_LAYOUT_BLOCK_6_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_6_LEN, 0x0Au }, */
+    /* block 28 (bak of 7): { PARAM_LAYOUT_BLOCK_7_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_7_LEN, 0x0Au }, */
+    /* block 29 (bak of 8): { PARAM_LAYOUT_BLOCK_8_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_8_LEN, 0x0Au }, */
+    /* block 30 (bak of 9): { PARAM_LAYOUT_BLOCK_9_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_9_LEN, 0x0Au }, */
+    /* block 31 (bak of 10): { PARAM_LAYOUT_BLOCK_10_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_10_LEN, 0x0Au }, */
 };
 
 const uint16_t tParamBlockTableCount = (uint16_t)PARAM_LAYOUT_BLOCK_COUNT;
 
+const uint8_t g_param_attr_PARAM_REMOTECTRL[] = { 2u, 2u, 4u, 2u };
+
+const uint8_t g_param_attr_PARAM_LIST_DEMO[] = { 3u, 8u,
+    0x00u, 2u,
+    0x01u, 4u,
+    0x10u, 2u,
+    0x11u, 4u,
+    0x12u, 2u,
+    0x13u, 4u,
+    0x20u, 2u,
+    0x30u, 4u };
+
+const uint8_t g_param_attr_PARAM_EVENT[] = { 3u, 8u,
+    0x00u, 1u,
+    0x10u, 1u,
+    0x20u, 1u,
+    0x30u, 1u,
+    0x40u, 2u,
+    0x41u, 2u,
+    0x42u, 4u,
+    0x43u, 1u };
+
+const uint8_t g_param_attr_PARAM_IO_RS485[] = { 3u, 6u,
+    0x00u, 16u,
+    0x01u, 5u,
+    0x02u, 1u,
+    0x10u, 16u,
+    0x11u, 5u,
+    0x12u, 1u };
+
 const uint8_t g_param_attr_PARAM_LINK_TEST[] = { 4u, 3u, 2u, 30u };
+
+const uint8_t g_param_attr_PARAM_TCP_UDP_SETUP[] = { 2u, 5u, 2u, 32u, 2u, 1u, 2u };
 
 const uint8_t g_param_attr_PARAM_LINK_TEST2[] = { 4u, 2u, 3u, 16u };
 
 const uint8_t g_param_attr_PARAM_LINK_TEST3[] = { 4u, 2u, 3u, 20u };
 
 const uint8_t g_param_attr_PARAM_CALIB_DATA[] = { 4u, 2u, 5u, 12u };
+
+const uint8_t g_param_attr_PARAM_UDP_SETUP[] = { 2u, 4u, 2u, 2u, 1u, 2u };
 
 const uint8_t g_default_PARAM_SEASON_SWTIME[7u] = {
     0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu
@@ -328,29 +411,35 @@ const uint8_t g_default_PARAM_LADDER_SWTIME[7u] = {
 
 const ST_PARAM_TABLE tParamApiTable[] = {
     /* RAM_EE_BK1 */
-    { PARAM_UN           , 0u , 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
-    { PARAM_REMOTECTRL   , 0u , 4u , 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
-    { PARAM_LOCALCTRL    , 0u , 10u, 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
-    { PARAM_SEASON_SWTIME, 0u , 16u, 7u  , _PARAM_ATTR_INT                , g_default_PARAM_SEASON_SWTIME },
-    { PARAM_LINK_TEST    , 1u , 0u , 150u, g_param_attr_PARAM_LINK_TEST   , NULL                          },
+    { PARAM_UN                , 0u , 0u , 4u  , _PARAM_ATTR_INT                 , NULL                          },
+    { PARAM_REMOTECTRL        , 0u , 4u , 6u  , g_param_attr_PARAM_REMOTECTRL   , NULL                          },
+    { PARAM_LOCALCTRL         , 0u , 10u, 6u  , g_param_attr_PARAM_REMOTECTRL   , NULL                          },
+    { PARAM_SEASON_SWTIME     , 0u , 16u, 7u  , _PARAM_ATTR_INT                 , g_default_PARAM_SEASON_SWTIME },
+    { PARAM_LIST_DEMO         , 0u , 23u, 24u , g_param_attr_PARAM_LIST_DEMO    , NULL                          },
+    { PARAM_OVER_VOLTAGE_EVENT, 0u , 47u, 13u , g_param_attr_PARAM_EVENT        , NULL                          },
+    { PARAM_IO_RS485          , 1u , 0u , 44u , g_param_attr_PARAM_IO_RS485     , NULL                          },
+    { PARAM_LINK_TEST         , 2u , 0u , 150u, g_param_attr_PARAM_LINK_TEST    , NULL                          },
     /* EE_BK1 */
-    { PARAM_IB           , 4u , 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
-    { PARAM_TCP_UDP_SETUP, 4u , 4u , 39u , _param_attr_PARAM_TCP_UDP_SETUP, NULL                          },
-    { PARAM_DAY_SWTIME   , 4u , 43u, 7u  , _PARAM_ATTR_INT                , g_default_PARAM_DAY_SWTIME    },
-    { PARAM_FEE_SWTIME   , 4u , 50u, 7u  , _PARAM_ATTR_INT                , g_default_PARAM_FEE_SWTIME    },
-    { PARAM_LADDER_SWTIME, 5u , 0u , 7u  , _PARAM_ATTR_INT                , g_default_PARAM_LADDER_SWTIME },
-    { PARAM_DATA1        , 6u , 0u , 60u , _param_attr_PARAM_DATA1        , NULL                          },
-    { PARAM_LINK_TEST2   , 7u , 0u , 80u , g_param_attr_PARAM_LINK_TEST2  , NULL                          },
+    { PARAM_IB                , 5u , 0u , 4u  , _PARAM_ATTR_INT                 , NULL                          },
+    { PARAM_TCP_UDP_SETUP     , 5u , 4u , 39u , g_param_attr_PARAM_TCP_UDP_SETUP, NULL                          },
+    { PARAM_DAY_SWTIME        , 5u , 43u, 7u  , _PARAM_ATTR_INT                 , g_default_PARAM_DAY_SWTIME    },
+    { PARAM_FEE_SWTIME        , 5u , 50u, 7u  , _PARAM_ATTR_INT                 , g_default_PARAM_FEE_SWTIME    },
+    { PARAM_LADDER_SWTIME     , 6u , 0u , 7u  , _PARAM_ATTR_INT                 , g_default_PARAM_LADDER_SWTIME },
+    { PARAM_DATA1             , 7u , 0u , 60u , _param_attr_PARAM_DATA1         , NULL                          },
+    { PARAM_OVER_CURRENT_EVENT, 8u , 0u , 13u , g_param_attr_PARAM_EVENT        , NULL                          },
+    { PARAM_LINK_TEST2        , 9u , 0u , 80u , g_param_attr_PARAM_LINK_TEST2   , NULL                          },
     /* RAM_EE */
-    { PARAM_IMAX         , 9u , 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
-    { PARAM_HOLIDAY_DATA , 10u, 0u , 60u , _param_attr_PARAM_HOLIDAY_DATA , NULL                          },
-    { PARAM_LINK_TEST3   , 11u, 0u , 100u, g_param_attr_PARAM_LINK_TEST3  , NULL                          },
-    { PARAM_TESTCTRL     , 13u, 0u , 6u  , _param_attr_PARAM_REMOTECTRL   , NULL                          },
+    { PARAM_IMAX              , 11u, 0u , 4u  , _PARAM_ATTR_INT                 , NULL                          },
+    { PARAM_POWER_DOWN_EVENT  , 11u, 4u , 13u , g_param_attr_PARAM_EVENT        , NULL                          },
+    { PARAM_HOLIDAY_DATA      , 12u, 0u , 60u , _param_attr_PARAM_HOLIDAY_DATA  , NULL                          },
+    { PARAM_LINK_TEST3        , 13u, 0u , 100u, g_param_attr_PARAM_LINK_TEST3   , NULL                          },
+    { PARAM_TESTCTRL          , 15u, 0u , 6u  , g_param_attr_PARAM_REMOTECTRL   , NULL                          },
     /* EE */
-    { PARAM_CALIB_DATA   , 14u, 0u , 96u , g_param_attr_PARAM_CALIB_DATA  , NULL                          },
-    { PARAM_TEST_IMAX    , 16u, 0u , 4u  , _PARAM_ATTR_INT                , NULL                          },
-    { PARAM_TEST_DATA    , 17u, 0u , 60u , _param_attr_PARAM_TEST_DATA    , NULL                          },
-    { PARAM_UDP_SETUP    , 18u, 0u , 7u  , _param_attr_PARAM_UDP_SETUP    , NULL                           }
+    { PARAM_CALIB_DATA        , 16u, 0u , 96u , g_param_attr_PARAM_CALIB_DATA   , NULL                          },
+    { PARAM_TEST_IMAX         , 18u, 0u , 4u  , _PARAM_ATTR_INT                 , NULL                          },
+    { PARAM_TEST_DATA         , 19u, 0u , 60u , _param_attr_PARAM_TEST_DATA     , NULL                          },
+    { PARAM_UDP_SETUP         , 20u, 0u , 7u  , g_param_attr_PARAM_UDP_SETUP    , NULL                          },
+    { PARAM_MAGNET_EVENT      , 20u, 7u , 13u , g_param_attr_PARAM_EVENT        , NULL                           }
 };
 
 const uint16_t tParamApiTableCount = (uint16_t)PARAM_LAYOUT_ITEM_COUNT;

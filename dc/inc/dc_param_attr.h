@@ -6,6 +6,8 @@
  *   INT       : [type]
  *   ARRAY     : [type, elem_count, elem_bytes]
  *   STRUCT    : [type, field_count, field0_len, field1_len, ...]
+ *   LIST      : [type, leaf_count, xy0, len0, xy1, len1, ...]
+ *               仅叶子；xF / 0xFF 由查找推导，不写进表
  *   LINKARRAY : [type, N, M, K]
  *               已解析：N=子块数，M=每块容量（条），K=每条字节数；记录数 = total_len/K
  *               未解析（N=M=0）：由 total_len 与 PARAM_BLOCK_PAYLOAD_MAX 推导
@@ -102,6 +104,8 @@ static inline uint8_t param_attr_bytes_index_count(const uint8_t *attr,
     case DATATYPE_ARRAY:
     case DATATYPE_STRUCT:
         return attr[1];
+    case DATATYPE_LIST:
+        return attr[1];
     case DATATYPE_LINKARRAY:
         if ((attr[1] == 0u) && (attr[2] == 0u))
         {
@@ -125,6 +129,110 @@ static inline uint8_t param_attr_bytes_index_count(const uint8_t *attr,
 }
 
 /**
+ * @brief LIST：按分项号求相对条目起点的偏移与长度
+ *
+ * @param attr  attrib 表
+ * @param index 叶子 xy、组全部 xF，或 PARAM_INDEX_ALL
+ * @param off   输出偏移
+ * @param len   输出字节数
+ * @return 非 0 表示命中
+ */
+static inline int param_attr_list_lookup(const uint8_t *attr, uint8_t index,
+                                         uint16_t *off, uint16_t *len)
+{
+    uint8_t n;
+    uint8_t i;
+    uint8_t xy;
+    uint8_t glen_g;
+    uint16_t run;
+    uint16_t sum;
+    uint16_t group_off;
+    uint16_t group_len;
+    int found;
+
+    if ((attr == NULL) || (off == NULL) || (len == NULL) ||
+        (attr[0] != (uint8_t)DATATYPE_LIST))
+    {
+        return 0;
+    }
+    n = attr[1];
+    run = 0u;
+    sum = 0u;
+    for (i = 0u; i < n; i++)
+    {
+        sum = (uint16_t)(sum + (uint16_t)attr[3u + (uint8_t)(i * 2u)]);
+    }
+    if (index == PARAM_INDEX_ALL)
+    {
+        *off = 0u;
+        *len = sum;
+        return (sum != 0u) ? 1 : 0;
+    }
+    if ((index & 0x0Fu) == 0x0Fu)
+    {
+        glen_g = (uint8_t)(index >> 4);
+        found = 0;
+        group_off = 0u;
+        group_len = 0u;
+        run = 0u;
+        for (i = 0u; i < n; i++)
+        {
+            xy = attr[2u + (uint8_t)(i * 2u)];
+            if ((uint8_t)(xy >> 4) == glen_g)
+            {
+                if (found == 0)
+                {
+                    group_off = run;
+                    found = 1;
+                }
+                group_len = (uint16_t)(group_len + (uint16_t)attr[3u + (uint8_t)(i * 2u)]);
+            }
+            else if (found != 0)
+            {
+                break;
+            }
+            run = (uint16_t)(run + (uint16_t)attr[3u + (uint8_t)(i * 2u)]);
+        }
+        if ((found == 0) || (group_len == 0u))
+        {
+            return 0;
+        }
+        *off = group_off;
+        *len = group_len;
+        return 1;
+    }
+    run = 0u;
+    for (i = 0u; i < n; i++)
+    {
+        xy = attr[2u + (uint8_t)(i * 2u)];
+        if (xy == index)
+        {
+            *off = run;
+            *len = (uint16_t)attr[3u + (uint8_t)(i * 2u)];
+            return (*len != 0u) ? 1 : 0;
+        }
+        run = (uint16_t)(run + (uint16_t)attr[3u + (uint8_t)(i * 2u)]);
+    }
+    return 0;
+}
+
+/**
+ * @brief LIST：第 ordinal 个叶子的分项号 xy
+ *
+ * @param attr     attrib 表
+ * @param ordinal  叶子序号（0 起）
+ * @return xy；越界返回 0
+ */
+static inline uint8_t param_attr_list_leaf_xy(const uint8_t *attr, uint8_t ordinal)
+{
+    if ((attr == NULL) || (attr[0] != (uint8_t)DATATYPE_LIST) || (ordinal >= attr[1]))
+    {
+        return 0u;
+    }
+    return attr[2u + (uint8_t)(ordinal * 2u)];
+}
+
+/**
  * @brief 从 attrib 字节表求指定 index 的元素字节数
  *
  * @param attr      attrib 表指针
@@ -136,6 +244,9 @@ static inline uint8_t param_attr_bytes_elem_bytes(const uint8_t *attr,
                                                   uint8_t param_len,
                                                   uint8_t index)
 {
+    uint16_t off;
+    uint16_t len;
+
     if (attr == NULL)
     {
         return 0u;
@@ -152,6 +263,16 @@ static inline uint8_t param_attr_bytes_elem_bytes(const uint8_t *attr,
             return 0u;
         }
         return attr[2u + index];
+    case DATATYPE_LIST:
+        if (param_attr_list_lookup(attr, index, &off, &len) == 0)
+        {
+            return 0u;
+        }
+        if (len > 255u)
+        {
+            return 0u;
+        }
+        return (uint8_t)len;
     case DATATYPE_LINKARRAY:
         return attr[3];
     default:
@@ -213,6 +334,13 @@ static inline uint16_t param_attr_bytes_total_bytes(const uint8_t *attr,
         for (i = 0u; i < attr[1]; i++)
         {
             sum = (uint16_t)(sum + attr[2u + i]);
+        }
+        return sum;
+    case DATATYPE_LIST:
+        sum = 0u;
+        for (i = 0u; i < attr[1]; i++)
+        {
+            sum = (uint16_t)(sum + attr[3u + (uint8_t)(i * 2u)]);
         }
         return sum;
     case DATATYPE_LINKARRAY:

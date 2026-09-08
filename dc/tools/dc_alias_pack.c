@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "dc_variable_cfg.h"
 
+#define DC_PARAM_PACK
 #include "dc_param.h"
 #include "dc_param_attr.h"
 
@@ -291,6 +292,68 @@ static void emit_var_aliases(const var_item_t *items, unsigned nitems, int *firs
     }
 }
 
+static void emit_param_list_aliases(const param_item_t *item, int *first)
+{
+    const uint8_t *attr;
+    unsigned n;
+    unsigned i;
+    unsigned line;
+    uint8_t xy;
+    uint8_t g;
+    uint8_t last_g;
+    uint8_t prev;
+    uint8_t xf;
+    int have;
+    char sym[128];
+
+    attr = item->attr;
+    if ((attr == 0) || (attr[0] != (uint8_t)DATATYPE_LIST)) {
+        die("%s: LIST attrib missing", item->name);
+    }
+    n = (unsigned)attr[1];
+    line = 0u;
+    have = 0;
+    last_g = 0u;
+    prev = 0u;
+    for (i = 0u; i < n; i++) {
+        xy = attr[2u + (i * 2u)];
+        g = (uint8_t)(xy >> 4);
+        if ((have != 0) && (g != last_g)) {
+            xf = (uint8_t)((unsigned)last_g << 4) | 0x0Fu;
+            snprintf(sym, sizeof sym, "DC_ALIAS_%s_%02X", item->name, (unsigned)xf);
+            emit_alias_line_prefix(first, line);
+            line++;
+            oprintf("    %s = ParaAliasBuild(%s, 0x%02Xu)", sym, item->name,
+                    (unsigned)xf);
+            prev = xf;
+        }
+        snprintf(sym, sizeof sym, "DC_ALIAS_%s_%02X", item->name, (unsigned)xy);
+        emit_alias_line_prefix(first, line);
+        if ((line == 0u) || (xy != (uint8_t)(prev + 1u))) {
+            oprintf("    %s = ParaAliasBuild(%s, 0x%02Xu)", sym, item->name,
+                    (unsigned)xy);
+        } else {
+            oprintf("    %s", sym);
+        }
+        line++;
+        prev = xy;
+        last_g = g;
+        have = 1;
+    }
+    if (have != 0) {
+        xf = (uint8_t)((unsigned)last_g << 4) | 0x0Fu;
+        snprintf(sym, sizeof sym, "DC_ALIAS_%s_%02X", item->name, (unsigned)xf);
+        emit_alias_line_prefix(first, line);
+        line++;
+        oprintf("    %s = ParaAliasBuild(%s, 0x%02Xu)", sym, item->name,
+                (unsigned)xf);
+        prev = xf;
+    }
+    snprintf(sym, sizeof sym, "DC_ALIAS_%s_ALL", item->name);
+    emit_alias_line_prefix(first, line);
+    oprintf("    %s = ParaAliasBuild(%s, 0xFFu)", sym, item->name);
+}
+
 static void emit_param_aliases(int *first)
 {
     unsigned i;
@@ -304,6 +367,13 @@ static void emit_param_aliases(int *first)
         unsigned n;
         unsigned count;
 
+        if (s_params[i].dtype == (uint8_t)DATATYPE_LIST) {
+            emit_param_list_aliases(&s_params[i], first);
+            if (i + 1u < nparams) {
+                oputs(",\n\n");
+            }
+            continue;
+        }
         n = param_alias_index_count(&s_params[i]);
         count = param_alias_count((uint8_t)n);
         for (j = 0u; j < count; j++) {

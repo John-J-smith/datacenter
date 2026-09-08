@@ -4,19 +4,21 @@
 
 namespace {
 
-// 测试内容：tParamApiTable 全部参变量、全部分项 index 读写回读（经 DC_ALIAS_PARAM_* 别名）
+// 测试内容：tParamApiTable 全部参变量、全部分项 index 读写回读（经别名，含 LIST xy）
 TEST_F(ParamTestBase, AllParams_ReadWrite)
 {
     std::vector<uint8_t> wbuf(MakeParamIoBuffer());
     std::vector<uint8_t> rbuf(MakeParamIoBuffer());
 
+    // 1. 遍历映射表，逐项、逐分项写入图案
     for (uint16_t row = 0u; row < tParamApiTableCount; ++row)
     {
         const ST_PARAM_TABLE *entry = &tParamApiTable[row];
         const uint8_t index_count = ParamIndexCount(entry);
 
-        for (uint8_t index = 0u; index < index_count; ++index)
+        for (uint8_t ordinal = 0u; ordinal < index_count; ++ordinal)
         {
+            const uint8_t index = ParamIoIndex(entry, ordinal);
             const uint16_t elem_bytes = ParamElemBytes(entry, index);
             const uint32_t alias = ParaAliasBuild(entry->eParamType, index);
             
@@ -28,13 +30,15 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
         }
     }
 
+    // 2. 全部写完后，再按同样分项读回并与期望图案比对
     for (uint16_t row = 0u; row < tParamApiTableCount; ++row)
     {
         const ST_PARAM_TABLE *entry = &tParamApiTable[row];
         const uint8_t index_count = ParamIndexCount(entry);
 
-        for (uint8_t index = 0u; index < index_count; ++index)
+        for (uint8_t ordinal = 0u; ordinal < index_count; ++ordinal)
         {
+            const uint8_t index = ParamIoIndex(entry, ordinal);
             const uint16_t elem_bytes = ParamElemBytes(entry, index);
             const uint32_t alias = ParaAliasBuild(entry->eParamType, index);
 
@@ -49,6 +53,7 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
         }
     }
 
+    // 3. 分项数 > 1 的条目：PARAM_INDEX_ALL 整项写后再读
     for (uint16_t row = 0u; row < tParamApiTableCount; ++row)
     {
         const ST_PARAM_TABLE *entry = &tParamApiTable[row];

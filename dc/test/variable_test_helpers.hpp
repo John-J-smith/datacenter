@@ -42,6 +42,7 @@ inline void SeedBClassEeSlot(E_VARIABLE_EE_SLOT slot, uint8_t first_byte)
               static_cast<int16_t>(VAR_B_END_ADDR));
 }
 
+/// @brief 默认写入 A 区 PWR_ON_0。
 inline void SeedAClassEe(uint8_t first_byte)
 {
     SeedAClassEeSlot(VAR_EE_SLOT_A_PWR_ON_0, first_byte);
@@ -78,21 +79,25 @@ inline void FillVarWritePattern(uint8_t *buf, uint16_t nbytes, uint16_t row, uin
     }
 }
 
+/// @brief 经 VarAliasBuild 调用 dc_read_alias。
 inline int16_t ReadVar(uint16_t type_id, uint8_t index, uint8_t *buf, uint16_t len)
 {
     return dc_read_alias(VarAliasBuild(type_id, index), buf, len, 0u);
 }
 
+/// @brief 经 VarAliasBuild 调用 dc_write_alias。
 inline int16_t WriteVar(uint16_t type_id, uint8_t index, const uint8_t *buf, uint16_t len)
 {
     return dc_write_alias(VarAliasBuild(type_id, index), buf, len, 0u);
 }
 
+/// @brief 断言指定 SRAM 分区 body CRC 合法。
 inline void ExpectZoneBodyCrcOk(dc_test_var_zone_t zone)
 {
     EXPECT_NE(DcTestVarBodyCrcOk(zone), 0);
 }
 
+/// @brief Seed A 区后首次读，触发 var_ensure_init。
 inline void InitVariableModule(void)
 {
     std::vector<uint8_t> buf(MakeVarIoBuffer());
@@ -101,6 +106,7 @@ inline void InitVariableModule(void)
     ReadVar(VAR_DATE_TIME, 0, buf.data(), 1u);
 }
 
+/// @brief 读 EE 槽并断言数据区首字节。
 inline void ExpectEeSlotFirstByte(E_VARIABLE_EE_SLOT slot, uint8_t expected, uint16_t block_len)
 {
     uint8_t block[64];

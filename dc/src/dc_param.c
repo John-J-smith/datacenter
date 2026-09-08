@@ -445,7 +445,54 @@ static int16_t param_xfer_struct(const ST_PARAM_TABLE *item,
 }
 
 /**
- * @brief 参变量别名读写分发（INT / ARRAY / STRUCT / LINKARRAY）
+ * @brief DATATYPE_LIST 按 xy / xF / 0xFF 读写（单块）
+ *
+ * @param item    API 表项
+ * @param block   所属块
+ * @param rw      读缓冲（写时可为 NULL）
+ * @param ro      写数据源（读时可为 NULL）
+ * @param usLen   非 ALL 时必须为 1
+ * @param index   分项号
+ * @param writing 非 0 表示写
+ * @return 成功返回传输字节数；失败返回负错误码
+ */
+static int16_t param_xfer_list(const ST_PARAM_TABLE *item,
+                               const ST_PARAM_BLOCK_TABLE *block,
+                               uint8_t *rw,
+                               const uint8_t *ro,
+                               uint16_t usLen,
+                               uint8_t index,
+                               int writing)
+{
+    uint16_t off;
+    uint16_t nbytes;
+    uint8_t *ram;
+
+    if ((index != PARAM_INDEX_ALL) && (usLen != 1u))
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    if (param_attr_list_lookup(item->pAttr, index, &off, &nbytes) == 0)
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    ram = param_block_working(block);
+    off = (uint16_t)(item->uParamOffset + off);
+    if (writing != 0)
+    {
+        memcpy(ram + off, ro, nbytes);
+        param_block_crc_fill(block);
+        param_block_commit_ee(block);
+    }
+    else
+    {
+        memcpy(rw, ram + off, nbytes);
+    }
+    return (int16_t)nbytes;
+}
+
+/**
+ * @brief 参变量别名读写分发（INT / ARRAY / STRUCT / LIST / LINKARRAY）
  *
  * @param alias   参变量别名（含小类与 index）
  * @param rw      读缓冲（写时可为 NULL）
@@ -494,17 +541,18 @@ static int16_t param_xfer(uint32_t alias,
     ram = param_block_working(block);
 
     dtype = param_attr_type(item);
-    index_max = param_attr_index_count(item);
     index = GetAliasIndex(alias);
+
+    if (dtype == (uint8_t)DATATYPE_LIST)
+    {
+        return param_xfer_list(item, block, rw, ro, usLen, index, writing);
+    }
+
+    index_max = param_attr_index_count(item);
     if (index == PARAM_INDEX_ALL)
     {
         index = 0u;
         usLen = index_max;
-    }
-
-    if (dtype == (uint8_t)DATATYPE_LIST)
-    {
-        return DC_RET_PARAM_ERR;
     }
 
     if ((uint16_t)index + usLen > (uint16_t)index_max)
