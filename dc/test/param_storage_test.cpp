@@ -93,6 +93,16 @@ TEST_F(ParamTestBase, Write_StorageFail_ReturnsParamErr)
     EXPECT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), DC_RET_PARAM_ERR);
 }
 
+// 测试内容：参变量类入口拒绝空缓冲
+TEST_F(ParamTestBase, DirectApi_NullBufferWithLength)
+{
+    std::array<uint8_t, 7u> buf{};
+
+    ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
+    EXPECT_EQ(dc_read_param(DC_ALIAS_PARAM_SEASON_SWTIME, 0, 1u, 0u), DC_RET_PARAM_ERR);
+    EXPECT_EQ(dc_write_param(DC_ALIAS_PARAM_SEASON_SWTIME, 0, 1u, 0u), DC_RET_PARAM_ERR);
+}
+
 // 测试内容：仅 EE 的 LINKARRAY 按记录 index 读写回读
 TEST_F(ParamTestBase, EeOnly_Linkarray_ReadWrite)
 {

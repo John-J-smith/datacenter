@@ -30,7 +30,7 @@ add_executable(dc_tests
     param_storage_test.cpp
     param_list_test.cpp
 )
-target_include_directories(dc_tests PRIVATE ${DC_PORT_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(dc_tests PRIVATE ${DC_PORT_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 target_compile_definitions(dc_tests PRIVATE DC_TEST)
 target_link_libraries(dc_tests PRIVATE datacenter dc_test_port GTest::gtest_main)
 

@@ -9,6 +9,7 @@
 #include "dc_variable_layout.h"
 
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 typedef struct
@@ -588,6 +589,29 @@ static void var_ensure_init(void)
 }
 
 /**
+ * @brief 按存储类型取得 SRAM 区 payload 上限（不含 A/B CRC 字段）
+ *
+ * @param ucStor VARIABLE_TYPEA/B/C
+ * @return 字节上限；不支持的类型返回 0
+ */
+static uint16_t var_sram_limit(uint8_t ucStor)
+{
+    if (ucStor == (uint8_t)VARIABLE_TYPEA)
+    {
+        return VAR_A_CRC_ADDR;
+    }
+    if (ucStor == (uint8_t)VARIABLE_TYPEB)
+    {
+        return VAR_B_CRC_ADDR;
+    }
+    if (ucStor == (uint8_t)VARIABLE_TYPEC)
+    {
+        return (uint16_t)sizeof(s_stVarRam.body_c);
+    }
+    return 0;
+}
+
+/**
  * @brief 按存储类型取得 SRAM 区基址指针
  *
  * @param ucStor VARIABLE_TYPEA/B/C
@@ -635,7 +659,16 @@ static int16_t var_storage_xfer(const ST_DC_VARIABLE_TABLE *pstRow,
 
     usNbytes = (uint16_t)(usLen * (uint16_t)pstRow->ucBytes);
     usOff = (uint16_t)(pstRow->usVariableAddr + (uint16_t)ucIndex * (uint16_t)pstRow->ucBytes);
-    if ((uint32_t)usOff + (uint32_t)usNbytes > (uint32_t)VAR_D_EE_SIZE)
+    if ((usNbytes > (uint16_t)INT16_MAX) ||
+        ((uint32_t)usOff + (uint32_t)usNbytes > (uint32_t)VAR_D_EE_SIZE))
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    if ((ucWriting != 0) && (pucRo == 0))
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    if ((ucWriting == 0) && (pucRw == 0))
     {
         return DC_RET_PARAM_ERR;
     }
@@ -679,6 +712,14 @@ static int16_t var_xfer(uint32_t ulAlias,
     if (usLen == 0u)
     {
         return 0;
+    }
+    if ((ucWriting != 0) && (pucRo == 0))
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    if ((ucWriting == 0) && (pucRw == 0))
+    {
+        return DC_RET_PARAM_ERR;
     }
 
     /* 查表并展开 INDEX_ALL */
@@ -732,6 +773,11 @@ static int16_t var_xfer(uint32_t ulAlias,
 
     usNbytes = (uint16_t)(usLen * (uint16_t)pstRow->ucBytes);
     usOff = (uint16_t)(pstRow->usVariableAddr + (uint16_t)ucIndex * (uint16_t)pstRow->ucBytes);
+    if ((usNbytes > (uint16_t)INT16_MAX) ||
+        ((uint32_t)usOff + (uint32_t)usNbytes > (uint32_t)var_sram_limit(pstRow->ucType)))
+    {
+        return DC_RET_PARAM_ERR;
+    }
 
     if (ucWriting != 0)
     {

@@ -173,6 +173,14 @@ TEST_F(VariableTestBase, NullBufferWithLength)
               DC_RET_PARAM_ERR);
 }
 
+// 测试内容：类入口同样拒绝空缓冲
+TEST_F(VariableTestBase, DirectApi_NullBufferWithLength)
+{
+    InitVariableModule();
+    EXPECT_EQ(dc_read_variable(VarAliasBuild(VAR_DATE_TIME, 0), 0, 1u, 0u), DC_RET_PARAM_ERR);
+    EXPECT_EQ(dc_write_variable(VarAliasBuild(VAR_DATE_TIME, 0), 0, 1u, 0u), DC_RET_PARAM_ERR);
+}
+
 // 测试内容：非法 EE 槽位读写返回 DC_RET_PARAM_ERR
 TEST_F(VariableTestBase, InvalidEeSlot)
 {

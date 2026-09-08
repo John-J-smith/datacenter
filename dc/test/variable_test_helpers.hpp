@@ -7,6 +7,7 @@
 extern "C" {
 #include "datacenter.h"
 #include "dc_crc16.h"
+#include "dc_entry.h"
 #include "dc_test_storage.h"
 #include "dc_test_variable.h"
 #include "dc_variable.h"

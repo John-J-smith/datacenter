@@ -9,6 +9,7 @@
 
 #include "dc_param_layout.h"
 
+#include <stdint.h>
 #include <string.h>
 
 static uint8_t s_ucParamInited;
@@ -38,6 +39,28 @@ static const ST_PARAM_BLOCK_TABLE *param_find_block(uint8_t ucBlk)
 static uint16_t param_block_payload_len(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
     return (uint16_t)(pstBlock->usBlockLen - (uint16_t)PARAM_CRC_BYTES_BLOCK);
+}
+
+/**
+ * @brief 块内 [usOff, usOff+usNbytes) 是否落在 payload 内且长度可经 int16_t 返回
+ *
+ * @return 0 合法；否则 DC_RET_PARAM_ERR
+ */
+static int16_t param_block_check_range(const ST_PARAM_BLOCK_TABLE *pstBlock, uint16_t usOff,
+                                       uint16_t usNbytes)
+{
+    uint16_t usPayload;
+
+    if ((pstBlock == NULL) || (usNbytes > (uint16_t)INT16_MAX))
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    usPayload = param_block_payload_len(pstBlock);
+    if ((uint32_t)usOff + (uint32_t)usNbytes > (uint32_t)usPayload)
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    return 0;
 }
 
 static uint8_t *param_block_data_buf(const ST_PARAM_BLOCK_TABLE *pstBlock);
@@ -475,6 +498,10 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *pstItem,
             ucLastSubBlk = ucSubBlk;
         }
         usOff = (uint16_t)ucRecInBlk * (uint16_t)ucRecBytes;
+        if (param_block_check_range(pstBlock, usOff, ucRecBytes) != 0)
+        {
+            return DC_RET_PARAM_ERR;
+        }
         if (ucWriting != 0)
         {
             memcpy(pucBlkData + usOff, pucRo + usCopied, ucRecBytes);
@@ -483,7 +510,11 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *pstItem,
         {
             memcpy(pucRw + usCopied, pucBlkData + usOff, ucRecBytes);
         }
-        usCopied = (uint16_t)(usCopied + ucRecBytes);
+    usCopied = (uint16_t)(usCopied + ucRecBytes);
+    if (usCopied > (uint16_t)INT16_MAX)
+    {
+        return DC_RET_PARAM_ERR;
+    }
     }
     if ((ucWriting != 0) && (ucLastSubBlk != 0xFFu))
     {
@@ -536,6 +567,10 @@ static int16_t param_xfer_struct(const ST_PARAM_TABLE *pstItem,
             return DC_RET_PARAM_ERR;
         }
         usOff = (uint16_t)(pstItem->ucParamOffset + param_attr_struct_field_off(pstItem, ucIdx));
+        if (param_block_check_range(pstBlock, usOff, ucFieldBytes) != 0)
+        {
+            return DC_RET_PARAM_ERR;
+        }
         pucBlkData = param_block_data_buf(pstBlock);
         if (ucWriting != 0)
         {
@@ -594,6 +629,10 @@ static int16_t param_xfer_list(const ST_PARAM_TABLE *pstItem,
     }
     pucBlkData = param_block_data_buf(pstBlock);
     usOff = (uint16_t)(pstItem->ucParamOffset + usOff);
+    if (param_block_check_range(pstBlock, usOff, usNbytes) != 0)
+    {
+        return DC_RET_PARAM_ERR;
+    }
     if (ucWriting != 0)
     {
         memcpy(pucBlkData + usOff, pucRo, usNbytes);
@@ -644,6 +683,14 @@ static int16_t param_xfer(uint32_t ulAlias,
     if (usLen == 0u)
     {
         return 0;
+    }
+    if ((ucWriting != 0) && (pucRo == 0))
+    {
+        return DC_RET_PARAM_ERR;
+    }
+    if ((ucWriting == 0) && (pucRw == 0))
+    {
+        return DC_RET_PARAM_ERR;
     }
 
     /* 查条目、加载 EE-only 工作区 */
@@ -707,6 +754,11 @@ static int16_t param_xfer(uint32_t ulAlias,
         }
         usNbytes = (uint16_t)(usLen * (uint16_t)ucElemBytes);
         usOff = (uint16_t)(pstItem->ucParamOffset + (uint16_t)ucIndex * (uint16_t)ucElemBytes);
+    }
+
+    if (param_block_check_range(pstBlock, usOff, usNbytes) != 0)
+    {
+        return DC_RET_PARAM_ERR;
     }
 
     if (ucWriting != 0)

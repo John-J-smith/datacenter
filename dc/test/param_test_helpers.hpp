@@ -8,6 +8,7 @@
 
 extern "C" {
 #include "datacenter.h"
+#include "dc_entry.h"
 #include "dc_param_attr.h"
 #include "dc_test_param.h"
 #include "dc_test_storage.h"
