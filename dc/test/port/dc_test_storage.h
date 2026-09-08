@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 void DcTestStorageReset(void);
+void DcTestStorageFailNextWrites(uint16_t usCount);
 uint8_t *DcTestStoragePtr(void);
 
 #endif

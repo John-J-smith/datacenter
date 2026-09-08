@@ -397,73 +397,105 @@ static int16_t var_b_prepare_access(uint8_t ucWriting)
 }
 
 /**
- * @brief 将 A 区快照写入 PWR_ON 备份槽（双 bank 时写 0/1）
+ * @brief 写变量 EE 槽并核对长度
+ *
+ * @return 非 0 表示成功
  */
-static void var_backup_a_pwr_on(void)
+static uint8_t var_ee_write_ok(E_VARIABLE_EE_SLOT eSlot, const uint8_t *pucBuf, uint16_t usLen)
+{
+    return VariableEeWriteSlot(eSlot, pucBuf, usLen) == (int16_t)usLen;
+}
+
+/**
+ * @brief 将 A 区快照写入 PWR_ON 备份槽（双 bank 时写 0/1）
+ *
+ * @return 非 0 表示无需写或写入成功
+ */
+static uint8_t var_backup_a_pwr_on(void)
 {
     var_layout_a_t stSnap;
 
     if (!var_a_backup_allowed())
     {
-        return;
+        return 1;
     }
     memcpy(&stSnap, &s_stVarRam.body_a, sizeof(stSnap));
     var_a_crc_fill(&stSnap);
-    VariableEeWriteSlot(VAR_EE_SLOT_A_PWR_ON_0, (const uint8_t *)&stSnap, VAR_A_END_ADDR);
+    if (var_ee_write_ok(VAR_EE_SLOT_A_PWR_ON_0, (const uint8_t *)&stSnap, VAR_A_END_ADDR) == 0)
+    {
+        return 0;
+    }
 #if (VAR_EE_BACKUP_BANKS >= 2)
-    VariableEeWriteSlot(VAR_EE_SLOT_A_PWR_ON_1, (const uint8_t *)&stSnap, VAR_A_END_ADDR);
+    if (var_ee_write_ok(VAR_EE_SLOT_A_PWR_ON_1, (const uint8_t *)&stSnap, VAR_A_END_ADDR) == 0)
+    {
+        return 0;
+    }
 #endif
+    return 1;
 }
 
 /**
  * @brief 将 B 区快照写入 PWR_ON 备份槽（双 bank 时写 0/1）
+ *
+ * @return 非 0 表示无需写或写入成功
  */
-static void var_backup_b_pwr_on(void)
+static uint8_t var_backup_b_pwr_on(void)
 {
     var_layout_b_t stSnap;
 
     if (!var_b_backup_allowed())
     {
-        return;
+        return 1;
     }
     memcpy(&stSnap, &s_stVarRam.body_b, sizeof(stSnap));
     var_b_crc_fill(&stSnap);
-    VariableEeWriteSlot(VAR_EE_SLOT_B_PWR_ON_0, (const uint8_t *)&stSnap, VAR_B_END_ADDR);
+    if (var_ee_write_ok(VAR_EE_SLOT_B_PWR_ON_0, (const uint8_t *)&stSnap, VAR_B_END_ADDR) == 0)
+    {
+        return 0;
+    }
 #if (VAR_EE_BACKUP_BANKS >= 2)
-    VariableEeWriteSlot(VAR_EE_SLOT_B_PWR_ON_1, (const uint8_t *)&stSnap, VAR_B_END_ADDR);
+    if (var_ee_write_ok(VAR_EE_SLOT_B_PWR_ON_1, (const uint8_t *)&stSnap, VAR_B_END_ADDR) == 0)
+    {
+        return 0;
+    }
 #endif
+    return 1;
 }
 
 /**
  * @brief 将 A 区快照写入 PWR_DWN 掉电备份槽
+ *
+ * @return 非 0 表示无需写或写入成功
  */
-static void var_backup_a_pwr_dwn(void)
+static uint8_t var_backup_a_pwr_dwn(void)
 {
     var_layout_a_t stSnap;
 
     if (!var_a_backup_allowed())
     {
-        return;
+        return 1;
     }
     memcpy(&stSnap, &s_stVarRam.body_a, sizeof(stSnap));
     var_a_crc_fill(&stSnap);
-    VariableEeWriteSlot(VAR_EE_SLOT_A_PWR_DWN, (const uint8_t *)&stSnap, VAR_A_END_ADDR);
+    return var_ee_write_ok(VAR_EE_SLOT_A_PWR_DWN, (const uint8_t *)&stSnap, VAR_A_END_ADDR);
 }
 
 /**
  * @brief 将 B 区快照写入 PWR_DWN 掉电备份槽
+ *
+ * @return 非 0 表示无需写或写入成功
  */
-static void var_backup_b_pwr_dwn(void)
+static uint8_t var_backup_b_pwr_dwn(void)
 {
     var_layout_b_t stSnap;
 
     if (!var_b_backup_allowed())
     {
-        return;
+        return 1;
     }
     memcpy(&stSnap, &s_stVarRam.body_b, sizeof(stSnap));
     var_b_crc_fill(&stSnap);
-    VariableEeWriteSlot(VAR_EE_SLOT_B_PWR_DWN, (const uint8_t *)&stSnap, VAR_B_END_ADDR);
+    return var_ee_write_ok(VAR_EE_SLOT_B_PWR_DWN, (const uint8_t *)&stSnap, VAR_B_END_ADDR);
 }
 
 /**
@@ -485,24 +517,29 @@ void var_backup_tick(uint16_t usElapsedSec)
     /* A 区定时写 PWR_ON */
     if (s_usAPwrOnSec >= VAR_A_BACKUP_INTERVAL_SEC)
     {
-        s_usAPwrOnSec = 0u;
-        var_backup_a_pwr_on();
+        if (var_backup_a_pwr_on() != 0)
+        {
+            s_usAPwrOnSec = 0u;
+        }
     }
 
     /* B 区脏且到间隔则写 PWR_ON */
     if ((s_ucBDirty != 0u) && (s_usBPwrOnSec >= VAR_B_BACKUP_INTERVAL_SEC))
     {
-        s_usBPwrOnSec = 0u;
-        s_ucBDirty = 0u;
-        var_backup_b_pwr_on();
+        if (var_backup_b_pwr_on() != 0)
+        {
+            s_usBPwrOnSec = 0u;
+            s_ucBDirty = 0u;
+        }
     }
 
     /* 到间隔则写 A/B 掉电槽 */
     if (s_usPwrDwnSec >= VAR_PWR_DWN_INTERVAL_SEC)
     {
-        s_usPwrDwnSec = 0u;
-        var_backup_a_pwr_dwn();
-        var_backup_b_pwr_dwn();
+        if ((var_backup_a_pwr_dwn() != 0) && (var_backup_b_pwr_dwn() != 0))
+        {
+            s_usPwrDwnSec = 0u;
+        }
     }
 }
 

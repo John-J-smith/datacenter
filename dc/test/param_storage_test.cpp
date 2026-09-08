@@ -82,6 +82,17 @@ TEST_F(ParamTestBase, Write_RamEe_NoBakSlot)
     EXPECT_EQ(DcTestStoragePtr()[bak_addr], 0xFFu);
 }
 
+// 测试内容：参变量 EE 写入失败时 dc_write 返回错误
+TEST_F(ParamTestBase, Write_StorageFail_ReturnsParamErr)
+{
+    const uint8_t custom[] = {0x11u, 0x22u, 0x33u, 0x44u, 0x55u, 0x66u, 0x77u};
+    std::array<uint8_t, 7u> buf{};
+
+    ASSERT_EQ(dc_read_alias(DC_ALIAS_PARAM_SEASON_SWTIME, buf.data(), 1u, 0u), 7);
+    DcTestStorageFailNextWrites(4u);
+    EXPECT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), DC_RET_PARAM_ERR);
+}
+
 // 测试内容：仅 EE 的 LINKARRAY 按记录 index 读写回读
 TEST_F(ParamTestBase, EeOnly_Linkarray_ReadWrite)
 {

@@ -115,6 +115,30 @@ TEST_F(VariableTestBase, PwrUpUnrecoverable_SkipsBackup)
     EXPECT_EQ(ee[0], 0xFFu);
 }
 
+// 测试内容：B 类 EE 写入失败时保留脏标记，恢复写入后仍能备份
+TEST_F(VariableTestBase, TypeB_WriteFailKeepsDirty)
+{
+    uint8_t buf[8];
+    uint8_t ee[32];
+
+    SeedAClassEe(0u);
+    ReadVar(VAR_DATE_TIME, 0, buf, 1u);
+    buf[0] = 0x42u;
+    buf[1] = 0u;
+    buf[2] = 0u;
+    buf[3] = 0u;
+    ASSERT_EQ(WriteVar(VAR_USED_MONTH, 0, buf, 1u), 4);
+
+    DcTestStorageFailNextWrites(8u);
+    var_backup_tick(VAR_B_BACKUP_INTERVAL_SEC);
+    VariableEeReadSlot(VAR_EE_SLOT_B_PWR_ON_0, ee, VAR_B_END_ADDR);
+    EXPECT_EQ(ee[0], 0xFFu);
+
+    DcTestStorageFailNextWrites(0u);
+    var_backup_tick(1u);
+    ExpectEeSlotFirstByte(VAR_EE_SLOT_B_PWR_ON_0, 0x42u, VAR_B_END_ADDR);
+}
+
 // 测试内容：magic 与 CRC 均坏时跳过备份（CONTEXT 备份允许条件）
 TEST_F(VariableTestBase, BackupSkippedWhenInvalid)
 {

@@ -155,25 +155,37 @@ static uint8_t param_block_try_restore_ee(const ST_PARAM_BLOCK_TABLE *pstBlock, 
 
 /**
  * @brief 将 working 写入主槽；双备份时再写备份区 2
+ *
+ * @return 非 0 表示全部槽写入成功或无需落盘
  */
-static void param_block_commit_ee(const ST_PARAM_BLOCK_TABLE *pstBlock)
+static uint8_t param_block_commit_ee(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
     uint8_t *pucBlkData;
+    int16_t ssLen;
 
     if ((pstBlock == NULL) || ((pstBlock->ucFlag & FLAG_EEPROM) == 0u))
     {
-        return;
+        return 1;
     }
     if (pstBlock->ulBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
     {
-        return;
+        return 1;
     }
     pucBlkData = param_block_data_buf(pstBlock);
-    (void)DC_STORAGE_WRITE(param_block_ee_addr(pstBlock), pucBlkData, pstBlock->usBlockLen);
+    ssLen = DC_STORAGE_WRITE(param_block_ee_addr(pstBlock), pucBlkData, pstBlock->usBlockLen);
+    if (ssLen != (int16_t)pstBlock->usBlockLen)
+    {
+        return 0;
+    }
     if ((pstBlock->ucFlag & FLAG_EEPROM_BAK) != 0u)
     {
-        (void)DC_STORAGE_WRITE(param_block_ee_bak_addr(pstBlock), pucBlkData, pstBlock->usBlockLen);
+        ssLen = DC_STORAGE_WRITE(param_block_ee_bak_addr(pstBlock), pucBlkData, pstBlock->usBlockLen);
+        if (ssLen != (int16_t)pstBlock->usBlockLen)
+        {
+            return 0;
+        }
     }
+    return 1;
 }
 
 /**
@@ -453,7 +465,10 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *pstItem,
 
                 pstPrev = param_find_block((uint8_t)(pstItem->ucBlockName + ucLastSubBlk));
                 param_block_crc_fill(pstPrev);
-                param_block_commit_ee(pstPrev);
+                if (param_block_commit_ee(pstPrev) == 0)
+                {
+                    return DC_RET_PARAM_ERR;
+                }
             }
             param_block_load_ee_only(pstBlock);
             pucBlkData = param_block_data_buf(pstBlock);
@@ -476,7 +491,10 @@ static int16_t param_xfer_link(const ST_PARAM_TABLE *pstItem,
 
         pstBlock = param_find_block((uint8_t)(pstItem->ucBlockName + ucLastSubBlk));
         param_block_crc_fill(pstBlock);
-        param_block_commit_ee(pstBlock);
+        if (param_block_commit_ee(pstBlock) == 0)
+        {
+            return DC_RET_PARAM_ERR;
+        }
     }
     return (int16_t)usCopied;
 }
@@ -533,7 +551,10 @@ static int16_t param_xfer_struct(const ST_PARAM_TABLE *pstItem,
     if (ucWriting != 0)
     {
         param_block_crc_fill(pstBlock);
-        param_block_commit_ee(pstBlock);
+        if (param_block_commit_ee(pstBlock) == 0)
+        {
+            return DC_RET_PARAM_ERR;
+        }
     }
     return (int16_t)usCopied;
 }
@@ -577,7 +598,10 @@ static int16_t param_xfer_list(const ST_PARAM_TABLE *pstItem,
     {
         memcpy(pucBlkData + usOff, pucRo, usNbytes);
         param_block_crc_fill(pstBlock);
-        param_block_commit_ee(pstBlock);
+        if (param_block_commit_ee(pstBlock) == 0)
+        {
+            return DC_RET_PARAM_ERR;
+        }
     }
     else
     {
@@ -689,7 +713,10 @@ static int16_t param_xfer(uint32_t ulAlias,
     {
         memcpy(pucBlkData + usOff, pucRo, usNbytes);
         param_block_crc_fill(pstBlock);
-        param_block_commit_ee(pstBlock);
+        if (param_block_commit_ee(pstBlock) == 0)
+        {
+            return DC_RET_PARAM_ERR;
+        }
     }
     else
     {
