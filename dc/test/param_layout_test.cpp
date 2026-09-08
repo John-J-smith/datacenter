@@ -118,4 +118,11 @@ TEST_F(ParamLayoutTest, ApiTableRowCount)
     EXPECT_EQ(tParamApiTableCount, PARAM_LAYOUT_ITEM_COUNT);
 }
 
+TEST_F(ParamLayoutTest, RamPointersAreEnvelopeMembers)
+{
+    EXPECT_EQ(tParamBlockTable[0].pucRam, reinterpret_cast<uint8_t *>(&g_stParamSram.stBlk0));
+    EXPECT_EQ(tParamBlockTable[11].pucRam, reinterpret_cast<uint8_t *>(&g_stParamSram.stBlk11));
+    EXPECT_EQ(tParamBlockTable[5].pucRam, nullptr);
+}
+
 }  // namespace

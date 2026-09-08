@@ -47,18 +47,7 @@ inline const ST_PARAM_TABLE *ParamFindEntry(uint16_t type)
 /// @brief 翻转 SRAM 参数块末尾 CRC 的高字节（无 SRAM 的块忽略）。
 inline void ParamCorruptBlockCrc(uint8_t blk)
 {
-    const ST_PARAM_BLOCK_TABLE *block;
-
-    if ((uint16_t)blk >= tParamBlockTableCount)
-    {
-        return;
-    }
-    block = &tParamBlockTable[blk];
-    if (block->pucRam == NULL)
-    {
-        return;
-    }
-    block->pucRam[block->usBlockLen - PARAM_CRC_BYTES_BLOCK] ^= 0xFFu;
+    DcTestParamCorruptBlockCrc(blk);
 }
 
 /// @brief 拼 row/type/index/alias 的 SCOPED_TRACE 标签。

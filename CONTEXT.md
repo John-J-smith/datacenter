@@ -98,7 +98,7 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 
 **带 RAM 的工作区**：所有需要 RAM 的参变量块放进同一个不随复位清零的结构（头标记 + 各块现有类型 + 尾标记），不再各生成一个 `g_param_ram_N`。没有 RAM 的块不进该结构。说明见 `docs/superpowers/specs/2026-09-08-param-sram-head-tail-design.md`。
 
-**上电**（`param_ensure_init`，对齐 `var_ensure_init`）：每个带 RAM 的块**先查块尾校验**（头尾对也不能跳过）。校验坏则主槽 → 备份 → 默认；各块校验都好且头尾坏则补头尾。恢复与填默认**都不写** EE。
+**上电**（`param_ensure_init`，对齐 `var_ensure_init`）：每个带 RAM 的块**先查块尾校验**（头尾对也不能跳过）。校验坏则主槽 → 备份 → 默认；各块校验都好且头尾坏则补头尾。恢复与填默认**都不写** EE。没有 RAM 的块上电不处理。
 
 **运行中访问**：头尾都对则直接信 RAM；头或尾不对再按块查校验并恢复，最后补头尾。
 

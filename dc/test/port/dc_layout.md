@@ -18,7 +18,8 @@ EE 偏移相对 `VAR_EEPROM_BASE`，结束为末字节（含）。A/B 占用含�
 <!-- BEGIN:SUMMARY:PARAM -->
 ## 参变量分类消耗
 
-RAM 为 SRAM 工作区（compact：payload + CRC）；无 SRAM 的类型为 0。
+RAM 为 SRAM 工作区（compact：payload + CRC）；带 RAM 的参变量共用一块带头尾的 RAM。
+无 SRAM 的类型为 0。合计 RAM 含头尾 8 字节。
 EE 偏移相对 `PARAM_EEPROM_BASE`，结束为末字节（含）。
 有 BAK 的类型另计备份槽（`PARAM_EE_TOTAL` + 主槽偏移）；EE占用 含主槽与备份槽。
 `reserve` = `blk_size` − `compact`，合计含备份槽内的尾部空洞。
@@ -29,7 +30,7 @@ EE 偏移相对 `PARAM_EEPROM_BASE`，结束为末字节（含）。
 | EE_BK | 0 | 0x140(320) | 0x2BF(703) | 0x6C0(1728) | 0x83F(2111) | 768 | 310 |
 | RAM_EE | 193 | 0x2C0(704) | 0x3FF(1023) | - | - | 320 | 127 |
 | EE | 0 | 0x400(1024) | 0x53F(1343) | - | - | 320 | 130 |
-| 合计 | 457 | 0x0(0) | 0x53F(1343) | 0x580(1408) | 0x83F(2111) | 2048 | 679 |
+| 合计 | 465 | 0x0(0) | 0x53F(1343) | 0x580(1408) | 0x83F(2111) | 2048 | 679 |
 
 <!-- END:SUMMARY:PARAM -->
 <!-- BEGIN:VARIABLE -->
@@ -114,6 +115,7 @@ A/B 的 `ee_off` 为 PWR_ON_0 槽内该条目偏移。
 | RAM_EE | SRAM+EE | SRAM 工作区；仅 EE 备份区 1 |
 | EE | EE | 无 SRAM；仅 EE 备份区 1 |
 
+带 RAM 的参变量共用一块带头尾标记的 RAM（`ST_PARAM_SRAM`）。
 EE 偏移相对 `PARAM_EEPROM_BASE`。
 条目 `ee_off` = 块主槽起点 + 块内字段偏移。
 双备份：备份槽 = `PARAM_EE_TOTAL` + 主槽偏移（与固件 bak2 一致）。
@@ -191,7 +193,7 @@ EE 偏移相对 `PARAM_EEPROM_BASE`。
 | PARAM_HOLIDAY_DATA | 18 | RAM_EE | ARRAY | 5 | 60 |   | 0x300(768) | - |
 | PARAM_LINK_TEST3 | 19 | RAM_EE | LINKARRAY | 5 | 100 |   | 0x340(832) | - |
 | PARAM_TESTCTRL | 20 | RAM_EE | STRUCT | 2 | 6 |   | 0x3C0(960) | - |
-| PARAM_CALIB_DATA | 21 | EE | LINKARRAY | 8 | 96 |   | 0x400(1024) | - |
+| PARAM_CALIB_DATA | 21 | EE | LINKARRAY | 8 | 96 | ✔ | 0x400(1024) | - |
 | PARAM_TEST_IMAX | 22 | EE | INT | 1 | 4 |   | 0x480(1152) | - |
 | PARAM_TEST_DATA | 23 | EE | ARRAY | 5 | 60 |   | 0x4C0(1216) | - |
 | PARAM_UDP_SETUP | 24 | EE | STRUCT | 4 | 7 |   | 0x500(1280) | - |

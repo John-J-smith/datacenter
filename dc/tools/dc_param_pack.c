@@ -1457,7 +1457,8 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
     }
 
     fprintf(out, "## 参变量分类消耗\n\n");
-    fprintf(out, "RAM 为 SRAM 工作区（compact：payload + CRC）；无 SRAM 的类型为 0。\n");
+    fprintf(out, "RAM 为 SRAM 工作区（compact：payload + CRC）；带 RAM 的参变量共用一块带头尾的 RAM。\n");
+    fprintf(out, "无 SRAM 的类型为 0。合计 RAM 含头尾 8 字节。\n");
     fprintf(out, "EE 偏移相对 `PARAM_EEPROM_BASE`，结束为末字节（含）。\n");
     fprintf(out, "有 BAK 的类型另计备份槽（`PARAM_EE_TOTAL` + 主槽偏移）；EE占用 含主槽与备份槽。\n");
     fprintf(out, "`reserve` = `blk_size` − `compact`，合计含备份槽内的尾部空洞。\n\n");
@@ -1468,6 +1469,9 @@ static void dump_summary(FILE *out, unsigned nblocks, const pack_block_t *blocks
                           has_pri[k], pri_lo[k], pri_hi[k],
                           has_bak[k], bak_lo[k], bak_hi[k],
                           ee_bytes[k], reserve[k]);
+    }
+    if (ram_total > 0u) {
+        ram_total += 8u;
     }
     dump_param_ee_row(out, "合计", ram_total,
                       tot_pri, tot_pri_lo, tot_pri_hi,
@@ -1501,6 +1505,7 @@ static void dump_layout(FILE *out, unsigned nitems, unsigned nblocks,
     fprintf(out, "| EE_BK | EE+BAK | 无 SRAM；EE 备份区 1 + 备份区 2 |\n");
     fprintf(out, "| RAM_EE | SRAM+EE | SRAM 工作区；仅 EE 备份区 1 |\n");
     fprintf(out, "| EE | EE | 无 SRAM；仅 EE 备份区 1 |\n\n");
+    fprintf(out, "带 RAM 的参变量共用一块带头尾标记的 RAM（`ST_PARAM_SRAM`）。\n");
     fprintf(out, "EE 偏移相对 `PARAM_EEPROM_BASE`。\n");
     fprintf(out, "条目 `ee_off` = 块主槽起点 + 块内字段偏移。\n");
     fprintf(out, "双备份：备份槽 = `PARAM_EE_TOTAL` + 主槽偏移（与固件 bak2 一致）。\n\n");
@@ -1788,16 +1793,24 @@ int main(int argc, char **argv)
                 i, i, i);
     }
 
+    oputs("#define PARAM_SRAM_MAGIC_HEAD (0xA5A5A5A5u)\n");
+    oputs("#define PARAM_SRAM_MAGIC_TAIL (0x5A5A5A5Au)\n\n");
+    oputs("typedef struct {\n");
+    oputs("    uint32_t ulHead;\n");
+    for (i = 0u; i < nblocks; i++) {
+        if ((blocks[i].flags & FLAG_SRAM) != 0u) {
+            oprintf("    param_layout_%u_t stBlk%u;\n", i, i);
+        }
+    }
+    oputs("    uint32_t ulTail;\n");
+    oputs("} ST_PARAM_SRAM;\n\n");
+    oputs("extern ST_PARAM_SRAM g_stParamSram;\n\n");
+
     oputs("#endif /* DC_PARAM_LAYOUT_H */\n\n");
     oputs("#if defined(DC_PARAM_LAYOUT_DEFINE)\n");
     oputs("#ifndef DC_PARAM_LAYOUT_TABLE_DEFINED\n");
     oputs("#define DC_PARAM_LAYOUT_TABLE_DEFINED\n\n");
-    for (i = 0u; i < nblocks; i++) {
-        if ((blocks[i].flags & FLAG_SRAM) != 0u) {
-            oprintf("DC_NOINIT param_layout_%u_t g_param_ram_%u;\n", i, i);
-        }
-    }
-    oputs("\n");
+    oputs("DC_NOINIT ST_PARAM_SRAM g_stParamSram;\n\n");
     oputs("const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;\n\n");
     oputs("const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {\n");
     {
@@ -1819,7 +1832,8 @@ int main(int argc, char **argv)
             }
             if (has_sram != 0u) {
                 oprintf("    { PARAM_LAYOUT_BLOCK_%u_EE_OFF, "
-                        "(uint8_t *)&g_param_ram_%u, (uint16_t)sizeof(g_param_ram_%u), "
+                        "(uint8_t *)&g_stParamSram.stBlk%u, "
+                        "(uint16_t)sizeof(g_stParamSram.stBlk%u), "
                         "0x%02Xu }",
                         i, i, i, (unsigned)blocks[i].flags);
             } else {
@@ -1858,7 +1872,8 @@ int main(int argc, char **argv)
                 if (has_sram != 0u) {
                     oprintf("    /* block %u (bak of %u): "
                             "{ PARAM_LAYOUT_BLOCK_%u_EE_BK_OFF, "
-                            "(uint8_t *)&g_param_ram_%u, (uint16_t)sizeof(g_param_ram_%u), "
+                            "(uint8_t *)&g_stParamSram.stBlk%u, "
+                            "(uint16_t)sizeof(g_stParamSram.stBlk%u), "
                             "0x%02Xu }, */\n",
                             bak_id, i, i, i, i, (unsigned)blocks[i].flags);
                 } else {

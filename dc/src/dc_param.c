@@ -65,6 +65,103 @@ static int16_t param_block_check_range(const ST_PARAM_BLOCK_TABLE *pstBlock, uin
 
 static uint8_t *param_block_data_buf(const ST_PARAM_BLOCK_TABLE *pstBlock);
 static void param_block_apply_defaults(uint8_t ucBlk);
+static uint8_t param_block_crc_ok(const ST_PARAM_BLOCK_TABLE *pstBlock);
+static uint8_t param_block_try_restore_ee(const ST_PARAM_BLOCK_TABLE *pstBlock, uint8_t ucBak);
+
+/**
+ * @brief 块是否带 SRAM 工作区
+ */
+static uint8_t param_block_is_sram(const ST_PARAM_BLOCK_TABLE *pstBlock)
+{
+    return ((pstBlock != NULL) && ((pstBlock->ucFlag & FLAG_SRAM) != 0u) &&
+            (pstBlock->pucRam != NULL))
+               ? 1u
+               : 0u;
+}
+
+/**
+ * @brief 参变量 SRAM 头尾 magic 是否有效
+ */
+static uint8_t param_sram_ok(void)
+{
+    return ((g_stParamSram.ulHead == PARAM_SRAM_MAGIC_HEAD) &&
+            (g_stParamSram.ulTail == PARAM_SRAM_MAGIC_TAIL))
+               ? 1u
+               : 0u;
+}
+
+/**
+ * @brief 写入参变量 SRAM 头尾 magic（各带 RAM 块 CRC 已可信时调用）
+ */
+static void param_sram_mark_ok(void)
+{
+    g_stParamSram.ulHead = PARAM_SRAM_MAGIC_HEAD;
+    g_stParamSram.ulTail = PARAM_SRAM_MAGIC_TAIL;
+}
+
+/**
+ * @brief 所有带 RAM 的块尾 CRC 是否都正确
+ */
+static uint8_t param_sram_all_crc_ok(void)
+{
+    for (uint16_t i = 0u; i < tParamBlockTableCount; i++)
+    {
+        const ST_PARAM_BLOCK_TABLE *pstBlock;
+
+        pstBlock = &tParamBlockTable[i];
+        if ((param_block_is_sram(pstBlock) != 0u) && (param_block_crc_ok(pstBlock) == 0u))
+        {
+            return 0u;
+        }
+    }
+    return 1u;
+}
+
+/**
+ * @brief 带 RAM 的块：CRC 坏则主槽 → 备份 → 默认（不写 EE）
+ */
+static void param_restore_all_sram(void)
+{
+    for (uint16_t i = 0u; i < tParamBlockTableCount; i++)
+    {
+        const ST_PARAM_BLOCK_TABLE *pstBlock;
+
+        pstBlock = &tParamBlockTable[i];
+        if (param_block_is_sram(pstBlock) == 0u)
+        {
+            continue;
+        }
+        if (param_block_crc_ok(pstBlock) != 0u)
+        {
+            continue;
+        }
+        if (param_block_try_restore_ee(pstBlock, 0) != 0u)
+        {
+            continue;
+        }
+        if (param_block_try_restore_ee(pstBlock, 1) != 0u)
+        {
+            continue;
+        }
+        param_block_apply_defaults((uint8_t)i);
+    }
+}
+
+/**
+ * @brief 运行中访问带 RAM 的块：头尾好则信 RAM，否则按块恢复并补头尾
+ */
+static void param_prepare_sram_access(void)
+{
+    if (param_sram_ok() != 0u)
+    {
+        return;
+    }
+    param_restore_all_sram();
+    if (param_sram_all_crc_ok() != 0u)
+    {
+        param_sram_mark_ok();
+    }
+}
 
 /**
  * @brief 校验工作缓冲尾部 CRC16 是否正确
@@ -370,9 +467,10 @@ static void param_block_apply_defaults(uint8_t ucBlk)
 }
 
 /**
- * @brief 参变量块上电初始化
- *   FLAG_SRAM 且 RAM CRC 正确 → 保留 RAM
- *   否则主槽 EE → 备份区 2（FLAG_EEPROM_BAK）→ pucDefault / 0xFF
+ * @brief 参变量 SRAM 上电初始化
+ *   带 RAM：先查块尾 CRC（头尾对也不跳过）；坏则主槽 → 备份 → 默认
+ *   各块 CRC 都好且头尾坏则补头尾
+ *   无 RAM 块不处理，读/写时再装 scratch
  *   不写 EEPROM；仅 dc_write 路径落盘
  */
 static void param_ensure_init(void)
@@ -381,26 +479,10 @@ static void param_ensure_init(void)
     {
         return;
     }
-    /* SRAM CRC 好则保留；否则主槽 → 备份区 2 → 默认 */
-    for (uint16_t i = 0u; i < tParamBlockTableCount; i++)
+    param_restore_all_sram();
+    if ((param_sram_all_crc_ok() != 0u) && (param_sram_ok() == 0u))
     {
-        const ST_PARAM_BLOCK_TABLE *pstBlock;
-
-        pstBlock = &tParamBlockTable[i];
-        if (((pstBlock->ucFlag & FLAG_SRAM) != 0u) && (pstBlock->pucRam != NULL) &&
-            (param_block_crc_ok(pstBlock) != 0))
-        {
-            continue;
-        }
-        if (param_block_try_restore_ee(pstBlock, 0) != 0)
-        {
-            continue;
-        }
-        if (param_block_try_restore_ee(pstBlock, 1) != 0)
-        {
-            continue;
-        }
-        param_block_apply_defaults((uint8_t)i);
+        param_sram_mark_ok();
     }
     s_ucParamInited = 1u;
 }
@@ -705,7 +787,14 @@ static int16_t param_xfer(uint32_t ulAlias,
     {
         return DC_RET_ALIAS_ERR;
     }
-    param_block_load_ee_only(pstBlock);
+    if (param_block_is_sram(pstBlock) != 0u)
+    {
+        param_prepare_sram_access();
+    }
+    else
+    {
+        param_block_load_ee_only(pstBlock);
+    }
     pucBlkData = param_block_data_buf(pstBlock);
 
     ucDtype = param_attr_type(pstItem);
@@ -813,13 +902,7 @@ int16_t dc_write_param(uint32_t ulAlias, const uint8_t *pucBuf, uint16_t usLen, 
 void DcTestParamReset(void)
 {
     s_ucParamInited = 0u;
-    for (uint16_t i = 0u; i < tParamBlockTableCount; i++)
-    {
-        if (tParamBlockTable[i].pucRam != NULL)
-        {
-            memset(tParamBlockTable[i].pucRam, 0, (size_t)tParamBlockTable[i].usBlockLen);
-        }
-    }
+    memset(&g_stParamSram, 0, sizeof(g_stParamSram));
 }
 
 /**
@@ -828,5 +911,40 @@ void DcTestParamReset(void)
 void DcTestParamReinit(void)
 {
     s_ucParamInited = 0u;
+}
+
+/**
+ * @brief 测试用：仅破坏参变量 SRAM 头尾 magic
+ */
+void DcTestParamCorruptSramMagic(void)
+{
+    g_stParamSram.ulHead = 0u;
+    g_stParamSram.ulTail = 0u;
+}
+
+/**
+ * @brief 测试用：翻转指定块末尾 CRC 高字节
+ */
+void DcTestParamCorruptBlockCrc(uint8_t ucBlk)
+{
+    const ST_PARAM_BLOCK_TABLE *pstBlock;
+    uint16_t usCrcOff;
+
+    pstBlock = param_find_block(ucBlk);
+    if ((pstBlock == NULL) || (pstBlock->pucRam == NULL) ||
+        (pstBlock->usBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
+    {
+        return;
+    }
+    usCrcOff = (uint16_t)(pstBlock->usBlockLen - (uint16_t)PARAM_CRC_BYTES_BLOCK);
+    pstBlock->pucRam[usCrcOff] ^= 0xFFu;
+}
+
+/**
+ * @brief 测试用：头尾 magic 是否有效
+ */
+uint8_t DcTestParamSramOk(void)
+{
+    return param_sram_ok();
 }
 #endif /* DC_TEST */

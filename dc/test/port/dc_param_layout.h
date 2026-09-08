@@ -289,32 +289,43 @@ typedef struct {
 } param_layout_20_t;
 typedef char param_layout_20_szchk[(sizeof(param_layout_20_t) == (size_t)PARAM_LAYOUT_BLOCK_20_LEN) ? 1 : -1];
 
+#define PARAM_SRAM_MAGIC_HEAD (0xA5A5A5A5u)
+#define PARAM_SRAM_MAGIC_TAIL (0x5A5A5A5Au)
+
+typedef struct {
+    uint32_t ulHead;
+    param_layout_0_t stBlk0;
+    param_layout_1_t stBlk1;
+    param_layout_2_t stBlk2;
+    param_layout_3_t stBlk3;
+    param_layout_4_t stBlk4;
+    param_layout_11_t stBlk11;
+    param_layout_12_t stBlk12;
+    param_layout_13_t stBlk13;
+    param_layout_14_t stBlk14;
+    param_layout_15_t stBlk15;
+    uint32_t ulTail;
+} ST_PARAM_SRAM;
+
+extern ST_PARAM_SRAM g_stParamSram;
+
 #endif /* DC_PARAM_LAYOUT_H */
 
 #if defined(DC_PARAM_LAYOUT_DEFINE)
 #ifndef DC_PARAM_LAYOUT_TABLE_DEFINED
 #define DC_PARAM_LAYOUT_TABLE_DEFINED
 
-param_layout_0_t g_param_ram_0;
-param_layout_1_t g_param_ram_1;
-param_layout_2_t g_param_ram_2;
-param_layout_3_t g_param_ram_3;
-param_layout_4_t g_param_ram_4;
-param_layout_11_t g_param_ram_11;
-param_layout_12_t g_param_ram_12;
-param_layout_13_t g_param_ram_13;
-param_layout_14_t g_param_ram_14;
-param_layout_15_t g_param_ram_15;
+DC_NOINIT ST_PARAM_SRAM g_stParamSram;
 
 const uint32_t PARAM_EEPROM_ORIGIN = (uint32_t)PARAM_EEPROM_BASE;
 
 const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {
     /* RAM_EE_BK1 */
-    { PARAM_LAYOUT_BLOCK_0_EE_OFF, (uint8_t *)&g_param_ram_0, (uint16_t)sizeof(g_param_ram_0), 0x0Bu },
-    { PARAM_LAYOUT_BLOCK_1_EE_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x0Bu },
-    { PARAM_LAYOUT_BLOCK_2_EE_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x0Bu },
-    { PARAM_LAYOUT_BLOCK_3_EE_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x0Bu },
-    { PARAM_LAYOUT_BLOCK_4_EE_OFF, (uint8_t *)&g_param_ram_4, (uint16_t)sizeof(g_param_ram_4), 0x0Bu },
+    { PARAM_LAYOUT_BLOCK_0_EE_OFF, (uint8_t *)&g_stParamSram.stBlk0, (uint16_t)sizeof(g_stParamSram.stBlk0), 0x0Bu },
+    { PARAM_LAYOUT_BLOCK_1_EE_OFF, (uint8_t *)&g_stParamSram.stBlk1, (uint16_t)sizeof(g_stParamSram.stBlk1), 0x0Bu },
+    { PARAM_LAYOUT_BLOCK_2_EE_OFF, (uint8_t *)&g_stParamSram.stBlk2, (uint16_t)sizeof(g_stParamSram.stBlk2), 0x0Bu },
+    { PARAM_LAYOUT_BLOCK_3_EE_OFF, (uint8_t *)&g_stParamSram.stBlk3, (uint16_t)sizeof(g_stParamSram.stBlk3), 0x0Bu },
+    { PARAM_LAYOUT_BLOCK_4_EE_OFF, (uint8_t *)&g_stParamSram.stBlk4, (uint16_t)sizeof(g_stParamSram.stBlk4), 0x0Bu },
     /* EE_BK1 */
     { PARAM_LAYOUT_BLOCK_5_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_5_LEN, 0x0Au },
     { PARAM_LAYOUT_BLOCK_6_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_6_LEN, 0x0Au },
@@ -323,11 +334,11 @@ const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {
     { PARAM_LAYOUT_BLOCK_9_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_9_LEN, 0x0Au },
     { PARAM_LAYOUT_BLOCK_10_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_10_LEN, 0x0Au },
     /* RAM_EE */
-    { PARAM_LAYOUT_BLOCK_11_EE_OFF, (uint8_t *)&g_param_ram_11, (uint16_t)sizeof(g_param_ram_11), 0x03u },
-    { PARAM_LAYOUT_BLOCK_12_EE_OFF, (uint8_t *)&g_param_ram_12, (uint16_t)sizeof(g_param_ram_12), 0x03u },
-    { PARAM_LAYOUT_BLOCK_13_EE_OFF, (uint8_t *)&g_param_ram_13, (uint16_t)sizeof(g_param_ram_13), 0x03u },
-    { PARAM_LAYOUT_BLOCK_14_EE_OFF, (uint8_t *)&g_param_ram_14, (uint16_t)sizeof(g_param_ram_14), 0x03u },
-    { PARAM_LAYOUT_BLOCK_15_EE_OFF, (uint8_t *)&g_param_ram_15, (uint16_t)sizeof(g_param_ram_15), 0x03u },
+    { PARAM_LAYOUT_BLOCK_11_EE_OFF, (uint8_t *)&g_stParamSram.stBlk11, (uint16_t)sizeof(g_stParamSram.stBlk11), 0x03u },
+    { PARAM_LAYOUT_BLOCK_12_EE_OFF, (uint8_t *)&g_stParamSram.stBlk12, (uint16_t)sizeof(g_stParamSram.stBlk12), 0x03u },
+    { PARAM_LAYOUT_BLOCK_13_EE_OFF, (uint8_t *)&g_stParamSram.stBlk13, (uint16_t)sizeof(g_stParamSram.stBlk13), 0x03u },
+    { PARAM_LAYOUT_BLOCK_14_EE_OFF, (uint8_t *)&g_stParamSram.stBlk14, (uint16_t)sizeof(g_stParamSram.stBlk14), 0x03u },
+    { PARAM_LAYOUT_BLOCK_15_EE_OFF, (uint8_t *)&g_stParamSram.stBlk15, (uint16_t)sizeof(g_stParamSram.stBlk15), 0x03u },
     /* EE */
     { PARAM_LAYOUT_BLOCK_16_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_16_LEN, 0x02u },
     { PARAM_LAYOUT_BLOCK_17_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_17_LEN, 0x02u },
@@ -335,11 +346,11 @@ const ST_PARAM_BLOCK_TABLE tParamBlockTable[] = {
     { PARAM_LAYOUT_BLOCK_19_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_19_LEN, 0x02u },
     { PARAM_LAYOUT_BLOCK_20_EE_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_20_LEN, 0x02u }
     /* RAM_EE_BK2 */
-    /* block 21 (bak of 0): { PARAM_LAYOUT_BLOCK_0_EE_BK_OFF, (uint8_t *)&g_param_ram_0, (uint16_t)sizeof(g_param_ram_0), 0x0Bu }, */
-    /* block 22 (bak of 1): { PARAM_LAYOUT_BLOCK_1_EE_BK_OFF, (uint8_t *)&g_param_ram_1, (uint16_t)sizeof(g_param_ram_1), 0x0Bu }, */
-    /* block 23 (bak of 2): { PARAM_LAYOUT_BLOCK_2_EE_BK_OFF, (uint8_t *)&g_param_ram_2, (uint16_t)sizeof(g_param_ram_2), 0x0Bu }, */
-    /* block 24 (bak of 3): { PARAM_LAYOUT_BLOCK_3_EE_BK_OFF, (uint8_t *)&g_param_ram_3, (uint16_t)sizeof(g_param_ram_3), 0x0Bu }, */
-    /* block 25 (bak of 4): { PARAM_LAYOUT_BLOCK_4_EE_BK_OFF, (uint8_t *)&g_param_ram_4, (uint16_t)sizeof(g_param_ram_4), 0x0Bu }, */
+    /* block 21 (bak of 0): { PARAM_LAYOUT_BLOCK_0_EE_BK_OFF, (uint8_t *)&g_stParamSram.stBlk0, (uint16_t)sizeof(g_stParamSram.stBlk0), 0x0Bu }, */
+    /* block 22 (bak of 1): { PARAM_LAYOUT_BLOCK_1_EE_BK_OFF, (uint8_t *)&g_stParamSram.stBlk1, (uint16_t)sizeof(g_stParamSram.stBlk1), 0x0Bu }, */
+    /* block 23 (bak of 2): { PARAM_LAYOUT_BLOCK_2_EE_BK_OFF, (uint8_t *)&g_stParamSram.stBlk2, (uint16_t)sizeof(g_stParamSram.stBlk2), 0x0Bu }, */
+    /* block 24 (bak of 3): { PARAM_LAYOUT_BLOCK_3_EE_BK_OFF, (uint8_t *)&g_stParamSram.stBlk3, (uint16_t)sizeof(g_stParamSram.stBlk3), 0x0Bu }, */
+    /* block 25 (bak of 4): { PARAM_LAYOUT_BLOCK_4_EE_BK_OFF, (uint8_t *)&g_stParamSram.stBlk4, (uint16_t)sizeof(g_stParamSram.stBlk4), 0x0Bu }, */
     /* EE_BK2 */
     /* block 26 (bak of 5): { PARAM_LAYOUT_BLOCK_5_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_5_LEN, 0x0Au }, */
     /* block 27 (bak of 6): { PARAM_LAYOUT_BLOCK_6_EE_BK_OFF, NULL, (uint16_t)PARAM_LAYOUT_BLOCK_6_LEN, 0x0Au }, */
@@ -409,6 +420,15 @@ const uint8_t g_default_PARAM_LADDER_SWTIME[7u] = {
     0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0xFFu
 };
 
+const uint8_t g_default_PARAM_CALIB_DATA[96u] = {
+    0x00u, 0x01u, 0x02u, 0x03u, 0x04u, 0x05u, 0x06u, 0x07u, 0x08u, 0x09u, 0x0Au, 0x0Bu, 0x0Cu, 0x0Du, 0x0Eu, 0x0Fu, 
+    0x10u, 0x11u, 0x12u, 0x13u, 0x14u, 0x15u, 0x16u, 0x17u, 0x18u, 0x19u, 0x1Au, 0x1Bu, 0x1Cu, 0x1Du, 0x1Eu, 0x1Fu, 
+    0x20u, 0x21u, 0x22u, 0x23u, 0x24u, 0x25u, 0x26u, 0x27u, 0x28u, 0x29u, 0x2Au, 0x2Bu, 0x2Cu, 0x2Du, 0x2Eu, 0x2Fu, 
+    0x30u, 0x31u, 0x32u, 0x33u, 0x34u, 0x35u, 0x36u, 0x37u, 0x38u, 0x39u, 0x3Au, 0x3Bu, 0x3Cu, 0x3Du, 0x3Eu, 0x3Fu, 
+    0x40u, 0x41u, 0x42u, 0x43u, 0x44u, 0x45u, 0x46u, 0x47u, 0x48u, 0x49u, 0x4Au, 0x4Bu, 0x4Cu, 0x4Du, 0x4Eu, 0x4Fu, 
+    0x50u, 0x51u, 0x52u, 0x53u, 0x54u, 0x55u, 0x56u, 0x57u, 0x58u, 0x59u, 0x5Au, 0x5Bu, 0x5Cu, 0x5Du, 0x5Eu, 0x5Fu
+};
+
 const ST_PARAM_TABLE tParamApiTable[] = {
     /* RAM_EE_BK1 */
     { PARAM_UN                , 0u , 0u , 4u  , _PARAM_ATTR_INT                 , NULL                          },
@@ -435,7 +455,7 @@ const ST_PARAM_TABLE tParamApiTable[] = {
     { PARAM_LINK_TEST3        , 13u, 0u , 100u, g_param_attr_PARAM_LINK_TEST3   , NULL                          },
     { PARAM_TESTCTRL          , 15u, 0u , 6u  , g_param_attr_PARAM_REMOTECTRL   , NULL                          },
     /* EE */
-    { PARAM_CALIB_DATA        , 16u, 0u , 96u , g_param_attr_PARAM_CALIB_DATA   , NULL                          },
+    { PARAM_CALIB_DATA        , 16u, 0u , 96u , g_param_attr_PARAM_CALIB_DATA   , g_default_PARAM_CALIB_DATA    },
     { PARAM_TEST_IMAX         , 18u, 0u , 4u  , _PARAM_ATTR_INT                 , NULL                          },
     { PARAM_TEST_DATA         , 19u, 0u , 60u , _param_attr_PARAM_TEST_DATA     , NULL                          },
     { PARAM_UDP_SETUP         , 20u, 0u , 7u  , g_param_attr_PARAM_UDP_SETUP    , NULL                          },

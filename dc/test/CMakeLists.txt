@@ -27,6 +27,7 @@ add_executable(dc_tests
     param_rw_test.cpp
     param_default_test.cpp
     param_layout_test.cpp
+    param_sram_test.cpp
     param_storage_test.cpp
     param_list_test.cpp
 )

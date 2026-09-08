@@ -1,0 +1,39 @@
+---
+description: 单元测试用例必须有「测试内容」和编号步骤注释
+globs: dc/test/**/*.{cpp,hpp}
+alwaysApply: false
+---
+
+# 单元测试注释
+
+约定见 `dc/test/README.md` §3。写或改 `dc/test` 下用例时必须带这些注释，不要省略。
+
+## `TEST_F` / `TEST`
+
+每个用例**正上方**一行目的，步骤编号写在对应代码上方：
+
+```cpp
+// 测试内容：A 类定时备份到 PWR_ON 槽（CONTEXT EE 备份）
+TEST_F(VariableTestBase, TypeA_PeriodicPwrOnBackup)
+{
+    // 1. 写 DATE_TIME
+    WriteVar(VAR_DATE_TIME, buf, 1u);
+    // 2. var_backup_tick(VAR_A_BACKUP_INTERVAL_SEC)
+    var_backup_tick(VAR_A_BACKUP_INTERVAL_SEC);
+    // 3. 读 PWR_ON_0/1 首字节断言
+    EXPECT_EQ(...);
+}
+```
+
+- `// 测试内容：` — 验证什么；可引用 `8.2.1`、`8.2.2`、`CONTEXT`
+- `// 1.` `// 2.` … — Arrange / Act / Assert，不要把步骤堆在函数顶或写进断言字符串
+- 新增用例时同步写注释，不要先交无注释的 `TEST_F`
+
+## Helper
+
+`dc/test/*_helpers.hpp` 里的辅助函数用一行 `/// @brief`，不要在每个用例里重复说明 helper。
+
+```cpp
+/// @brief 翻转 SRAM 参数块末尾 CRC 的高字节（无 SRAM 的块忽略）。
+inline void ParamCorruptBlockCrc(uint8_t blk);
+```

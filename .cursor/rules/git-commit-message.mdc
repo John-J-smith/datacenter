@@ -1,0 +1,41 @@
+---
+description: Git 提交信息用中文，遵循 Angular 约定（type/scope 可为英文）
+alwaysApply: true
+---
+
+# 提交信息
+
+用户要求提交时，标题与正文用**中文**。格式遵循 [AngularJS Git Commit Guidelines](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md#commits)。`type`、`scope` 用英文；`scope` 可省略。
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+- 标题必填；`scope` 可选。任一行不超过 100 字符。
+- `type`：`feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `chore`
+- `scope`：改动位置，英文即可（如 `param`、`variable`、`pack`）。影响多处可用 `*`
+- `subject`：中文，祈使语气（「补头尾」不是「已补头尾」），首字不大写、末尾无句号
+- `body`：中文，写动机与和旧行为的差别；同样用祈使语气
+- `footer`：破坏性变更以 `BREAKING CHANGE:` 开头（该标记保持英文）；可附关闭的 issue
+- 还原：标题 `revert: ` + 原标题；正文写 `还原提交 <hash>。`
+
+仍遵守：只在用户明确要求时提交；不改 git config；不用 `-i`；消息用 HEREDOC 传入。
+
+```
+# 好
+feat(param): 参变量 RAM 合成一块并加头尾标记
+
+上电先查块尾校验，运行中头尾好则信 RAM。
+
+# 好
+fix(variable): 上电恢复失败时不要盖合法魔数
+
+# 差
+update params
+Fix SRAM magic.
+feat(param): Added head/tail envelope.
+```
