@@ -1794,7 +1794,7 @@ int main(int argc, char **argv)
     oputs("#define DC_PARAM_LAYOUT_TABLE_DEFINED\n\n");
     for (i = 0u; i < nblocks; i++) {
         if ((blocks[i].flags & FLAG_SRAM) != 0u) {
-            oprintf("param_layout_%u_t g_param_ram_%u;\n", i, i);
+            oprintf("DC_NOINIT param_layout_%u_t g_param_ram_%u;\n", i, i);
         }
     }
     oputs("\n");

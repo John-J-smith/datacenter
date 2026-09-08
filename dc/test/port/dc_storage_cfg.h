@@ -31,6 +31,14 @@
 #define PARAM_EEPROM_BASE (VAR_EEPROM_BASE + 512u)
 #endif
 
+/*
+ * Product firmware: define DC_NOINIT to a no-init qualifier (e.g. IAR __no_init)
+ * so A/B variable RAM and param SRAM blocks survive reset. Host tests leave it empty.
+ */
+#ifndef DC_NOINIT
+#define DC_NOINIT
+#endif
+
 int16_t DcCfgStorageRead(uint32_t ulAddr, uint8_t *pucBuf, uint16_t usLen);
 int16_t DcCfgStorageWrite(uint32_t ulAddr, const uint8_t *pucBuf, uint16_t usLen);
 

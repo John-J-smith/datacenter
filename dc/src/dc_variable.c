@@ -22,7 +22,7 @@ typedef struct
     uint32_t tail_b;
     var_layout_c_t body_c;
 } ST_VAR_RAM;
-static ST_VAR_RAM s_stVarRam;
+static DC_NOINIT ST_VAR_RAM s_stVarRam;
 
 static uint8_t s_ucVarInited;
 static uint8_t s_ucBDirty;
