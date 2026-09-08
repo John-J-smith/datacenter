@@ -101,6 +101,20 @@ TEST_F(VariableTestBase, ImmediatePowerDown)
     ExpectEeSlotFirstByte(VAR_EE_SLOT_A_PWR_DWN, 0x71u, VAR_A_END_ADDR);
 }
 
+// 测试内容：上电不可恢复时定时备份不得把 SRAM 垃圾写入 EE
+TEST_F(VariableTestBase, PwrUpUnrecoverable_SkipsBackup)
+{
+    uint8_t buf[8];
+    uint8_t ee[64];
+
+    DcTestVarSmearZone(DC_TEST_VAR_ZONE_A, 0xA5u);
+    EXPECT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 1u), DC_RET_PARAM_ERR);
+    var_backup_tick(VAR_A_BACKUP_INTERVAL_SEC);
+    ASSERT_EQ(VariableEeReadSlot(VAR_EE_SLOT_A_PWR_ON_0, ee, VAR_A_END_ADDR),
+              static_cast<int16_t>(VAR_A_END_ADDR));
+    EXPECT_EQ(ee[0], 0xFFu);
+}
+
 // 测试内容：magic 与 CRC 均坏时跳过备份（CONTEXT 备份允许条件）
 TEST_F(VariableTestBase, BackupSkippedWhenInvalid)
 {

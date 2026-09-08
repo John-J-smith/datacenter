@@ -119,6 +119,29 @@ TEST_F(VariableTestBase, RuntimeCrcBadFallbackPwrOn1)
 }
 #endif
 
+// 测试内容：上电 SRAM/EE 均不可恢复 → 读返回 DC_RET_PARAM_ERR，不把垃圾当合法
+TEST_F(VariableTestBase, PwrUpUnrecoverable_ReadFails)
+{
+    uint8_t buf[8];
+
+    DcTestVarSmearZone(DC_TEST_VAR_ZONE_A, 0xA5u);
+    EXPECT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 1u), DC_RET_PARAM_ERR);
+}
+
+// 测试内容：上电不可恢复后仍允许写入以建立合法 SRAM
+TEST_F(VariableTestBase, PwrUpUnrecoverable_WriteInitializes)
+{
+    uint8_t buf[8];
+
+    DcTestVarSmearZone(DC_TEST_VAR_ZONE_A, 0xA5u);
+    buf[0] = 0x31u;
+    ASSERT_EQ(WriteVar(VAR_DATE_TIME, 0, buf, 1u), 7);
+    std::memset(buf, 0, sizeof buf);
+    ASSERT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 1u), 7);
+    EXPECT_EQ(buf[0], 0x31u);
+    ExpectZoneBodyCrcOk(DC_TEST_VAR_ZONE_A);
+}
+
 // 测试内容：SRAM 与 EE 均不可恢复 → DC_RET_PARAM_ERR（CONTEXT 失败路径）
 TEST_F(VariableTestBase, RuntimeRestoreFails)
 {

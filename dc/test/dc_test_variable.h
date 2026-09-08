@@ -9,6 +9,7 @@ typedef enum {
 } dc_test_var_zone_t;
 
 void DcTestVarReset(void);
+void DcTestVarSmearZone(dc_test_var_zone_t zone, uint8_t ucFill);
 void DcTestVarCorruptMagic(dc_test_var_zone_t zone);
 void DcTestVarCorruptCrc(dc_test_var_zone_t zone);
 void DcTestVarInvalidateAll(dc_test_var_zone_t zone);

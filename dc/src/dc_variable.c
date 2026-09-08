@@ -249,10 +249,8 @@ static uint8_t var_try_restore_b_slot(E_VARIABLE_EE_SLOT slot)
 
 /**
  * @brief 运行中恢复A区数据
- *   CRC 错  → 从 EE 备份区恢复（恢复顺序：PWR_ON_0 → PWR_ON_1）
- *   CRC 对  → 只补 magic
- *   恢复失败 → DC_RET_PARAM_ERR
- * 
+ *   恢复顺序：PWR_ON_0 → PWR_ON_1
+ *
  * @return 非 0 表示成功
  */
 static uint8_t var_restore_a_backup(void)
@@ -270,10 +268,8 @@ static uint8_t var_restore_a_backup(void)
 
 /**
  * @brief 运行中恢复B区数据
- *   CRC 错   → 从 EE 备份区恢复（恢复顺序：PWR_ON_0 → PWR_ON_1）
- *   CRC 对   → 只补 magic
- *   恢复失败 → DC_RET_PARAM_ERR
- * 
+ *   恢复顺序：PWR_ON_0 → PWR_ON_1
+ *
  * @return 非 0 表示成功
  */
 static uint8_t var_restore_b_backup(void)
@@ -291,10 +287,8 @@ static uint8_t var_restore_b_backup(void)
 
 /**
  * @brief 上电恢复A区数据
- *   CRC 错   → 从 EE 备份区恢复（恢复顺序：PWR_DWN → PWR_ON_0 → PWR_ON_1）
- *   CRC 对   → 只补 magic
- *   恢复失败 → DC_RET_PARAM_ERR
- * 
+ *   恢复顺序：PWR_DWN → PWR_ON_0 → PWR_ON_1
+ *
  * @return 非 0 表示成功
  */
 static uint8_t var_restore_a_pwrup(void)
@@ -308,10 +302,8 @@ static uint8_t var_restore_a_pwrup(void)
 
 /**
  * @brief 上电恢复B区数据
- *   CRC 错   → 从 EE 备份区恢复（恢复顺序：PWR_DWN → PWR_ON_0 → PWR_ON_1）
- *   CRC 对   → 只补 magic
- *   恢复失败 → DC_RET_PARAM_ERR
- * 
+ *   恢复顺序：PWR_DWN → PWR_ON_0 → PWR_ON_1
+ *
  * @return 非 0 表示成功
  */
 static uint8_t var_restore_b_pwrup(void)
@@ -326,28 +318,20 @@ static uint8_t var_restore_b_pwrup(void)
 /**
  * @brief 判断 A 区当前是否允许写入 EE 备份
  *
- * @return 非 0 表示 magic 有效或 body CRC 正确
+ * @return 非 0 表示 body CRC 正确（magic 不足以为凭）
  */
 static uint8_t var_a_backup_allowed(void)
 {
-    if (var_a_sram_ok())
-    {
-        return 1;
-    }
     return var_a_crc_ok(&s_stVarRam.body_a);
 }
 
 /**
  * @brief 判断 B 区当前是否允许写入 EE 备份
  *
- * @return 非 0 表示 magic 有效或 body CRC 正确
+ * @return 非 0 表示 body CRC 正确
  */
 static uint8_t var_b_backup_allowed(void)
 {
-    if (var_b_sram_ok())
-    {
-        return 1;
-    }
     return var_b_crc_ok(&s_stVarRam.body_b);
 }
 
@@ -357,11 +341,12 @@ static uint8_t var_b_backup_allowed(void)
  *   head/tail 错 → 查 body CRC
  *    CRC 错  → 从 EE 备份区恢复（PWR_ON_0/1，不用掉电区）
  *    CRC 对  → 只补 magic
- *   恢复失败 → DC_RET_PARAM_ERR
- * 
- * @return int16_t 
+ *   恢复失败 → 读返回 DC_RET_PARAM_ERR；写则清零工作区后继续
+ *
+ * @param ucWriting 非 0 表示写路径（允许在不可恢复时重建工作区）
+ * @return 0 成功；负值表示恢复失败
  */
-static int16_t var_a_prepare_access(void)
+static int16_t var_a_prepare_access(uint8_t ucWriting)
 {
     if (var_a_sram_ok())
     {
@@ -371,7 +356,12 @@ static int16_t var_a_prepare_access(void)
     {
         if (!var_restore_a_backup())
         {
-            return DC_RET_PARAM_ERR;
+            if (ucWriting == 0u)
+            {
+                return DC_RET_PARAM_ERR;
+            }
+            memset(&s_stVarRam.body_a, 0, sizeof s_stVarRam.body_a);
+            var_a_crc_fill(&s_stVarRam.body_a);
         }
     }
     var_a_mark_ok();
@@ -381,9 +371,10 @@ static int16_t var_a_prepare_access(void)
 /**
  * @brief B 区访问前完整性检查（SRAM noinit，逻辑同 A 区）
  *
+ * @param ucWriting 非 0 表示写路径
  * @return 0 成功；负值表示恢复失败
  */
-static int16_t var_b_prepare_access(void)
+static int16_t var_b_prepare_access(uint8_t ucWriting)
 {
     if (var_b_sram_ok())
     {
@@ -393,7 +384,12 @@ static int16_t var_b_prepare_access(void)
     {
         if (!var_restore_b_backup())
         {
-            return DC_RET_PARAM_ERR;
+            if (ucWriting == 0u)
+            {
+                return DC_RET_PARAM_ERR;
+            }
+            memset(&s_stVarRam.body_b, 0, sizeof s_stVarRam.body_b);
+            var_b_crc_fill(&s_stVarRam.body_b);
         }
     }
     var_b_mark_ok();
@@ -522,9 +518,8 @@ void var_backup_power_down(void)
 
 /**
  * @brief 上电恢复A/B区数据
- *   CRC 错   → 从 EE 备份区恢复（恢复顺序：PWR_DWN → PWR_ON_0 → PWR_ON_1）
- *   CRC 对   → 只补 magic
- *   恢复失败 → DC_RET_PARAM_ERR
+ *   CRC 好 → 必要时只补 magic
+ *   CRC 坏 → PWR_DWN → PWR_ON_0 → PWR_ON_1；仍失败则不补 magic
  */
 static void var_ensure_init(void)
 {
@@ -536,12 +531,11 @@ static void var_ensure_init(void)
     s_usAPwrOnSec = 0u;
     s_usBPwrOnSec = 0u;
     s_usPwrDwnSec = 0u;
-    /* CRC 坏则上电链恢复；再补 magic */
     if (!var_a_crc_ok(&s_stVarRam.body_a))
     {
         var_restore_a_pwrup();
     }
-    if (!var_a_sram_ok())
+    if (var_a_crc_ok(&s_stVarRam.body_a) && !var_a_sram_ok())
     {
         var_a_mark_ok();
     }
@@ -549,7 +543,7 @@ static void var_ensure_init(void)
     {
         var_restore_b_pwrup();
     }
-    if (!var_b_sram_ok())
+    if (var_b_crc_ok(&s_stVarRam.body_b) && !var_b_sram_ok())
     {
         var_b_mark_ok();
     }
@@ -674,7 +668,7 @@ static int16_t var_xfer(uint32_t ulAlias,
     /* A/B 访问前校验；D 类直读写 EE */
     if (pstRow->ucType == (uint8_t)VARIABLE_TYPEA)
     {
-        ssRet = var_a_prepare_access();
+        ssRet = var_a_prepare_access(ucWriting);
         if (ssRet != 0)
         {
             return ssRet;
@@ -682,7 +676,7 @@ static int16_t var_xfer(uint32_t ulAlias,
     }
     else if (pstRow->ucType == (uint8_t)VARIABLE_TYPEB)
     {
-        ssRet = var_b_prepare_access();
+        ssRet = var_b_prepare_access(ucWriting);
         if (ssRet != 0)
         {
             return ssRet;
@@ -765,6 +759,28 @@ void DcTestVarReset(void)
     s_usAPwrOnSec = 0u;
     s_usBPwrOnSec = 0u;
     s_usPwrDwnSec = 0u;
+}
+
+/**
+ * @brief 测试用：用填充字节污染指定区 body，并清 magic（模拟 noinit 垃圾）
+ *
+ * @param zone   A 或 B 区
+ * @param ucFill 填充值
+ */
+void DcTestVarSmearZone(dc_test_var_zone_t zone, uint8_t ucFill)
+{
+    if (zone == DC_TEST_VAR_ZONE_A)
+    {
+        memset(&s_stVarRam.body_a, ucFill, sizeof s_stVarRam.body_a);
+        s_stVarRam.head_a = 0u;
+        s_stVarRam.tail_a = 0u;
+    }
+    else
+    {
+        memset(&s_stVarRam.body_b, ucFill, sizeof s_stVarRam.body_b);
+        s_stVarRam.head_b = 0u;
+        s_stVarRam.tail_b = 0u;
+    }
 }
 
 /**
