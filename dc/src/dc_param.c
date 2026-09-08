@@ -200,8 +200,57 @@ static void param_block_load_ee_only(const ST_PARAM_BLOCK_TABLE *pstBlock)
 }
 
 /**
+ * @brief 解析 LINKARRAY 的 N/M/K
+ *
+ * @param pstItem API 表项
+ * @param pucN    子块数
+ * @param pucM    每块条数
+ * @param pucK    每条字节
+ * @return 非 0 表示成功
+ */
+static uint8_t param_link_dims(const ST_PARAM_TABLE *pstItem, uint8_t *pucN, uint8_t *pucM,
+                               uint8_t *pucK)
+{
+    const uint8_t *pucAttr;
+    uint8_t ucN;
+    uint8_t ucM;
+    uint16_t usNrec;
+
+    if ((pstItem == NULL) || (pstItem->pucAttr == NULL) || (pucN == NULL) || (pucM == NULL) ||
+        (pucK == NULL))
+    {
+        return 0;
+    }
+    pucAttr = pstItem->pucAttr;
+    if (pucAttr[0] != (uint8_t)DATATYPE_LINKARRAY)
+    {
+        return 0;
+    }
+    *pucK = pucAttr[3];
+    if ((pucAttr[1] == 0u) && (pucAttr[2] == 0u))
+    {
+        if (param_linkarray_dims(pstItem->ucParamLen, pucAttr[3], PARAM_BLOCK_PAYLOAD_MAX, &ucN,
+                                 &ucM, &usNrec) == 0)
+        {
+            return 0;
+        }
+        *pucN = ucN;
+        *pucM = ucM;
+        return 1;
+    }
+    if ((pucAttr[1] == 0u) || (pucAttr[2] == 0u) || (pucAttr[3] == 0u))
+    {
+        return 0;
+    }
+    *pucN = pucAttr[1];
+    *pucM = pucAttr[2];
+    return 1;
+}
+
+/**
  * @brief 将单块恢复为默认值
  *   payload 先填 0xFF → 按 tParamApiTable.pucDefault 覆盖 → 写 CRC
+ *   LINKARRAY 只拷本子块切片，长度钳在 payload 内
  *
  * @param ucBlk 块下标
  */
@@ -222,13 +271,65 @@ static void param_block_apply_defaults(uint8_t ucBlk)
     for (uint16_t i = 0u; i < tParamApiTableCount; i++)
     {
         const ST_PARAM_TABLE *pstItem;
+        uint16_t usOff;
+        uint16_t usCopy;
+        uint16_t usSrc;
+        uint8_t ucN;
+        uint8_t ucM;
+        uint8_t ucK;
+        uint8_t ucSub;
 
         pstItem = &tParamApiTable[i];
-        if ((pstItem->ucBlockName != ucBlk) || (pstItem->pucDefault == NULL))
+        if (pstItem->pucDefault == NULL)
         {
             continue;
         }
-        memcpy(pucBlkData + pstItem->ucParamOffset, pstItem->pucDefault, pstItem->ucParamLen);
+        if (param_attr_type(pstItem) == (uint8_t)DATATYPE_LINKARRAY)
+        {
+            if (param_link_dims(pstItem, &ucN, &ucM, &ucK) == 0)
+            {
+                continue;
+            }
+            if (ucBlk < pstItem->ucBlockName)
+            {
+                continue;
+            }
+            ucSub = (uint8_t)(ucBlk - pstItem->ucBlockName);
+            if (ucSub >= ucN)
+            {
+                continue;
+            }
+            usSrc = (uint16_t)((uint16_t)ucSub * (uint16_t)ucM * (uint16_t)ucK);
+            usCopy = (uint16_t)((uint16_t)ucM * (uint16_t)ucK);
+            if (usSrc >= (uint16_t)pstItem->ucParamLen)
+            {
+                continue;
+            }
+            if ((uint16_t)(usSrc + usCopy) > (uint16_t)pstItem->ucParamLen)
+            {
+                usCopy = (uint16_t)((uint16_t)pstItem->ucParamLen - usSrc);
+            }
+            usOff = pstItem->ucParamOffset;
+        }
+        else
+        {
+            if (pstItem->ucBlockName != ucBlk)
+            {
+                continue;
+            }
+            usOff = pstItem->ucParamOffset;
+            usCopy = pstItem->ucParamLen;
+            usSrc = 0u;
+        }
+        if (usOff >= usPayload)
+        {
+            continue;
+        }
+        if ((uint32_t)usOff + (uint32_t)usCopy > (uint32_t)usPayload)
+        {
+            usCopy = (uint16_t)(usPayload - usOff);
+        }
+        memcpy(pucBlkData + usOff, pstItem->pucDefault + usSrc, usCopy);
     }
     param_block_crc_fill(pstBlock);
 }

@@ -174,4 +174,24 @@ TEST_F(ParamTestBase, Noinit_BadRamAndEe_RestoresCatalogDefault)
     EXPECT_EQ(std::memcmp(buf.data(), g_default_PARAM_SEASON_SWTIME, buf.size()), 0);
 }
 
+// 测试内容：LINKARRAY 出厂默认按子块切片，不得把逻辑总长拷进首块
+TEST_F(ParamTestBase, FirstRead_LinkarrayDefault_IsSlicedPerBlock)
+{
+    uint8_t rec0[12];
+    uint8_t rec7[12];
+    uint8_t expect0[12];
+    uint8_t expect7[12];
+
+    for (uint8_t b = 0u; b < 12u; ++b)
+    {
+        expect0[b] = b;
+        expect7[b] = static_cast<uint8_t>(0x54u + b);
+    }
+
+    ASSERT_EQ(dc_read_alias(ParaAliasBuild(PARAM_CALIB_DATA, 0u), rec0, 1u, 0u), 12);
+    ASSERT_EQ(dc_read_alias(ParaAliasBuild(PARAM_CALIB_DATA, 7u), rec7, 1u, 0u), 12);
+    EXPECT_EQ(std::memcmp(rec0, expect0, sizeof rec0), 0);
+    EXPECT_EQ(std::memcmp(rec7, expect7, sizeof rec7), 0);
+}
+
 }  // namespace
