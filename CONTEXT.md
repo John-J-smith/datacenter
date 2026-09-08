@@ -87,16 +87,18 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 
 | 宏 | flags | 工作区 | EE |
 |----|-------|--------|-----|
-| `PARAM_STORE_RAM_EE_BK` | SRAM+EEPROM+BAK | `g_param_ram_*` | 主槽 + 备份区 2 |
+| `PARAM_STORE_RAM_EE_BK` | SRAM+EEPROM+BAK | 共用一块带头尾的 RAM（见下） | 主槽 + 备份区 2 |
 | `PARAM_STORE_EE_BK` | EEPROM+BAK | 无（`ram=NULL`，scratch） | 主槽 + 备份区 2 |
-| `PARAM_STORE_RAM_EE` | SRAM+EEPROM | `g_param_ram_*` | 仅主槽 |
+| `PARAM_STORE_RAM_EE` | SRAM+EEPROM | 同上共用 RAM | 仅主槽 |
 | `PARAM_STORE_EE` | EEPROM | 无（scratch） | 仅主槽 |
 
 备份区 2 **不进** `tParamBlockTable`：`addr = PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + ulBlockEeOff`。EE-only 行仍带紧凑 `usBlockLen`（含 CRC），不能为 0。
 
 **API 表** `tParamApiTable`：小类、块下标、块内偏移、`ucParamLen`（逻辑总长；LINKARRAY 为记录总字节）、`pucAttr`、`pucDefault`。
 
-**上电**（`param_ensure_init`）：有 SRAM 且块 CRC 好 → 保留 RAM；否则主槽 → 备份区 2 → `pucDefault`/0xFF。恢复与填默认**都不写** EE。
+**带 RAM 的工作区**：所有需要 RAM 的参变量块放进同一个不随复位清零的结构（头标记 + 各块现有类型 + 尾标记），不再各生成一个 `g_param_ram_N`。头尾都对则整块 RAM 直接用；头或尾不对则对每个带 RAM 的块走「块尾校验 → EEPROM 主槽 → 备份 → 出厂默认」，全部处理完再补头尾。没有 RAM 的块不进该结构。说明见 `docs/superpowers/specs/2026-09-08-param-sram-head-tail-design.md`。
+
+**上电**（`param_ensure_init`）：与上面同一套判断。恢复与填默认**都不写** EE。
 
 **读写**：INT / ARRAY / STRUCT / LINKARRAY（跨连续块、按记录分页）。EE-only 经 `PARAM_BLOCK_SIZE` scratch 装主槽/备份，失败再套默认。**仅 `dc_write_*` 落盘**：刷新块 CRC 后写主槽；有 BAK 再写备份区 2。
 
