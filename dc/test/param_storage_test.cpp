@@ -20,7 +20,7 @@ TEST_F(ParamTestBase, Write_RamEeBk_MirrorsPrimaryAndBak)
     const ST_PARAM_BLOCK_TABLE *block;
 
     ASSERT_NE(entry, nullptr);
-    block = &tParamBlockTable[entry->eBlockName];
+    block = &tParamBlockTable[entry->ucBlockName];
     // 1. 写 SEASON_SWTIME 并读回
     ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_SEASON_SWTIME, custom, 1u, 0u), 7);
 
@@ -28,12 +28,12 @@ TEST_F(ParamTestBase, Write_RamEeBk_MirrorsPrimaryAndBak)
     EXPECT_EQ(std::memcmp(buf.data(), custom, sizeof(custom)), 0);
 
     // 2. 主槽与 PARAM_EE_BAK_BASE + 主槽偏移 内容相同
-    EXPECT_EQ(std::memcmp(DcTestStoragePtr() + PARAM_EEPROM_ORIGIN + block->uBlockEeOff +
-                              entry->uParamOffset,
+    EXPECT_EQ(std::memcmp(DcTestStoragePtr() + PARAM_EEPROM_ORIGIN + block->ulBlockEeOff +
+                              entry->ucParamOffset,
                           custom, sizeof(custom)),
               0);
     EXPECT_EQ(std::memcmp(DcTestStoragePtr() + PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE +
-                              block->uBlockEeOff + entry->uParamOffset,
+                              block->ulBlockEeOff + entry->ucParamOffset,
                           custom, sizeof(custom)),
               0);
 }
@@ -47,7 +47,7 @@ TEST_F(ParamTestBase, Write_EeBk_NoSram_PersistsAcrossReinit)
 
     ASSERT_NE(entry, nullptr);
     // 1. 块 ram 为空
-    EXPECT_EQ(tParamBlockTable[entry->eBlockName].ram, nullptr);
+    EXPECT_EQ(tParamBlockTable[entry->ucBlockName].pucRam, nullptr);
 
     // 2. 写入后 DcTestParamReinit，再读仍为写入值
     ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_DAY_SWTIME, custom, 1u, 0u), 7);
@@ -67,18 +67,18 @@ TEST_F(ParamTestBase, Write_RamEe_NoBakSlot)
     uint32_t bak_addr;
 
     ASSERT_NE(entry, nullptr);
-    block = &tParamBlockTable[entry->eBlockName];
+    block = &tParamBlockTable[entry->ucBlockName];
     EXPECT_EQ(block->ucFlag & FLAG_EEPROM_BAK, 0u);
     // 1. 写 PARAM_IMAX，主槽为写入值
     ASSERT_EQ(dc_write_alias(DC_ALIAS_PARAM_IMAX, custom, 1u, 0u), 4);
 
-    EXPECT_EQ(std::memcmp(DcTestStoragePtr() + PARAM_EEPROM_ORIGIN + block->uBlockEeOff +
-                              entry->uParamOffset,
+    EXPECT_EQ(std::memcmp(DcTestStoragePtr() + PARAM_EEPROM_ORIGIN + block->ulBlockEeOff +
+                              entry->ucParamOffset,
                           custom, sizeof(custom)),
               0);
 
     // 2. BAK_BASE + 主槽偏移处仍为 0xFF（无备份槽）
-    bak_addr = PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + block->uBlockEeOff;
+    bak_addr = PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + block->ulBlockEeOff;
     EXPECT_EQ(DcTestStoragePtr()[bak_addr], 0xFFu);
 }
 
@@ -90,8 +90,8 @@ TEST_F(ParamTestBase, EeOnly_Linkarray_ReadWrite)
     const ST_PARAM_TABLE *entry = ParamFindEntry(PARAM_CALIB_DATA);
 
     ASSERT_NE(entry, nullptr);
-    EXPECT_EQ(tParamBlockTable[entry->eBlockName].ram, nullptr);
-    EXPECT_EQ(tParamBlockTable[entry->eBlockName].ucFlag, PARAM_STORE_EE);
+    EXPECT_EQ(tParamBlockTable[entry->ucBlockName].pucRam, nullptr);
+    EXPECT_EQ(tParamBlockTable[entry->ucBlockName].ucFlag, PARAM_STORE_EE);
 
     for (uint8_t b = 0u; b < 12u; ++b)
     {

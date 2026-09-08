@@ -12,7 +12,7 @@ typedef struct {
     int16_t (*entry)(uint32_t, const uint8_t *, uint16_t, uint8_t);
 } ST_ALIAS_WSTORAGE_TABLE;
 
-static const ST_ALIAS_RSTORAGE_TABLE readAliasDataTable[] = {
+static const ST_ALIAS_RSTORAGE_TABLE s_tReadAliasTable[] = {
     { (uint8_t)ALIAS_CLASS_ENERGY,    dc_read_energy },
     { (uint8_t)ALIAS_CLASS_DEMAND,    dc_read_demand },
     { (uint8_t)ALIAS_CLASS_PARAMETER, dc_read_param },
@@ -21,7 +21,7 @@ static const ST_ALIAS_RSTORAGE_TABLE readAliasDataTable[] = {
     { (uint8_t)ALIAS_CLASS_RECORD,    dc_read_record },
 };
 
-static const ST_ALIAS_WSTORAGE_TABLE writeAliasDataTable[] = {
+static const ST_ALIAS_WSTORAGE_TABLE s_tWriteAliasTable[] = {
     { (uint8_t)ALIAS_CLASS_DEMAND,    dc_write_demand },
     { (uint8_t)ALIAS_CLASS_PARAMETER, dc_write_param },
     { (uint8_t)ALIAS_CLASS_VARIABLE,  dc_write_variable },
@@ -29,37 +29,55 @@ static const ST_ALIAS_WSTORAGE_TABLE writeAliasDataTable[] = {
     { (uint8_t)ALIAS_CLASS_RECORD,    dc_write_record },
 };
 
-int16_t dc_read_alias(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+/**
+ * @brief 按别名大类分派读
+ *
+ * @param ulAlias 别名
+ * @param pucBuf  输出缓冲；usLen 非 0 时不得为 NULL
+ * @param usLen   元素个数
+ * @param ucType  保留，传 0
+ * @return 成功返回传输字节数；失败返回负错误码
+ */
+int16_t dc_read_alias(uint32_t ulAlias, uint8_t *pucBuf, uint16_t usLen, uint8_t ucType)
 {
-    uint8_t class_id;
-    uint8_t i;
-
-    if ((dataPtr == 0) && (usLen != 0u)) {
+    uint8_t ucClassId;
+    /* 空缓冲且请求长度非 0 */
+    if ((pucBuf == 0) && (usLen != 0u)) {
         return DC_RET_PARAM_ERR;
     }
 
-    class_id = GetAliasClass(alias);
-    for (i = 0u; i < (uint8_t)(sizeof(readAliasDataTable) / sizeof(readAliasDataTable[0])); i++) {
-        if (class_id == readAliasDataTable[i].ucClassId) {
-            return readAliasDataTable[i].entry(alias, dataPtr, usLen, type);
+    /* 按大类查读表并转入对应入口 */
+    ucClassId = GetAliasClass(ulAlias);
+    for (uint8_t i = 0u; i < (uint8_t)(sizeof(s_tReadAliasTable) / sizeof(s_tReadAliasTable[0])); i++) {
+        if (ucClassId == s_tReadAliasTable[i].ucClassId) {
+            return s_tReadAliasTable[i].entry(ulAlias, pucBuf, usLen, ucType);
         }
     }
     return DC_RET_ALIAS_ERR;
 }
 
-int16_t dc_write_alias(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+/**
+ * @brief 按别名大类分派写
+ *
+ * @param ulAlias 别名
+ * @param pucBuf  输入数据；usLen 非 0 时不得为 NULL
+ * @param usLen   元素个数
+ * @param ucType  保留，传 0
+ * @return 成功返回传输字节数；失败返回负错误码
+ */
+int16_t dc_write_alias(uint32_t ulAlias, const uint8_t *pucBuf, uint16_t usLen, uint8_t ucType)
 {
-    uint8_t class_id;
-    uint8_t i;
-
-    if ((dataPtr == 0) && (usLen != 0u)) {
+    uint8_t ucClassId;
+    /* 空缓冲且请求长度非 0 */
+    if ((pucBuf == 0) && (usLen != 0u)) {
         return DC_RET_PARAM_ERR;
     }
 
-    class_id = GetAliasClass(alias);
-    for (i = 0u; i < (uint8_t)(sizeof(writeAliasDataTable) / sizeof(writeAliasDataTable[0])); i++) {
-        if (class_id == writeAliasDataTable[i].ucClassId) {
-            return writeAliasDataTable[i].entry(alias, dataPtr, usLen, type);
+    /* 按大类查写表并转入对应入口 */
+    ucClassId = GetAliasClass(ulAlias);
+    for (uint8_t i = 0u; i < (uint8_t)(sizeof(s_tWriteAliasTable) / sizeof(s_tWriteAliasTable[0])); i++) {
+        if (ucClassId == s_tWriteAliasTable[i].ucClassId) {
+            return s_tWriteAliasTable[i].entry(ulAlias, pucBuf, usLen, ucType);
         }
     }
     return DC_RET_ALIAS_ERR;

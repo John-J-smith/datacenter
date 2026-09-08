@@ -11,281 +11,275 @@
 
 #include <string.h>
 
-static uint8_t s_param_inited;
-static uint8_t s_param_scratch[PARAM_BLOCK_SIZE];
+static uint8_t s_ucParamInited;
+static uint8_t s_ucParamScratch[PARAM_BLOCK_SIZE];
 
 /**
  * @brief 按块下标查找块表项
  *
- * @param blk 块下标（与 tParamBlockTable[] 顺序一致）
+ * @param ucBlk 块下标（与 tParamBlockTable[] 顺序一致）
  * @return 块指针；下标越界时返回 NULL
  */
-static const ST_PARAM_BLOCK_TABLE *param_find_block(uint8_t blk)
+static const ST_PARAM_BLOCK_TABLE *param_find_block(uint8_t ucBlk)
 {
-    if ((uint16_t)blk >= tParamBlockTableCount)
+    if ((uint16_t)ucBlk >= tParamBlockTableCount)
     {
         return NULL;
     }
-    return &tParamBlockTable[blk];
+    return &tParamBlockTable[ucBlk];
 }
 
 /**
  * @brief 块 payload 长度（不含尾部 CRC 字节）
  *
- * @param block 块表项
+ * @param pstBlock 块表项
  * @return payload 字节数
  */
-static uint16_t param_block_payload_len(const ST_PARAM_BLOCK_TABLE *block)
+static uint16_t param_block_payload_len(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    return (uint16_t)(block->ucBlockLen - (uint16_t)PARAM_CRC_BYTES_BLOCK);
+    return (uint16_t)(pstBlock->usBlockLen - (uint16_t)PARAM_CRC_BYTES_BLOCK);
 }
 
-static uint8_t *param_block_working(const ST_PARAM_BLOCK_TABLE *block);
-static void param_block_apply_defaults(uint8_t blk);
+static uint8_t *param_block_data_buf(const ST_PARAM_BLOCK_TABLE *pstBlock);
+static void param_block_apply_defaults(uint8_t ucBlk);
 
 /**
  * @brief 校验工作缓冲尾部 CRC16 是否正确
  *
- * @param block 块表项
+ * @param pstBlock 块表项
  * @return 非 0 表示 CRC 与 payload 一致
  */
-static int param_block_crc_ok(const ST_PARAM_BLOCK_TABLE *block)
+static uint8_t param_block_crc_ok(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    uint16_t payload;
-    uint16_t stored;
-    uint16_t calc;
-    const uint8_t *ram;
+    uint16_t usPayload;
+    uint16_t usStored;
+    const uint8_t *pucBlkData;
 
-    if ((block == NULL) || (block->ucBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
+    if ((pstBlock == NULL) || (pstBlock->usBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
     {
         return 0;
     }
-    ram = param_block_working(block);
-    payload = param_block_payload_len(block);
-    stored = (uint16_t)ram[payload] |
-             (uint16_t)((uint16_t)ram[payload + 1u] << 8);
-    calc = dc_crc16_ccitt(ram, payload);
-    return stored == calc;
+    pucBlkData = param_block_data_buf(pstBlock);
+    usPayload = param_block_payload_len(pstBlock);
+    usStored = (uint16_t)pucBlkData[usPayload] |
+             (uint16_t)((uint16_t)pucBlkData[usPayload + 1u] << 8);
+    return usStored == dc_crc16_ccitt(pucBlkData, usPayload);
 }
 
 /**
  * @brief 按当前 payload 重算并写入块尾部 CRC
  *
- * @param block 块表项
+ * @param pstBlock 块表项
  */
-static void param_block_crc_fill(const ST_PARAM_BLOCK_TABLE *block)
+static void param_block_crc_fill(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    uint16_t payload;
-    uint16_t crc;
-    uint8_t *ram;
+    uint16_t usPayload;
+    uint16_t usCrc;
+    uint8_t *pucBlkData;
 
-    if ((block == NULL) || (block->ucBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
+    if ((pstBlock == NULL) || (pstBlock->usBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
     {
         return;
     }
-    ram = param_block_working(block);
-    payload = param_block_payload_len(block);
-    crc = dc_crc16_ccitt(ram, payload);
-    ram[payload] = (uint8_t)(crc & 0xFFu);
-    ram[payload + 1u] = (uint8_t)(crc >> 8);
+    pucBlkData = param_block_data_buf(pstBlock);
+    usPayload = param_block_payload_len(pstBlock);
+    usCrc = dc_crc16_ccitt(pucBlkData, usPayload);
+    pucBlkData[usPayload] = (uint8_t)(usCrc & 0xFFu);
+    pucBlkData[usPayload + 1u] = (uint8_t)(usCrc >> 8);
 }
 
 /**
- * @brief 工作缓冲：有 SRAM 用块 RAM，否则用 scratch
+ * @brief 取块数据缓冲：有 SRAM 返回块 RAM，否则返回 scratch
  */
-static uint8_t *param_block_working(const ST_PARAM_BLOCK_TABLE *block)
+static uint8_t *param_block_data_buf(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    if ((block == NULL) || (block->ram == NULL))
+    if ((pstBlock == NULL) || (pstBlock->pucRam == NULL))
     {
-        return s_param_scratch;
+        return s_ucParamScratch;
     }
-    return block->ram;
+    return pstBlock->pucRam;
 }
 
 /**
  * @brief 主槽绝对地址
  */
-static uint32_t param_block_ee_addr(const ST_PARAM_BLOCK_TABLE *block)
+static uint32_t param_block_ee_addr(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    return PARAM_EEPROM_ORIGIN + block->uBlockEeOff;
+    return PARAM_EEPROM_ORIGIN + pstBlock->ulBlockEeOff;
 }
 
 /**
  * @brief 备份区 2 绝对地址（不入 table：PARAM_EE_BAK_BASE + 主槽相对偏移）
  */
-static uint32_t param_block_ee_bak_addr(const ST_PARAM_BLOCK_TABLE *block)
+static uint32_t param_block_ee_bak_addr(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    return PARAM_EEPROM_ORIGIN + (uint32_t)PARAM_EE_BAK_BASE + block->uBlockEeOff;
+    return PARAM_EEPROM_ORIGIN + (uint32_t)PARAM_EE_BAK_BASE + pstBlock->ulBlockEeOff;
 }
 
 /**
  * @brief 从指定 EE 槽读入 working 并校验 CRC
  *
- * @param bak 非 0 读备份区 2
+ * @param ucBak 非 0 读备份区 2
  */
-static int param_block_try_restore_ee(const ST_PARAM_BLOCK_TABLE *block, int bak)
+static uint8_t param_block_try_restore_ee(const ST_PARAM_BLOCK_TABLE *pstBlock, uint8_t ucBak)
 {
-    uint32_t addr;
-    int16_t n;
-    uint8_t *ram;
+    uint32_t ulAddr;
+    int16_t ssLen;
+    uint8_t *pucBlkData;
 
-    if ((block == NULL) || (block->ucBlockLen == 0u))
+    if ((pstBlock == NULL) || (pstBlock->usBlockLen == 0u))
     {
         return 0;
     }
-    if ((block->ucFlag & FLAG_EEPROM) == 0u)
+    if ((pstBlock->ucFlag & FLAG_EEPROM) == 0u)
     {
         return 0;
     }
-    if (block->uBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
+    if (pstBlock->ulBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
     {
         return 0;
     }
-    if ((bak != 0) && ((block->ucFlag & FLAG_EEPROM_BAK) == 0u))
+    if ((ucBak != 0u) && ((pstBlock->ucFlag & FLAG_EEPROM_BAK) == 0u))
     {
         return 0;
     }
-    ram = param_block_working(block);
-    addr = (bak != 0) ? param_block_ee_bak_addr(block) : param_block_ee_addr(block);
-    n = DC_STORAGE_READ(addr, ram, block->ucBlockLen);
-    if (n != (int16_t)block->ucBlockLen)
+    pucBlkData = param_block_data_buf(pstBlock);
+    ulAddr = (ucBak != 0u) ? param_block_ee_bak_addr(pstBlock) : param_block_ee_addr(pstBlock);
+    ssLen = DC_STORAGE_READ(ulAddr, pucBlkData, pstBlock->usBlockLen);
+    if (ssLen != (int16_t)pstBlock->usBlockLen)
     {
         return 0;
     }
-    return param_block_crc_ok(block);
+    return param_block_crc_ok(pstBlock);
 }
 
 /**
  * @brief 将 working 写入主槽；双备份时再写备份区 2
  */
-static void param_block_commit_ee(const ST_PARAM_BLOCK_TABLE *block)
+static void param_block_commit_ee(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    uint8_t *src;
+    uint8_t *pucBlkData;
 
-    if ((block == NULL) || ((block->ucFlag & FLAG_EEPROM) == 0u))
+    if ((pstBlock == NULL) || ((pstBlock->ucFlag & FLAG_EEPROM) == 0u))
     {
         return;
     }
-    if (block->uBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
+    if (pstBlock->ulBlockEeOff == PARAM_BLOCK_NULL_EE_OFF)
     {
         return;
     }
-    src = param_block_working(block);
-    (void)DC_STORAGE_WRITE(param_block_ee_addr(block), src, block->ucBlockLen);
-    if ((block->ucFlag & FLAG_EEPROM_BAK) != 0u)
+    pucBlkData = param_block_data_buf(pstBlock);
+    (void)DC_STORAGE_WRITE(param_block_ee_addr(pstBlock), pucBlkData, pstBlock->usBlockLen);
+    if ((pstBlock->ucFlag & FLAG_EEPROM_BAK) != 0u)
     {
-        (void)DC_STORAGE_WRITE(param_block_ee_bak_addr(block), src, block->ucBlockLen);
+        (void)DC_STORAGE_WRITE(param_block_ee_bak_addr(pstBlock), pucBlkData, pstBlock->usBlockLen);
     }
 }
 
 /**
- * @brief EE-only 块：主槽 → 备份区 2 → pDefault / 0xFF（不写 EE）
+ * @brief EE-only 块：主槽 → 备份区 2 → pucDefault / 0xFF（不写 EE）
  */
-static void param_block_load_ee_only(const ST_PARAM_BLOCK_TABLE *block)
+static void param_block_load_ee_only(const ST_PARAM_BLOCK_TABLE *pstBlock)
 {
-    uint8_t blk;
+    uint8_t ucBlk;
 
-    if ((block == NULL) || (block->ram != NULL))
+    if ((pstBlock == NULL) || (pstBlock->pucRam != NULL))
     {
         return;
     }
-    if (param_block_try_restore_ee(block, 0) != 0)
+    if (param_block_try_restore_ee(pstBlock, 0) != 0)
     {
         return;
     }
-    if (param_block_try_restore_ee(block, 1) != 0)
+    if (param_block_try_restore_ee(pstBlock, 1) != 0)
     {
         return;
     }
-    blk = (uint8_t)(block - &tParamBlockTable[0]);
-    param_block_apply_defaults(blk);
+    ucBlk = (uint8_t)(pstBlock - &tParamBlockTable[0]);
+    param_block_apply_defaults(ucBlk);
 }
 
 /**
  * @brief 将单块恢复为默认值
- *   payload 先填 0xFF → 按 tParamApiTable.pDefault 覆盖 → 写 CRC
+ *   payload 先填 0xFF → 按 tParamApiTable.pucDefault 覆盖 → 写 CRC
  *
- * @param blk 块下标
+ * @param ucBlk 块下标
  */
-static void param_block_apply_defaults(uint8_t blk)
+static void param_block_apply_defaults(uint8_t ucBlk)
 {
-    const ST_PARAM_BLOCK_TABLE *block;
-    uint16_t payload;
-    uint16_t i;
-    uint8_t *ram;
+    const ST_PARAM_BLOCK_TABLE *pstBlock;
+    uint16_t usPayload;
+    uint8_t *pucBlkData;
 
-    block = param_find_block(blk);
-    if ((block == NULL) || (block->ucBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
+    pstBlock = param_find_block(ucBlk);
+    if ((pstBlock == NULL) || (pstBlock->usBlockLen < (uint16_t)PARAM_CRC_BYTES_BLOCK))
     {
         return;
     }
-    payload = param_block_payload_len(block);
-    ram = param_block_working(block);
-    memset(ram, 0xFF, payload);
-    for (i = 0u; i < tParamApiTableCount; i++)
+    usPayload = param_block_payload_len(pstBlock);
+    pucBlkData = param_block_data_buf(pstBlock);
+    memset(pucBlkData, 0xFF, usPayload);
+    for (uint16_t i = 0u; i < tParamApiTableCount; i++)
     {
-        const ST_PARAM_TABLE *item;
+        const ST_PARAM_TABLE *pstItem;
 
-        item = &tParamApiTable[i];
-        if ((item->eBlockName != blk) || (item->pDefault == NULL))
+        pstItem = &tParamApiTable[i];
+        if ((pstItem->ucBlockName != ucBlk) || (pstItem->pucDefault == NULL))
         {
             continue;
         }
-        memcpy(ram + item->uParamOffset, item->pDefault, item->ucParamLen);
+        memcpy(pucBlkData + pstItem->ucParamOffset, pstItem->pucDefault, pstItem->ucParamLen);
     }
-    param_block_crc_fill(block);
+    param_block_crc_fill(pstBlock);
 }
 
 /**
  * @brief 参变量块上电初始化
  *   FLAG_SRAM 且 RAM CRC 正确 → 保留 RAM
- *   否则主槽 EE → 备份区 2（FLAG_EEPROM_BAK）→ pDefault / 0xFF
+ *   否则主槽 EE → 备份区 2（FLAG_EEPROM_BAK）→ pucDefault / 0xFF
  *   不写 EEPROM；仅 dc_write 路径落盘
  */
 static void param_ensure_init(void)
 {
-    uint16_t i;
-
-    if (s_param_inited != 0u)
+    if (s_ucParamInited != 0u)
     {
         return;
     }
-    for (i = 0u; i < tParamBlockTableCount; i++)
+    /* SRAM CRC 好则保留；否则主槽 → 备份区 2 → 默认 */
+    for (uint16_t i = 0u; i < tParamBlockTableCount; i++)
     {
-        const ST_PARAM_BLOCK_TABLE *block;
+        const ST_PARAM_BLOCK_TABLE *pstBlock;
 
-        block = &tParamBlockTable[i];
-        if (((block->ucFlag & FLAG_SRAM) != 0u) && (block->ram != NULL) &&
-            (param_block_crc_ok(block) != 0))
+        pstBlock = &tParamBlockTable[i];
+        if (((pstBlock->ucFlag & FLAG_SRAM) != 0u) && (pstBlock->pucRam != NULL) &&
+            (param_block_crc_ok(pstBlock) != 0))
         {
             continue;
         }
-        if (param_block_try_restore_ee(block, 0) != 0)
+        if (param_block_try_restore_ee(pstBlock, 0) != 0)
         {
             continue;
         }
-        if (param_block_try_restore_ee(block, 1) != 0)
+        if (param_block_try_restore_ee(pstBlock, 1) != 0)
         {
             continue;
         }
         param_block_apply_defaults((uint8_t)i);
     }
-    s_param_inited = 1u;
+    s_ucParamInited = 1u;
 }
 
 /**
  * @brief 按参变量小类 ID 查找参变量表项
  *
- * @param subclass E_PARAMETER_TYPE 枚举值
+ * @param usSubclass E_PARAMETER_TYPE 枚举值
  * @return 表项指针；未找到时返回 NULL
  */
-static const ST_PARAM_TABLE *param_find_item(uint16_t subclass)
+static const ST_PARAM_TABLE *param_find_item(uint16_t usSubclass)
 {
-    uint16_t i;
-
-    for (i = 0u; i < tParamApiTableCount; i++)
+    for (uint16_t i = 0u; i < tParamApiTableCount; i++)
     {
-        if (tParamApiTable[i].eParamType == subclass)
+        if (tParamApiTable[i].usParamType == usSubclass)
         {
             return &tParamApiTable[i];
         }
@@ -296,229 +290,230 @@ static const ST_PARAM_TABLE *param_find_item(uint16_t subclass)
 /**
  * @brief DATATYPE_LINKARRAY 读写（跨连续物理块逻辑拼接）
  *
- * @param item    API 表项
- * @param rw      读缓冲（写时可为 NULL）
- * @param ro      写数据源（读时可为 NULL）
+ * @param pstItem    API 表项
+ * @param pucRw      读缓冲（写时可为 NULL）
+ * @param pucRo      写数据源（读时可为 NULL）
  * @param usLen   记录条数
- * @param index   起始记录索引
- * @param writing 非 0 表示写
+ * @param ucIndex   起始记录索引
+ * @param ucWriting 非 0 表示写
  * @return 成功返回传输字节数；失败返回负错误码
  */
-static int16_t param_xfer_link(const ST_PARAM_TABLE *item, 
-                               uint8_t *rw,
-                               const uint8_t *ro, 
+static int16_t param_xfer_link(const ST_PARAM_TABLE *pstItem, 
+                               uint8_t *pucRw,
+                               const uint8_t *pucRo, 
                                uint16_t usLen, 
-                               uint8_t index,
-                               int writing)
+                               uint8_t ucIndex,
+                               uint8_t ucWriting)
 {
-    const uint8_t *attr;
-    uint8_t k;
-    uint8_t per_page;
-    uint16_t i;
-    uint16_t copied;
-    uint8_t *ram;
-    uint8_t last_page;
+    const uint8_t *pucAttr;
+    uint8_t ucRecBytes;
+    uint8_t ucRecPerBlk;
+    uint16_t usCopied;
+    uint8_t *pucBlkData;
+    uint8_t ucLastSubBlk;
 
-    attr = item->pAttr;
-    k = attr[3];
-    if (k == 0u)
+    pucAttr = pstItem->pucAttr;
+    ucRecBytes = pucAttr[3];
+    if (ucRecBytes == 0u)
     {
         return DC_RET_PARAM_ERR;
     }
-    per_page = attr[2];
-    if (per_page == 0u)
+    ucRecPerBlk = pucAttr[2];
+    if (ucRecPerBlk == 0u)
     {
         return DC_RET_PARAM_ERR;
     }
 
-    copied = 0u;
-    last_page = 0xFFu;
-    ram = NULL;
-    for (i = 0u; i < usLen; i++)
+    usCopied = 0u;
+    ucLastSubBlk = 0xFFu;
+    pucBlkData = NULL;
+    /* 按记录切块；换子块时提交上一块并加载下一块 */
+    for (uint16_t i = 0u; i < usLen; i++)
     {
-        uint16_t rec;
-        uint8_t page;
-        uint8_t slot;
-        const ST_PARAM_BLOCK_TABLE *block;
-        uint16_t off;
+        uint16_t usRec;
+        uint8_t ucSubBlk;
+        uint8_t ucRecInBlk;
+        const ST_PARAM_BLOCK_TABLE *pstBlock;
+        uint16_t usOff;
 
-        rec = (uint16_t)index + i;
-        page = (uint8_t)(rec / (uint16_t)per_page);
-        slot = (uint8_t)(rec % (uint16_t)per_page);
-        block = param_find_block((uint8_t)(item->eBlockName + page));
-        if (block == NULL)
+        usRec = (uint16_t)ucIndex + i;
+        ucSubBlk = (uint8_t)(usRec / (uint16_t)ucRecPerBlk);
+        ucRecInBlk = (uint8_t)(usRec % (uint16_t)ucRecPerBlk);
+        pstBlock = param_find_block((uint8_t)(pstItem->ucBlockName + ucSubBlk));
+        if (pstBlock == NULL)
         {
             return DC_RET_ALIAS_ERR;
         }
-        if (page != last_page)
+        if (ucSubBlk != ucLastSubBlk)
         {
-            if ((writing != 0) && (last_page != 0xFFu))
+            if ((ucWriting != 0) && (ucLastSubBlk != 0xFFu))
             {
-                const ST_PARAM_BLOCK_TABLE *prev;
+                const ST_PARAM_BLOCK_TABLE *pstPrev;
 
-                prev = param_find_block((uint8_t)(item->eBlockName + last_page));
-                param_block_crc_fill(prev);
-                param_block_commit_ee(prev);
+                pstPrev = param_find_block((uint8_t)(pstItem->ucBlockName + ucLastSubBlk));
+                param_block_crc_fill(pstPrev);
+                param_block_commit_ee(pstPrev);
             }
-            param_block_load_ee_only(block);
-            ram = param_block_working(block);
-            last_page = page;
+            param_block_load_ee_only(pstBlock);
+            pucBlkData = param_block_data_buf(pstBlock);
+            ucLastSubBlk = ucSubBlk;
         }
-        off = (uint16_t)slot * (uint16_t)k;
-        if (writing != 0)
+        usOff = (uint16_t)ucRecInBlk * (uint16_t)ucRecBytes;
+        if (ucWriting != 0)
         {
-            memcpy(ram + off, ro + copied, k);
+            memcpy(pucBlkData + usOff, pucRo + usCopied, ucRecBytes);
         }
         else
         {
-            memcpy(rw + copied, ram + off, k);
+            memcpy(pucRw + usCopied, pucBlkData + usOff, ucRecBytes);
         }
-        copied = (uint16_t)(copied + k);
+        usCopied = (uint16_t)(usCopied + ucRecBytes);
     }
-    if ((writing != 0) && (last_page != 0xFFu))
+    if ((ucWriting != 0) && (ucLastSubBlk != 0xFFu))
     {
-        const ST_PARAM_BLOCK_TABLE *block;
+        const ST_PARAM_BLOCK_TABLE *pstBlock;
 
-        block = param_find_block((uint8_t)(item->eBlockName + last_page));
-        param_block_crc_fill(block);
-        param_block_commit_ee(block);
+        pstBlock = param_find_block((uint8_t)(pstItem->ucBlockName + ucLastSubBlk));
+        param_block_crc_fill(pstBlock);
+        param_block_commit_ee(pstBlock);
     }
-    return (int16_t)copied;
+    return (int16_t)usCopied;
 }
 
 /**
  * @brief DATATYPE_STRUCT 按字段索引读写
  *
- * @param item    API 表项
- * @param block   所属块
- * @param rw      读缓冲（写时可为 NULL）
- * @param ro      写数据源（读时可为 NULL）
+ * @param pstItem    API 表项
+ * @param pstBlock   所属块
+ * @param pucRw      读缓冲（写时可为 NULL）
+ * @param pucRo      写数据源（读时可为 NULL）
  * @param usLen   字段个数
- * @param index   起始字段索引
- * @param writing 非 0 表示写
+ * @param ucIndex   起始字段索引
+ * @param ucWriting 非 0 表示写
  * @return 成功返回传输字节数；失败返回负错误码
  */
-static int16_t param_xfer_struct(const ST_PARAM_TABLE *item,
-                                 const ST_PARAM_BLOCK_TABLE *block,
-                                 uint8_t *rw, 
-                                 const uint8_t *ro,
+static int16_t param_xfer_struct(const ST_PARAM_TABLE *pstItem,
+                                 const ST_PARAM_BLOCK_TABLE *pstBlock,
+                                 uint8_t *pucRw, 
+                                 const uint8_t *pucRo,
                                  uint16_t usLen, 
-                                 uint8_t index, 
-                                 int writing)
+                                 uint8_t ucIndex, 
+                                 uint8_t ucWriting)
 {
-    uint16_t copied;
-    uint16_t i;
-    uint8_t idx;
-    uint8_t *ram;
+    uint16_t usCopied;
+    uint8_t ucIdx;
+    uint8_t *pucBlkData;
 
-    copied = 0u;
-    idx = index;
-    for (i = 0u; i < usLen; i++)
+    usCopied = 0u;
+    ucIdx = ucIndex;
+    for (uint16_t i = 0u; i < usLen; i++)
     {
-        uint8_t eb;
-        uint16_t off;
+        uint8_t ucFieldBytes;
+        uint16_t usOff;
 
-        eb = param_attr_elem_bytes(item, idx);
-        if (eb == 0u)
+        ucFieldBytes = param_attr_elem_bytes(pstItem, ucIdx);
+        if (ucFieldBytes == 0u)
         {
             return DC_RET_PARAM_ERR;
         }
-        off = (uint16_t)(item->uParamOffset + param_attr_struct_field_off(item, idx));
-        ram = param_block_working(block);
-        if (writing != 0)
+        usOff = (uint16_t)(pstItem->ucParamOffset + param_attr_struct_field_off(pstItem, ucIdx));
+        pucBlkData = param_block_data_buf(pstBlock);
+        if (ucWriting != 0)
         {
-            memcpy(ram + off, ro + copied, eb);
+            memcpy(pucBlkData + usOff, pucRo + usCopied, ucFieldBytes);
         }
         else
         {
-            memcpy(rw + copied, ram + off, eb);
+            memcpy(pucRw + usCopied, pucBlkData + usOff, ucFieldBytes);
         }
-        copied = (uint16_t)(copied + eb);
-        idx = (uint8_t)(idx + 1u);
+        usCopied = (uint16_t)(usCopied + ucFieldBytes);
+        ucIdx = (uint8_t)(ucIdx + 1u);
     }
-    if (writing != 0)
+    if (ucWriting != 0)
     {
-        param_block_crc_fill(block);
-        param_block_commit_ee(block);
+        param_block_crc_fill(pstBlock);
+        param_block_commit_ee(pstBlock);
     }
-    return (int16_t)copied;
+    return (int16_t)usCopied;
 }
 
 /**
  * @brief DATATYPE_LIST 按 xy / xF / 0xFF 读写（单块）
  *
- * @param item    API 表项
- * @param block   所属块
- * @param rw      读缓冲（写时可为 NULL）
- * @param ro      写数据源（读时可为 NULL）
+ * @param pstItem    API 表项
+ * @param pstBlock   所属块
+ * @param pucRw      读缓冲（写时可为 NULL）
+ * @param pucRo      写数据源（读时可为 NULL）
  * @param usLen   非 ALL 时必须为 1
- * @param index   分项号
- * @param writing 非 0 表示写
+ * @param ucIndex   分项号
+ * @param ucWriting 非 0 表示写
  * @return 成功返回传输字节数；失败返回负错误码
  */
-static int16_t param_xfer_list(const ST_PARAM_TABLE *item,
-                               const ST_PARAM_BLOCK_TABLE *block,
-                               uint8_t *rw,
-                               const uint8_t *ro,
+static int16_t param_xfer_list(const ST_PARAM_TABLE *pstItem,
+                               const ST_PARAM_BLOCK_TABLE *pstBlock,
+                               uint8_t *pucRw,
+                               const uint8_t *pucRo,
                                uint16_t usLen,
-                               uint8_t index,
-                               int writing)
+                               uint8_t ucIndex,
+                               uint8_t ucWriting)
 {
-    uint16_t off;
-    uint16_t nbytes;
-    uint8_t *ram;
+    uint16_t usOff;
+    uint16_t usNbytes;
+    uint8_t *pucBlkData;
 
-    if ((index != PARAM_INDEX_ALL) && (usLen != 1u))
+    /* 非 ALL 时 usLen 必须为 1；按 xy/xF/ALL 取偏移与长度 */
+    if ((ucIndex != PARAM_INDEX_ALL) && (usLen != 1u))
     {
         return DC_RET_PARAM_ERR;
     }
-    if (param_attr_list_lookup(item->pAttr, index, &off, &nbytes) == 0)
+    if (param_attr_list_lookup(pstItem->pucAttr, ucIndex, &usOff, &usNbytes) == 0)
     {
         return DC_RET_PARAM_ERR;
     }
-    ram = param_block_working(block);
-    off = (uint16_t)(item->uParamOffset + off);
-    if (writing != 0)
+    pucBlkData = param_block_data_buf(pstBlock);
+    usOff = (uint16_t)(pstItem->ucParamOffset + usOff);
+    if (ucWriting != 0)
     {
-        memcpy(ram + off, ro, nbytes);
-        param_block_crc_fill(block);
-        param_block_commit_ee(block);
+        memcpy(pucBlkData + usOff, pucRo, usNbytes);
+        param_block_crc_fill(pstBlock);
+        param_block_commit_ee(pstBlock);
     }
     else
     {
-        memcpy(rw, ram + off, nbytes);
+        memcpy(pucRw, pucBlkData + usOff, usNbytes);
     }
-    return (int16_t)nbytes;
+    return (int16_t)usNbytes;
 }
 
 /**
  * @brief 参变量别名读写分发（INT / ARRAY / STRUCT / LIST / LINKARRAY）
  *
- * @param alias   参变量别名（含小类与 index）
- * @param rw      读缓冲（写时可为 NULL）
- * @param ro      写数据源（读时可为 NULL）
- * @param usLen   元素个数（index=PARAM_INDEX_ALL 时为全部分项）
- * @param type    保留，传 0
- * @param writing 非 0 表示写
+ * @param ulAlias   参变量别名（含小类与 ucIndex）
+ * @param pucRw      读缓冲（写时可为 NULL）
+ * @param pucRo      写数据源（读时可为 NULL）
+ * @param usLen   元素个数（ucIndex=PARAM_INDEX_ALL 时为全部分项）
+ * @param ucType    保留，传 0
+ * @param ucWriting 非 0 表示写
  * @return 成功返回传输字节数；失败返回负错误码
  */
-static int16_t param_xfer(uint32_t alias, 
-                          uint8_t *rw, 
-                          const uint8_t *ro,
+static int16_t param_xfer(uint32_t ulAlias, 
+                          uint8_t *pucRw, 
+                          const uint8_t *pucRo,
                           uint16_t usLen, 
-                          uint8_t type, 
-                          int writing)
+                          uint8_t ucType, 
+                          uint8_t ucWriting)
 {
-    const ST_PARAM_TABLE *item;
-    const ST_PARAM_BLOCK_TABLE *block;
-    uint8_t index;
-    uint8_t dtype;
-    uint8_t index_max;
-    uint16_t nbytes;
-    uint16_t off;
-    uint8_t elem_bytes;
-    uint8_t *ram;
+    const ST_PARAM_TABLE *pstItem;
+    const ST_PARAM_BLOCK_TABLE *pstBlock;
+    uint8_t ucIndex;
+    uint8_t ucDtype;
+    uint8_t ucIndexMax;
+    uint16_t usNbytes;
+    uint16_t usOff;
+    uint8_t ucElemBytes;
+    uint8_t *pucBlkData;
 
+    (void)ucType;
     param_ensure_init();
 
     if (usLen == 0u)
@@ -526,105 +521,108 @@ static int16_t param_xfer(uint32_t alias,
         return 0;
     }
 
-    item = param_find_item(ParaAliasToType(alias));
-    if (item == NULL)
+    /* 查条目、加载 EE-only 工作区 */
+    pstItem = param_find_item(ParaAliasToType(ulAlias));
+    if (pstItem == NULL)
     {
         return DC_RET_ALIAS_ERR;
     }
 
-    block = param_find_block(item->eBlockName);
-    if (block == NULL)
+    pstBlock = param_find_block(pstItem->ucBlockName);
+    if (pstBlock == NULL)
     {
         return DC_RET_ALIAS_ERR;
     }
-    param_block_load_ee_only(block);
-    ram = param_block_working(block);
+    param_block_load_ee_only(pstBlock);
+    pucBlkData = param_block_data_buf(pstBlock);
 
-    dtype = param_attr_type(item);
-    index = GetAliasIndex(alias);
+    ucDtype = param_attr_type(pstItem);
+    ucIndex = GetAliasIndex(ulAlias);
 
-    if (dtype == (uint8_t)DATATYPE_LIST)
+    /* LIST / LINKARRAY / STRUCT 走专用路径 */
+    if (ucDtype == (uint8_t)DATATYPE_LIST)
     {
-        return param_xfer_list(item, block, rw, ro, usLen, index, writing);
+        return param_xfer_list(pstItem, pstBlock, pucRw, pucRo, usLen, ucIndex, ucWriting);
     }
 
-    index_max = param_attr_index_count(item);
-    if (index == PARAM_INDEX_ALL)
+    ucIndexMax = param_attr_index_count(pstItem);
+    if (ucIndex == PARAM_INDEX_ALL)
     {
-        index = 0u;
-        usLen = index_max;
+        ucIndex = 0u;
+        usLen = ucIndexMax;
     }
 
-    if ((uint16_t)index + usLen > (uint16_t)index_max)
+    if ((uint16_t)ucIndex + usLen > (uint16_t)ucIndexMax)
     {
         return DC_RET_PARAM_ERR;
     }
 
-    if (dtype == (uint8_t)DATATYPE_LINKARRAY)
+    if (ucDtype == (uint8_t)DATATYPE_LINKARRAY)
     {
-        return param_xfer_link(item, rw, ro, usLen, index, writing);
+        return param_xfer_link(pstItem, pucRw, pucRo, usLen, ucIndex, ucWriting);
     }
 
-    if (dtype == (uint8_t)DATATYPE_STRUCT)
+    if (ucDtype == (uint8_t)DATATYPE_STRUCT)
     {
-        return param_xfer_struct(item, block, rw, ro, usLen, index, writing);
+        return param_xfer_struct(pstItem, pstBlock, pucRw, pucRo, usLen, ucIndex, ucWriting);
     }
 
-    if (dtype == (uint8_t)DATATYPE_INT)
+    /* INT 整条；ARRAY 按元素宽算偏移与长度 */
+    if (ucDtype == (uint8_t)DATATYPE_INT)
     {
-        nbytes = item->ucParamLen;
-        off = item->uParamOffset;
+        usNbytes = pstItem->ucParamLen;
+        usOff = pstItem->ucParamOffset;
     }
     else
     {
-        elem_bytes = param_attr_elem_bytes(item, index);
-        if (elem_bytes == 0u)
+        ucElemBytes = param_attr_elem_bytes(pstItem, ucIndex);
+        if (ucElemBytes == 0u)
         {
             return DC_RET_PARAM_ERR;
         }
-        nbytes = (uint16_t)(usLen * (uint16_t)elem_bytes);
-        off = (uint16_t)(item->uParamOffset + (uint16_t)index * (uint16_t)elem_bytes);
+        usNbytes = (uint16_t)(usLen * (uint16_t)ucElemBytes);
+        usOff = (uint16_t)(pstItem->ucParamOffset + (uint16_t)ucIndex * (uint16_t)ucElemBytes);
     }
 
-    if (writing != 0)
+    if (ucWriting != 0)
     {
-        memcpy(ram + off, ro, nbytes);
-        param_block_crc_fill(block);
-        param_block_commit_ee(block);
+        memcpy(pucBlkData + usOff, pucRo, usNbytes);
+        param_block_crc_fill(pstBlock);
+        param_block_commit_ee(pstBlock);
     }
     else
     {
-        memcpy(rw, ram + off, nbytes);
+        memcpy(pucRw, pucBlkData + usOff, usNbytes);
     }
-    return (int16_t)nbytes;
+    return (int16_t)usNbytes;
 }
 
 /**
  * @brief 读参变量（别名层 ALIAS_CLASS_PARAMETER 入口）
  *
- * @param alias    参变量别名
- * @param dataPtr  输出缓冲
+ * @param ulAlias    参变量别名
+ * @param pucBuf  输出缓冲
  * @param usLen    元素个数
- * @param type     保留，传 0
+ * @param ucType     保留，传 0
  * @return 成功返回读取字节数；失败返回负错误码
  */
-int16_t dc_read_param(uint32_t alias, uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_read_param(uint32_t ulAlias, uint8_t *pucBuf, uint16_t usLen, uint8_t ucType)
 {
-    return param_xfer(alias, dataPtr, 0, usLen, type, 0);
+    return param_xfer(ulAlias, pucBuf, 0, usLen, ucType, 0);
 }
 
 /**
  * @brief 写参变量（别名层 ALIAS_CLASS_PARAMETER 入口）
  *
- * @param alias    参变量别名
- * @param dataPtr  输入数据
+ * @param ulAlias    参变量别名
+ * @param pucBuf  输入数据
  * @param usLen    元素个数
- * @param type     保留，传 0
+ * @param ucType     保留，传 0
  * @return 成功返回写入字节数；失败返回负错误码
  */
-int16_t dc_write_param(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, uint8_t type)
+int16_t dc_write_param(uint32_t ulAlias, const uint8_t *pucBuf, uint16_t usLen, uint8_t ucType)
 {
-    return param_xfer(alias, 0, dataPtr, usLen, type, 1);
+    return param_xfer(ulAlias, 0, pucBuf, usLen, ucType, 1);
 }
 
 #ifdef DC_TEST
@@ -634,14 +632,12 @@ int16_t dc_write_param(uint32_t alias, const uint8_t *dataPtr, uint16_t usLen, u
  */
 void DcTestParamReset(void)
 {
-    uint16_t i;
-
-    s_param_inited = 0u;
-    for (i = 0u; i < tParamBlockTableCount; i++)
+    s_ucParamInited = 0u;
+    for (uint16_t i = 0u; i < tParamBlockTableCount; i++)
     {
-        if (tParamBlockTable[i].ram != NULL)
+        if (tParamBlockTable[i].pucRam != NULL)
         {
-            memset(tParamBlockTable[i].ram, 0, (size_t)tParamBlockTable[i].ucBlockLen);
+            memset(tParamBlockTable[i].pucRam, 0, (size_t)tParamBlockTable[i].usBlockLen);
         }
     }
 }
@@ -651,6 +647,6 @@ void DcTestParamReset(void)
  */
 void DcTestParamReinit(void)
 {
-    s_param_inited = 0u;
+    s_ucParamInited = 0u;
 }
 #endif /* DC_TEST */

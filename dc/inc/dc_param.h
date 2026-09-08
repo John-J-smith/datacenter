@@ -35,19 +35,19 @@ PARAM_ITEM_LIST(_PARAM_ATTR_EMIT_)
 #define PARAM_BLOCK_NULL_EE_OFF  (0xFFFFFFFFu)
 
 typedef struct {
-    uint32_t uBlockEeOff;
-    uint8_t *ram;
-    uint16_t ucBlockLen;
+    uint32_t ulBlockEeOff;
+    uint8_t *pucRam;
+    uint16_t usBlockLen;
     uint8_t ucFlag;
 } ST_PARAM_BLOCK_TABLE;
 
 typedef struct {
-    uint16_t eParamType;
-    uint8_t eBlockName;
-    uint8_t uParamOffset;
+    uint16_t usParamType;
+    uint8_t ucBlockName;
+    uint8_t ucParamOffset;
     uint8_t ucParamLen;
-    const uint8_t *pAttr;
-    const uint8_t *pDefault;
+    const uint8_t *pucAttr;
+    const uint8_t *pucDefault;
 } ST_PARAM_TABLE;
 
 extern const ST_PARAM_BLOCK_TABLE tParamBlockTable[];

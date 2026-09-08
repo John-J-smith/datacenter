@@ -23,7 +23,7 @@ TEST_F(ParamLayoutTest, EeMapContiguous)
     // 2. 遍历 tParamBlockTable 有效主槽，相邻偏移差一块
     for (uint16_t bi = 0u; bi < PARAM_LAYOUT_BLOCK_COUNT; ++bi)
     {
-        const uint32_t off = tParamBlockTable[bi].uBlockEeOff;
+        const uint32_t off = tParamBlockTable[bi].ulBlockEeOff;
 
         if (off == PARAM_BLOCK_NULL_EE_OFF)
         {
@@ -50,7 +50,7 @@ TEST_F(ParamLayoutTest, EeMapContiguous)
 TEST_F(ParamLayoutTest, BlockTableAddresses)
 {
     // 1. 块 0 与 PARAM_LAYOUT_BLOCK_0_EE_OFF、ORIGIN、BAK_BASE 对齐
-    EXPECT_EQ(tParamBlockTable[0].uBlockEeOff, PARAM_LAYOUT_BLOCK_0_EE_OFF);
+    EXPECT_EQ(tParamBlockTable[0].ulBlockEeOff, PARAM_LAYOUT_BLOCK_0_EE_OFF);
     EXPECT_EQ(PARAM_EEPROM_ORIGIN, static_cast<uint32_t>(PARAM_EEPROM_BASE));
     EXPECT_EQ(PARAM_EE_BAK_BASE, PARAM_EE_TOTAL);
 }
@@ -75,18 +75,18 @@ TEST_F(ParamLayoutTest, StoreFlagsGrouped)
         }
         if ((f & FLAG_SRAM) != 0u)
         {
-            EXPECT_NE(tParamBlockTable[bi].ram, nullptr);
+            EXPECT_NE(tParamBlockTable[bi].pucRam, nullptr);
         }
         else
         {
-            EXPECT_EQ(tParamBlockTable[bi].ram, nullptr);
+            EXPECT_EQ(tParamBlockTable[bi].pucRam, nullptr);
         }
         prev = f;
         have = 1;
     }
 }
 
-// 测试内容：带 BAK 的主槽备份地址 = PARAM_EE_BAK_BASE + 主槽 uBlockEeOff，且落入 bak 宏表
+// 测试内容：带 BAK 的主槽备份地址 = PARAM_EE_BAK_BASE + 主槽 ulBlockEeOff，且落入 bak 宏表
 TEST_F(ParamLayoutTest, BakOffDerivedFromPrimary)
 {
     static const uint32_t bak_macro[] = { PARAM_LAYOUT_BAK_OFFS };
@@ -102,7 +102,7 @@ TEST_F(ParamLayoutTest, BakOffDerivedFromPrimary)
             continue;
         }
         ASSERT_LT(k, (unsigned)(sizeof(bak_macro) / sizeof(bak_macro[0]))) << "block " << bi;
-        bak = PARAM_EE_BAK_BASE + tParamBlockTable[bi].uBlockEeOff;
+        bak = PARAM_EE_BAK_BASE + tParamBlockTable[bi].ulBlockEeOff;
         EXPECT_EQ(bak, bak_macro[k]) << "block " << bi;
         EXPECT_LT(bak, PARAM_EE_MAP_END) << "block " << bi;
         k++;

@@ -26,7 +26,7 @@ TEST_F(ParamTestBase, FirstRead_CatalogDefaultParam_ReturnsDefaultBytes)
     EXPECT_EQ(std::memcmp(buf.data(), g_default_PARAM_SEASON_SWTIME, buf.size()), 0);
 }
 
-// 测试内容：pDefault 为 NULL 的参数，冷启动首次读返回 0xFF 填充
+// 测试内容：pucDefault 为 NULL 的参数，冷启动首次读返回 0xFF 填充
 TEST_F(ParamTestBase, FirstRead_NoDefaultParam_Returns0xFF)
 {
     std::array<uint8_t, 4u> buf{};
@@ -138,7 +138,7 @@ TEST_F(ParamTestBase, Noinit_BadBlockCrc_RestoresFromEe)
     const ST_PARAM_TABLE *entry = ParamFindEntry(PARAM_SEASON_SWTIME);
     ASSERT_NE(entry, nullptr);
     // 2. 破坏 SRAM 块 CRC 后清 init，模拟 noinit
-    ParamCorruptBlockCrc(entry->eBlockName);
+    ParamCorruptBlockCrc(entry->ucBlockName);
     DcTestParamReinit();
 
     // 3. 再读应从主槽 EE 恢复为写入值
@@ -159,12 +159,12 @@ TEST_F(ParamTestBase, Noinit_BadRamAndEe_RestoresCatalogDefault)
 
     const ST_PARAM_TABLE *entry = ParamFindEntry(PARAM_SEASON_SWTIME);
     ASSERT_NE(entry, nullptr);
-    const ST_PARAM_BLOCK_TABLE *block = &tParamBlockTable[entry->eBlockName];
-    ParamCorruptBlockCrc(entry->eBlockName);
-    DcTestStoragePtr()[PARAM_EEPROM_ORIGIN + block->uBlockEeOff +
-                       (block->ucBlockLen - PARAM_CRC_BYTES_BLOCK)] ^= 0xFFu;
-    DcTestStoragePtr()[PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + block->uBlockEeOff +
-                       (block->ucBlockLen - PARAM_CRC_BYTES_BLOCK)] ^= 0xFFu;
+    const ST_PARAM_BLOCK_TABLE *block = &tParamBlockTable[entry->ucBlockName];
+    ParamCorruptBlockCrc(entry->ucBlockName);
+    DcTestStoragePtr()[PARAM_EEPROM_ORIGIN + block->ulBlockEeOff +
+                       (block->usBlockLen - PARAM_CRC_BYTES_BLOCK)] ^= 0xFFu;
+    DcTestStoragePtr()[PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + block->ulBlockEeOff +
+                       (block->usBlockLen - PARAM_CRC_BYTES_BLOCK)] ^= 0xFFu;
     // 2. noinit 后再读
     DcTestParamReinit();
 

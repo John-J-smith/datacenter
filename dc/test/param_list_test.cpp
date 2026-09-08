@@ -71,7 +71,7 @@ TEST_F(ParamTestBase, AllListParams_LeafGroupAll)
             continue;
         }
         list_n++;
-        attr = entry->pAttr;
+        attr = entry->pucAttr;
         ASSERT_NE(attr, nullptr) << ParamTraceLabel(row, entry, 0u);
         ASSERT_GT(leaf_n, 0u) << ParamTraceLabel(row, entry, 0u);
         expected.assign(total, 0u);
@@ -82,7 +82,7 @@ TEST_F(ParamTestBase, AllListParams_LeafGroupAll)
             const uint8_t xy = param_attr_list_leaf_xy(attr, i);
             uint16_t off;
             uint16_t len;
-            const uint32_t alias = ParaAliasBuild(entry->eParamType, xy);
+            const uint32_t alias = ParaAliasBuild(entry->usParamType, xy);
 
             ASSERT_NE(param_attr_list_lookup(attr, xy, &off, &len), 0)
                 << ParamTraceLabel(row, entry, xy);
@@ -113,7 +113,7 @@ TEST_F(ParamTestBase, AllListParams_LeafGroupAll)
             }
             last_g = g;
             xf = static_cast<uint8_t>((static_cast<unsigned>(g) << 4) | 0x0Fu);
-            alias = ParaAliasBuild(entry->eParamType, xf);
+            alias = ParaAliasBuild(entry->usParamType, xf);
             ASSERT_NE(param_attr_list_lookup(attr, xf, &off, &len), 0)
                 << ParamTraceLabel(row, entry, xf);
             TraceParamEntry(row, entry, xf);
@@ -127,7 +127,7 @@ TEST_F(ParamTestBase, AllListParams_LeafGroupAll)
 
         // 3. PARAM_INDEX_ALL 读整段
         {
-            const uint32_t alias_all = ParaAliasBuild(entry->eParamType, PARAM_INDEX_ALL);
+            const uint32_t alias_all = ParaAliasBuild(entry->usParamType, PARAM_INDEX_ALL);
 
             TraceParamEntry(row, entry, PARAM_INDEX_ALL);
             std::fill(rbuf.begin(), rbuf.end(), 0u);
@@ -142,7 +142,7 @@ TEST_F(ParamTestBase, AllListParams_LeafGroupAll)
         {
             const uint8_t xy0 = param_attr_list_leaf_xy(attr, 0u);
 
-            EXPECT_EQ(dc_write_alias(ParaAliasBuild(entry->eParamType, xy0), wbuf.data(), 2u,
+            EXPECT_EQ(dc_write_alias(ParaAliasBuild(entry->usParamType, xy0), wbuf.data(), 2u,
                                      0u),
                       DC_RET_PARAM_ERR)
                 << ParamTraceLabel(row, entry, xy0);

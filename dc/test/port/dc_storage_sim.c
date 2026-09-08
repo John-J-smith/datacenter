@@ -3,38 +3,62 @@
 
 #include <string.h>
 
-static uint8_t s_storage[0x2000u];
+static uint8_t s_ucStorage[0x2000u];
 
+/**
+ * @brief 测试用：存储镜像填 0xFF
+ */
 void DcTestStorageReset(void)
 {
-    memset(s_storage, 0xFF, sizeof s_storage);
+    memset(s_ucStorage, 0xFF, sizeof s_ucStorage);
 }
 
+/**
+ * @brief 测试用：存储镜像基址
+ *
+ * @return 模拟存储首地址
+ */
 uint8_t *DcTestStoragePtr(void)
 {
-    return s_storage;
+    return s_ucStorage;
 }
 
-int16_t DcCfgStorageRead(uint32_t addr, uint8_t *buf, uint16_t len)
+/**
+ * @brief 模拟统一 storage 读
+ *
+ * @param ulAddr 绝对地址
+ * @param pucBuf 输出缓冲
+ * @param usLen  字节数
+ * @return 成功返回读取字节数；失败返回负错误码
+ */
+int16_t DcCfgStorageRead(uint32_t ulAddr, uint8_t *pucBuf, uint16_t usLen)
 {
-    if (addr >= DC_STORAGE_BASE_FILE) {
+    if (ulAddr >= DC_STORAGE_BASE_FILE) {
         return DC_RET_UNSUPPORTED;
     }
-    if ((uint32_t)len + addr > (uint32_t)(sizeof s_storage)) {
+    if ((uint32_t)usLen + ulAddr > (uint32_t)(sizeof s_ucStorage)) {
         return DC_RET_PARAM_ERR;
     }
-    memcpy(buf, s_storage + addr, (size_t)len);
-    return (int16_t)len;
+    memcpy(pucBuf, s_ucStorage + ulAddr, (size_t)usLen);
+    return (int16_t)usLen;
 }
 
-int16_t DcCfgStorageWrite(uint32_t addr, const uint8_t *buf, uint16_t len)
+/**
+ * @brief 模拟统一 storage 写
+ *
+ * @param ulAddr 绝对地址
+ * @param pucBuf 输入数据
+ * @param usLen  字节数
+ * @return 成功返回写入字节数；失败返回负错误码
+ */
+int16_t DcCfgStorageWrite(uint32_t ulAddr, const uint8_t *pucBuf, uint16_t usLen)
 {
-    if (addr >= DC_STORAGE_BASE_FILE) {
+    if (ulAddr >= DC_STORAGE_BASE_FILE) {
         return DC_RET_UNSUPPORTED;
     }
-    if ((uint32_t)len + addr > (uint32_t)(sizeof s_storage)) {
+    if ((uint32_t)usLen + ulAddr > (uint32_t)(sizeof s_ucStorage)) {
         return DC_RET_PARAM_ERR;
     }
-    memcpy(s_storage + addr, buf, (size_t)len);
-    return (int16_t)len;
+    memcpy(s_ucStorage + ulAddr, pucBuf, (size_t)usLen);
+    return (int16_t)usLen;
 }

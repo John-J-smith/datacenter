@@ -20,7 +20,7 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
         {
             const uint8_t index = ParamIoIndex(entry, ordinal);
             const uint16_t elem_bytes = ParamElemBytes(entry, index);
-            const uint32_t alias = ParaAliasBuild(entry->eParamType, index);
+            const uint32_t alias = ParaAliasBuild(entry->usParamType, index);
             
             TraceParamEntry(row, entry, index);
             FillParamWritePattern(wbuf.data(), elem_bytes, row, index);
@@ -40,7 +40,7 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
         {
             const uint8_t index = ParamIoIndex(entry, ordinal);
             const uint16_t elem_bytes = ParamElemBytes(entry, index);
-            const uint32_t alias = ParaAliasBuild(entry->eParamType, index);
+            const uint32_t alias = ParaAliasBuild(entry->usParamType, index);
 
             TraceParamEntry(row, entry, index);
             FillParamWritePattern(wbuf.data(), elem_bytes, row, index);
@@ -65,7 +65,7 @@ TEST_F(ParamTestBase, AllParams_ReadWrite)
         }
 
         const uint16_t total_bytes = ParamTotalBytes(entry);
-        const uint32_t alias_all = ParaAliasBuild(entry->eParamType, PARAM_INDEX_ALL);
+        const uint32_t alias_all = ParaAliasBuild(entry->usParamType, PARAM_INDEX_ALL);
 
         TraceParamEntry(row, entry, PARAM_INDEX_ALL);
         FillParamWritePattern(wbuf.data(), total_bytes, row, PARAM_INDEX_ALL);

@@ -30,12 +30,12 @@ inline const char *ParamTypeName(uint16_t type)
 
 #undef PARAM_TEST_NAME_CASE
 
-/// @brief 按 eParamType 查找 tParamApiTable 行。
+/// @brief 按 usParamType 查找 tParamApiTable 行。
 inline const ST_PARAM_TABLE *ParamFindEntry(uint16_t type)
 {
     for (uint16_t i = 0u; i < tParamApiTableCount; ++i)
     {
-        if (tParamApiTable[i].eParamType == type)
+        if (tParamApiTable[i].usParamType == type)
         {
             return &tParamApiTable[i];
         }
@@ -53,11 +53,11 @@ inline void ParamCorruptBlockCrc(uint8_t blk)
         return;
     }
     block = &tParamBlockTable[blk];
-    if (block->ram == NULL)
+    if (block->pucRam == NULL)
     {
         return;
     }
-    block->ram[block->ucBlockLen - PARAM_CRC_BYTES_BLOCK] ^= 0xFFu;
+    block->pucRam[block->usBlockLen - PARAM_CRC_BYTES_BLOCK] ^= 0xFFu;
 }
 
 /// @brief 拼 row/type/index/alias 的 SCOPED_TRACE 标签。
@@ -65,13 +65,13 @@ inline std::string ParamTraceLabel(uint16_t row, const ST_PARAM_TABLE *entry, ui
 {
     std::ostringstream oss;
 
-    oss << "row=" << row << " " << ParamTypeName(entry->eParamType)
-        << "(type=" << entry->eParamType << ")"
-        << " blk=" << static_cast<unsigned>(entry->eBlockName)
-        << " off=" << entry->uParamOffset
+    oss << "row=" << row << " " << ParamTypeName(entry->usParamType)
+        << "(type=" << entry->usParamType << ")"
+        << " blk=" << static_cast<unsigned>(entry->ucBlockName)
+        << " off=" << entry->ucParamOffset
         << " ucParamLen=" << static_cast<unsigned>(entry->ucParamLen)
         << " index=" << static_cast<unsigned>(index)
-        << " alias=0x" << std::hex << ParaAliasBuild(entry->eParamType, index);
+        << " alias=0x" << std::hex << ParaAliasBuild(entry->usParamType, index);
     return oss.str();
 }
 
@@ -80,7 +80,7 @@ inline uint8_t ParamIoIndex(const ST_PARAM_TABLE *entry, uint8_t ordinal)
 {
     if (param_attr_type(entry) == (uint8_t)DATATYPE_LIST)
     {
-        return param_attr_list_leaf_xy(entry->pAttr, ordinal);
+        return param_attr_list_leaf_xy(entry->pucAttr, ordinal);
     }
     return ordinal;
 }

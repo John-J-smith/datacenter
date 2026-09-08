@@ -66,7 +66,7 @@ static const uint8_t _PARAM_ATTR_INT[] = { DATATYPE_INT };
 #define DC_PARAM_TUP_N(t) DC_PARAM_HEAD t
 #define DC_PARAM_TUP_SUM(t) DC_PARAM_TAIL t
 
-#define DC_PARAM_LIST_XY(g, y) ((uint8_t)(((unsigned)(g) << 4) | (unsigned)(y)))
+#define DC_PARAM_LIST_XY(g, y) ((uint8_t)(((uint32_t)(g) << 4) | (uint32_t)(y)))
 
 #define DC_PARAM_LIST_LEAVES_EXPAND2(n) DC_PARAM_LIST_LEAVES_##n
 #define DC_PARAM_LIST_LEAVES_EXPAND1(n) DC_PARAM_LIST_LEAVES_EXPAND2(n)

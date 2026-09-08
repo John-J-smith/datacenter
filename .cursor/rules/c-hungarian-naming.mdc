@@ -1,0 +1,52 @@
+---
+description: C 变量匈牙利命名：stdint / 结构体 st、作用域 g_/s_、循环 i/j/k
+globs: "**/*.{c,h}"
+alwaysApply: false
+---
+
+# C 变量命名
+
+标识符 = 可选作用域前缀 + 类型前缀 + 语义名（Pascal 或有意义单词，不用 `snake_case` 当类型前缀）。
+
+## 作用域
+
+| 种类 | 前缀 | 例 |
+|------|------|-----|
+| 全局（含 `extern`） | `g_` | `uint32_t g_ulAddr;` |
+| 文件/函数 `static` | `s_` | `static uint8_t s_pucBuf[16];` |
+| 形参、局部、结构体成员 | 无 `g_`/`s_` | `uint16_t usLen;` |
+
+`g_`/`s_` 写在类型前缀之前：`g_ulAddr`、`s_usLen`、`s_pstBlock`。
+
+## 类型前缀（与 `stdint.h` 对齐）
+
+| 类型 | 对象 | 指针 | 例 |
+|------|------|------|-----|
+| `uint8_t` | `uc` | `puc` | `uint8_t ucIdx;` `uint8_t *pucBuf;` |
+| `int8_t` | `c` | `pc` | `int8_t cVal;` `int8_t *pcBuf;` |
+| `uint16_t` | `us` | `pus` | `uint16_t usLen;` |
+| `int16_t` | `ss` | `pss` | `int16_t ssTmp;` |
+| `uint32_t` | `ul` | `pul` | `uint32_t ulAddr;` |
+| `int32_t` | `sl` | `psl` | `int32_t slAddr;` |
+| 结构体 | `st` | `pst` | `ST_PARAM_TABLE stItem;` `ST_PARAM_TABLE *pstItem;` |
+
+结构体**类型名**用 `ST_`（`ST_PARAM_TABLE`）。`const` 不改变前缀。多级指针再叠 `p`。
+语义名用完整词，能看出职责：`ucRecBytes`、`pucBlkData`；不要 `ucK`、`pucWork` 这种抽象名（块表 SRAM 指针成员仍用 `pucRam`）。
+
+只用 `stdint.h` 定宽类型，禁止 `int` / `unsigned` / `char` / `short` / `long`。真假、写标志用 `uint8_t`（0 / 非 0）。`memset` 等库函数形参仍按接口用 `size_t` 转换。
+
+## 循环变量
+
+`i`、`j`、`k` 不加类型前缀。在 `for` 里声明，不要提到函数开头。
+
+```c
+/* BAD */
+uint16_t usI;
+for (usI = 0u; usI < usLen; usI++) { }
+
+/* GOOD */
+for (uint16_t i = 0u; i < usLen; i++) { }
+for (uint8_t k = 0u; k < ucN; k++) { }
+```
+
+其它计数器仍用匈牙利（`ucIdx`、`usRec`）。

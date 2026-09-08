@@ -8,7 +8,7 @@ namespace {
 void TraceVarEntry(uint16_t row, const ST_DC_VARIABLE_TABLE *entry, uint8_t index)
 {
     SCOPED_TRACE("row=" + std::to_string(row) + " id=0x" +
-                 std::to_string(entry->eVariableType) + " index=" +
+                 std::to_string(entry->usVariableType) + " index=" +
                  std::to_string(static_cast<unsigned>(index)));
 }
 
@@ -33,7 +33,7 @@ TEST_F(VariableTestBase, AllVariables_ReadWrite)
         {
             TraceVarEntry(row, entry, index);
             FillVarWritePattern(wbuf.data(), nbytes, row, index);
-            ASSERT_EQ(WriteVar(entry->eVariableType, index, wbuf.data(), 1u),
+            ASSERT_EQ(WriteVar(entry->usVariableType, index, wbuf.data(), 1u),
                       static_cast<int16_t>(nbytes));
         }
     }
@@ -49,7 +49,7 @@ TEST_F(VariableTestBase, AllVariables_ReadWrite)
             TraceVarEntry(row, entry, index);
             FillVarWritePattern(wbuf.data(), nbytes, row, index);
             std::fill(rbuf.begin(), rbuf.end(), 0u);
-            ASSERT_EQ(ReadVar(entry->eVariableType, index, rbuf.data(), 1u),
+            ASSERT_EQ(ReadVar(entry->usVariableType, index, rbuf.data(), 1u),
                       static_cast<int16_t>(nbytes));
             EXPECT_EQ(std::memcmp(wbuf.data(), rbuf.data(), nbytes), 0);
         }
@@ -165,7 +165,7 @@ TEST_F(VariableTestBase, ZeroLength)
     EXPECT_EQ(ReadVar(VAR_DATE_TIME, 0, buf, 0u), 0);
 }
 
-// 测试内容：dataPtr==NULL 且 usLen!=0 返回 DC_RET_PARAM_ERR（alias 层）
+// 测试内容：pucBuf==NULL 且 usLen!=0 返回 DC_RET_PARAM_ERR（alias 层）
 TEST_F(VariableTestBase, NullBufferWithLength)
 {
     // 1. dc_read_alias(NULL, usLen=1)，断言 DC_RET_PARAM_ERR

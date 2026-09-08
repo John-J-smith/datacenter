@@ -1760,7 +1760,7 @@ int main(int argc, char **argv)
         }
         oputs("\n");
 
-        oputs("/* tParamBlockTable: primary slots only. bak2 = PARAM_EE_BAK_BASE + uBlockEeOff */\n");
+        oputs("/* tParamBlockTable: primary slots only. bak2 = PARAM_EE_BAK_BASE + ulBlockEeOff */\n");
     }
 
     for (i = 0u; i < nblocks; i++) {

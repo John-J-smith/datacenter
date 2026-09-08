@@ -89,7 +89,7 @@ typedef enum {
     PARAM_LAYOUT_BLOCK_9_EE_BK_OFF, \
     PARAM_LAYOUT_BLOCK_10_EE_BK_OFF
 
-/* tParamBlockTable: primary slots only. bak2 = PARAM_EE_BAK_BASE + uBlockEeOff */
+/* tParamBlockTable: primary slots only. bak2 = PARAM_EE_BAK_BASE + ulBlockEeOff */
 #define PARAM_LAYOUT_BLOCK_0_PAYLOAD (60u)
 #define PARAM_LAYOUT_BLOCK_0_LEN (62u)
 

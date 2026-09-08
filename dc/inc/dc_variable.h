@@ -34,9 +34,9 @@ typedef enum {
 } E_VARIABLE_EE_SLOT;
 
 typedef struct {
-    uint16_t eVariableType;
-    uint16_t eVariableAddr;
-    uint16_t ucLength;
+    uint16_t usVariableType;
+    uint16_t usVariableAddr;
+    uint16_t usLength;
     uint8_t  ucIndexNum;
     uint8_t  ucBytes;
     uint8_t  ucType;
@@ -71,10 +71,10 @@ extern const uint16_t VAR_D_EE_SIZE;
 extern const uint16_t VAR_EE_TOTAL;
 
 uint32_t VariableEeSlotAddr(E_VARIABLE_EE_SLOT slot);
-int16_t VariableEeReadSlot(E_VARIABLE_EE_SLOT slot, uint8_t *buf, uint16_t len);
-int16_t VariableEeWriteSlot(E_VARIABLE_EE_SLOT slot, const uint8_t *buf, uint16_t len);
+int16_t VariableEeReadSlot(E_VARIABLE_EE_SLOT slot, uint8_t *pucBuf, uint16_t usLen);
+int16_t VariableEeWriteSlot(E_VARIABLE_EE_SLOT slot, const uint8_t *pucBuf, uint16_t usLen);
 
-void var_backup_tick(uint16_t elapsed_sec);
+void var_backup_tick(uint16_t usElapsedSec);
 void var_backup_power_down(void);
 
 #endif

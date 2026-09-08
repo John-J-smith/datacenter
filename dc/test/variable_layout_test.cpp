@@ -86,7 +86,7 @@ TEST_F(VariableTestBase, ApiTableOffsetsInBounds)
         default:
             FAIL() << "unknown ucType at row " << i;
         }
-        EXPECT_LE(static_cast<uint32_t>(row->eVariableAddr) + static_cast<uint32_t>(row->ucLength),
+        EXPECT_LE(static_cast<uint32_t>(row->usVariableAddr) + static_cast<uint32_t>(row->usLength),
                   static_cast<uint32_t>(limit))
             << "row " << i;
     }

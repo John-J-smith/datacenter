@@ -1,0 +1,46 @@
+---
+description: C 注释：函数 Doxygen 头 + 函数内分步简要注释
+globs: "**/*.{c,h}"
+alwaysApply: false
+---
+
+# C 注释
+
+公开与 `static` 函数均在定义前写 Doxygen 块（`/**`）。头文件声明可只留 `@brief`，细节写在 `.c` 定义处。
+
+## 函数头
+
+顺序：`@brief` → 空行 → 每个形参一行 `@param` → `@return`。`@param` 名与说明对齐；说明写约束（可为 NULL、必须为 1 等），不复述类型。无返回值的 `void` 可省略 `@return`。
+
+```c
+/**
+ * @brief DATATYPE_LIST 按 xy / xF / 0xFF 读写（单块）
+ *
+ * @param item    API 表项
+ * @param block   所属块
+ * @param rw      读缓冲（写时可为 NULL）
+ * @param ro      写数据源（读时可为 NULL）
+ * @param usLen   非 ALL 时必须为 1
+ * @param index   分项号
+ * @param writing 非 0 表示写
+ * @return 成功返回传输字节数；失败返回负错误码
+ */
+```
+
+不要用 `//` 当函数文档，不要把 `@param` 挤成一段。
+
+## 函数内分步
+
+按实现步骤写**简要** `/* ... */`，说明「这一段做什么」，不翻译下一行代码。校验/早退可并入上一步。平凡赋值、单一 `return` 不必注释。
+
+```c
+/* 查表并加载 EE-only 工作区 */
+item = param_find_item(ParaAliasToType(alias));
+/* ... */
+param_block_load_ee_only(block);
+
+/* LIST / LINKARRAY / STRUCT 走专用路径 */
+if (dtype == (uint8_t)DATATYPE_LIST) { /* ... */ }
+
+/* INT 整条；ARRAY 按元素宽算偏移与长度 */
+```

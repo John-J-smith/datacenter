@@ -31,15 +31,15 @@
 #define PARAM_EEPROM_BASE (VAR_EEPROM_BASE + 512u)
 #endif
 
-int16_t DcCfgStorageRead(uint32_t addr, uint8_t *buf, uint16_t len);
-int16_t DcCfgStorageWrite(uint32_t addr, const uint8_t *buf, uint16_t len);
+int16_t DcCfgStorageRead(uint32_t ulAddr, uint8_t *pucBuf, uint16_t usLen);
+int16_t DcCfgStorageWrite(uint32_t ulAddr, const uint8_t *pucBuf, uint16_t usLen);
 
 #ifndef DC_STORAGE_READ
-#define DC_STORAGE_READ(addr, buf, len) DcCfgStorageRead((addr), (buf), (uint16_t)(len))
+#define DC_STORAGE_READ(ulAddr, pucBuf, usLen) DcCfgStorageRead((ulAddr), (pucBuf), (uint16_t)(usLen))
 #endif
 
 #ifndef DC_STORAGE_WRITE
-#define DC_STORAGE_WRITE(addr, buf, len) DcCfgStorageWrite((addr), (const uint8_t *)(buf), (uint16_t)(len))
+#define DC_STORAGE_WRITE(ulAddr, pucBuf, usLen) DcCfgStorageWrite((ulAddr), (const uint8_t *)(pucBuf), (uint16_t)(usLen))
 #endif
 
 #endif

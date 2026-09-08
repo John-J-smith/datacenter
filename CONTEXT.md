@@ -21,11 +21,11 @@ _Avoid_: 按字节切满页, 与其它条目混装的超长数组
 _Avoid_: 手写字节偏移, 一组结构一个小类, 用 STRUCT 的 0xFF 表示某一组全部
 
 **块布局**:
-由条目清单在编译前生成的、编译期确定的块划分与条目偏移。清单用四段宏固定顺序（RAM+EE 双备份 → EE 双备份 → RAM+EE 单备份 → EE 单备份），pack 按该顺序扫描：flags 变化或本块放不下则新开一块。`tParamBlockTable` 只登记主槽；双备份的备份区 2 用 `PARAM_EE_BAK_BASE + uBlockEeOff` 推导，不占 table 行。
+由条目清单在编译前生成的、编译期确定的块划分与条目偏移。清单用四段宏固定顺序（RAM+EE 双备份 → EE 双备份 → RAM+EE 单备份 → EE 单备份），pack 按该顺序扫描：flags 变化或本块放不下则新开一块。`tParamBlockTable` 只登记主槽；双备份的备份区 2 用 `PARAM_EE_BAK_BASE + ulBlockEeOff` 推导，不占 table 行。
 _Avoid_: 运行时装箱, 手工块号, 把备份区 2 再写进 table
 
 **出厂默认**:
-有默认的条目在 API 表带 `pDefault`（pack 生成 `g_default_*`）；`NULL` 表示无默认，工作区填 0xFF。上电填默认**不写** EEPROM。
+有默认的条目在 API 表带 `pucDefault`（pack 生成 `g_default_*`）；`NULL` 表示无默认，工作区填 0xFF。上电填默认**不写** EEPROM。
 _Avoid_: 块级 ROM 数组, 初始化时把默认回写 EE
 
 **变量类（A/B/C/D）**:
@@ -92,11 +92,11 @@ CMake 变量 `DC_PORT_DIR` 指向产品 port 目录（默认 `test/port`）。�
 | `PARAM_STORE_RAM_EE` | SRAM+EEPROM | `g_param_ram_*` | 仅主槽 |
 | `PARAM_STORE_EE` | EEPROM | 无（scratch） | 仅主槽 |
 
-备份区 2 **不进** `tParamBlockTable`：`addr = PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + uBlockEeOff`。EE-only 行仍带紧凑 `ucBlockLen`（含 CRC），不能为 0。
+备份区 2 **不进** `tParamBlockTable`：`addr = PARAM_EEPROM_ORIGIN + PARAM_EE_BAK_BASE + ulBlockEeOff`。EE-only 行仍带紧凑 `usBlockLen`（含 CRC），不能为 0。
 
-**API 表** `tParamApiTable`：小类、块下标、块内偏移、`ucParamLen`（逻辑总长；LINKARRAY 为记录总字节）、`pAttr`、`pDefault`。
+**API 表** `tParamApiTable`：小类、块下标、块内偏移、`ucParamLen`（逻辑总长；LINKARRAY 为记录总字节）、`pucAttr`、`pucDefault`。
 
-**上电**（`param_ensure_init`）：有 SRAM 且块 CRC 好 → 保留 RAM；否则主槽 → 备份区 2 → `pDefault`/0xFF。恢复与填默认**都不写** EE。
+**上电**（`param_ensure_init`）：有 SRAM 且块 CRC 好 → 保留 RAM；否则主槽 → 备份区 2 → `pucDefault`/0xFF。恢复与填默认**都不写** EE。
 
 **读写**：INT / ARRAY / STRUCT / LINKARRAY（跨连续块、按记录分页）。EE-only 经 `PARAM_BLOCK_SIZE` scratch 装主槽/备份，失败再套默认。**仅 `dc_write_*` 落盘**：刷新块 CRC 后写主槽；有 BAK 再写备份区 2。
 
