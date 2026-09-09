@@ -23,6 +23,8 @@ alwaysApply: true
 - `footer`：破坏性变更以 `BREAKING CHANGE:` 开头（该标记保持英文）；可附关闭的 issue
 - 还原：标题 `revert: ` + 原标题；正文写 `还原提交 <hash>。`
 
+源码管理「Generate commit message」闪光按钮**不读**本 `.mdc`，须靠仓库根目录 `.cursorrules`（内容与本规则对齐）。Agent 对话里提交仍读本文件。
+
 仍遵守：只在用户明确要求时提交；不改 git config；不用 `-i`；消息用 HEREDOC 传入。
 
 ```

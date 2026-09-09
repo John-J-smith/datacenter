@@ -19,18 +19,10 @@ target_include_directories(dc_test_port PUBLIC
 target_include_directories(datacenter PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(datacenter PRIVATE DC_TEST)
 
-add_executable(dc_tests
-    variable_layout_test.cpp
-    variable_rw_test.cpp
-    variable_recovery_test.cpp
-    variable_backup_test.cpp
-    param_rw_test.cpp
-    param_default_test.cpp
-    param_layout_test.cpp
-    param_sram_test.cpp
-    param_storage_test.cpp
-    param_list_test.cpp
+file(GLOB DC_TEST_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/*_test.cpp"
 )
+add_executable(dc_tests ${DC_TEST_SOURCES})
 target_include_directories(dc_tests PRIVATE ${DC_PORT_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 target_compile_definitions(dc_tests PRIVATE DC_TEST)
 target_link_libraries(dc_tests PRIVATE datacenter dc_test_port GTest::gtest_main)

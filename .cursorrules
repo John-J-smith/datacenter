@@ -1,0 +1,26 @@
+# Generate Commit Message（源码管理闪光按钮）
+
+生成 Git 提交信息时必须遵守下列约定（与 `.cursor/rules/git-commit-message.mdc` 一致）。
+
+标题与正文用**中文**。格式遵循 AngularJS Commit Guidelines：`type` / `scope` 用英文；`scope` 可省略。
+
+```
+<type>(<scope>): <subject>
+
+<body>
+
+<footer>
+```
+
+- 任一行不超过 100 字符
+- `type`：`feat` / `fix` / `docs` / `style` / `refactor` / `perf` / `test` / `chore`
+- `scope`：改动位置英文（如 `param`、`variable`、`pack`）；多处可用 `*`
+- `subject`：中文，祈使语气，首字不大写，末尾无句号
+- `body`：中文，写动机与和旧行为的差别；祈使语气
+- `footer`：破坏性变更以 `BREAKING CHANGE:` 开头（该标记保持英文）
+
+示例：
+- `feat(param): 参变量 RAM 合成一块并加头尾标记`
+- `fix(variable): 上电恢复失败时不要盖合法魔数`
+
+不要写英文整句 subject，不要 `update params` / `Fix SRAM magic.` 这类标题。

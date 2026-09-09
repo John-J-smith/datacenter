@@ -94,16 +94,10 @@ add_custom_target(dc_alias_layout ALL
     VERBATIM
 )
 
-add_library(datacenter
-    src/dc_alias.c
-    src/dc_crc16.c
-    src/dc_energy.c
-    src/dc_demand.c
-    src/dc_param.c
-    src/dc_variable.c
-    src/dc_list.c
-    src/dc_record.c
+file(GLOB DC_LIB_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c"
 )
+add_library(datacenter ${DC_LIB_SOURCES})
 target_include_directories(datacenter
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc
            ${DC_PORT_DIR}
