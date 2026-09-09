@@ -1,3 +1,11 @@
+/**
+ * @file dc_alias_pack.c
+ * @brief host 工具：根据变量/参变量清单生成 dc_alias_layout.h（DC_ALIAS_* 枚举）
+ *
+ * 用法：dc_alias_pack <dc_alias_layout.h>
+ * 读 DC_PORT_DIR 下 dc_variable_cfg.h、dc_param_cfg.h；内容未变则不写文件。
+ */
+
 #include <stdint.h>
 #include "dc_variable_cfg.h"
 
@@ -52,6 +60,9 @@ static unsigned s_nparams;
 
 static void die(const char *fmt, ...);
 
+/**
+ * @brief 从 PARAM_ITEM_LIST 填 s_params[]
+ */
 static void load_param_items(void)
 {
     s_nparams = 0u;
@@ -61,6 +72,13 @@ static void load_param_items(void)
 #undef PACK_VAR
 #undef PACK_PARAM
 
+/**
+ * @brief 参变量小类的分项个数（LIST 为叶子数）
+ *
+ * @param item pack 条目
+ *
+ * @return 分项个数；无 attrib 时为 1
+ */
 static unsigned param_alias_index_count(const param_item_t *item)
 {
     if (item->attr == 0) {
@@ -70,6 +88,11 @@ static unsigned param_alias_index_count(const param_item_t *item)
                                                   item->total_len);
 }
 
+/**
+ * @brief 按清单顺序赋参变量小类 ID（0 起）
+ *
+ * @param nparams 条目数
+ */
 static void assign_param_ids(unsigned nparams)
 {
     unsigned i;
@@ -82,6 +105,11 @@ static void assign_param_ids(unsigned nparams)
 static char s_out[OUT_CAP];
 static size_t s_out_len;
 
+/**
+ * @brief 打印错误到 stderr 后退出
+ *
+ * @param fmt printf 格式；其后为可变参数
+ */
 static void die(const char *fmt, ...)
 {
     va_list ap;
@@ -93,6 +121,12 @@ static void die(const char *fmt, ...)
     exit(1);
 }
 
+/**
+ * @brief 把字节追加到生成缓冲；Windows 下独立 LF 写成 CRLF
+ *
+ * @param s 源串
+ * @param n 字节数
+ */
 static void oappend(const char *s, size_t n)
 {
     size_t i;
@@ -115,11 +149,21 @@ static void oappend(const char *s, size_t n)
     }
 }
 
+/**
+ * @brief 追加 C 字符串到生成缓冲
+ *
+ * @param s 以 NUL 结尾的源串
+ */
 static void oputs(const char *s)
 {
     oappend(s, strlen(s));
 }
 
+/**
+ * @brief 格式化后追加到生成缓冲
+ *
+ * @param fmt printf 格式；其后为可变参数
+ */
 static void oprintf(const char *fmt, ...)
 {
     char buf[512];
@@ -135,6 +179,15 @@ static void oprintf(const char *fmt, ...)
     oappend(buf, (uint16_t)n);
 }
 
+/**
+ * @brief 比较磁盘文件与内存缓冲是否完全一致
+ *
+ * @param path 路径
+ * @param data 缓冲
+ * @param len 长度
+ *
+ * @return 非 0 表示相同（文件不存在视为不同）
+ */
 static int file_same(const char *path, const char *data, size_t len)
 {
     FILE *fp;
@@ -170,6 +223,11 @@ static int file_same(const char *path, const char *data, size_t len)
     return same;
 }
 
+/**
+ * @brief 内容有变才写回 path，避免无意义改时间戳
+ *
+ * @param path 输出路径
+ */
 static void write_if_changed(const char *path)
 {
     FILE *fp;
@@ -188,6 +246,13 @@ static void write_if_changed(const char *path)
     fclose(fp);
 }
 
+/**
+ * @brief 给一类变量条目赋连续小类 ID
+ *
+ * @param items 条目数组
+ * @param nitems 个数
+ * @param base 起始 ID
+ */
 static void assign_ids(var_item_t *items, unsigned nitems, uint16_t base)
 {
     unsigned i;
@@ -197,6 +262,14 @@ static void assign_ids(var_item_t *items, unsigned nitems, uint16_t base)
     }
 }
 
+/**
+ * @brief 按 A→B→C→D 顺序赋全局变量小类 ID
+ *
+ * @param na A 类个数
+ * @param nb B 类个数
+ * @param nc C 类个数
+ * @param nd D 类个数
+ */
 static void assign_global_var_ids(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     uint16_t next;
@@ -211,6 +284,15 @@ static void assign_global_var_ids(unsigned na, unsigned nb, unsigned nc, unsigne
     assign_ids(s_d, nd, next);
 }
 
+/**
+ * @brief 拼变量 DC_ALIAS_* 符号名（单元素 / ALL / L1.. / 下标）
+ *
+ * @param buf 输出
+ * @param cap 容量
+ * @param name 小类宏名
+ * @param n 元素个数
+ * @param idx 分项或 ALL 槽
+ */
 static void var_alias_symbol(char *buf, size_t cap, const char *name, uint8_t n, unsigned idx)
 {
     if (n == 1u) {
@@ -234,6 +316,15 @@ static void var_alias_symbol(char *buf, size_t cap, const char *name, uint8_t n,
     snprintf(buf, cap, "DC_ALIAS_%s_%u", name, (unsigned)idx);
 }
 
+/**
+ * @brief 拼参变量 DC_ALIAS_* 符号名
+ *
+ * @param buf 输出
+ * @param cap 容量
+ * @param name 小类宏名
+ * @param n 分项个数
+ * @param idx 分项或 ALL 槽
+ */
 static void param_alias_symbol(char *buf, size_t cap, const char *name, uint8_t n, unsigned idx)
 {
     if (n == 1u) {
@@ -247,6 +338,13 @@ static void param_alias_symbol(char *buf, size_t cap, const char *name, uint8_t 
     snprintf(buf, cap, "DC_ALIAS_%s_%u", name, (unsigned)idx);
 }
 
+/**
+ * @brief 变量一条小类要生成的别名个数（多元素含 _ALL）
+ *
+ * @param n 元素个数
+ *
+ * @return 别名个数
+ */
 static unsigned var_alias_count(uint8_t n)
 {
     if (n <= 1u) {
@@ -255,6 +353,13 @@ static unsigned var_alias_count(uint8_t n)
     return (unsigned)n + 1u;
 }
 
+/**
+ * @brief 参变量一条小类要生成的别名个数（多分项含 _ALL）
+ *
+ * @param n 分项个数
+ *
+ * @return 别名个数
+ */
 static unsigned param_alias_count(uint8_t n)
 {
     if (n <= 1u) {
@@ -263,6 +368,12 @@ static unsigned param_alias_count(uint8_t n)
     return (unsigned)n + 1u;
 }
 
+/**
+ * @brief 枚举项之间输出逗号换行
+ *
+ * @param first 是否已输出过任一项
+ * @param idx 本小类内下标
+ */
 static void emit_alias_line_prefix(int *first, unsigned idx)
 {
     if (idx > 0u) {
@@ -271,6 +382,13 @@ static void emit_alias_line_prefix(int *first, unsigned idx)
     *first = 0;
 }
 
+/**
+ * @brief 输出一条变量小类的全部 DC_ALIAS_*
+ *
+ * @param item 变量条目
+ * @param first 枚举是否已有项
+ * @param add_trailing_blank 非 0 则项后空一行
+ */
 static void emit_var_item_aliases(const var_item_t *item, int *first, int add_trailing_blank)
 {
     unsigned count;
@@ -296,6 +414,13 @@ static void emit_var_item_aliases(const var_item_t *item, int *first, int add_tr
     }
 }
 
+/**
+ * @brief 输出一类变量清单的全部别名
+ *
+ * @param items 数组
+ * @param nitems 个数
+ * @param first 枚举是否已有项
+ */
 static void emit_var_aliases(const var_item_t *items, unsigned nitems, int *first)
 {
     unsigned i;
@@ -305,6 +430,12 @@ static void emit_var_aliases(const var_item_t *items, unsigned nitems, int *firs
     }
 }
 
+/**
+ * @brief LIST 型：叶子 xy、组 xF、以及 ALL
+ *
+ * @param item 参变量条目
+ * @param first 枚举是否已有项
+ */
 static void emit_param_list_aliases(const param_item_t *item, int *first)
 {
     const uint8_t *attr;
@@ -367,6 +498,11 @@ static void emit_param_list_aliases(const param_item_t *item, int *first)
     oprintf("    %s = ParaAliasBuild(%s, 0xFFu)", sym, item->name);
 }
 
+/**
+ * @brief 输出全部参变量 DC_ALIAS_*
+ *
+ * @param first 枚举是否已有项
+ */
 static void emit_param_aliases(int *first)
 {
     unsigned i;
@@ -408,6 +544,14 @@ static void emit_param_aliases(int *first)
     }
 }
 
+/**
+ * @brief 生成 dc_alias_layout.h 全文到 s_out
+ *
+ * @param na A 类个数
+ * @param nb B 类个数
+ * @param nc C 类个数
+ * @param nd D 类个数
+ */
 static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     int first;
@@ -423,6 +567,7 @@ static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
     oputs("#endif\n\n");
     oputs("typedef enum {\n");
 
+    /* 变量别名在前，参变量在后 */
     first = 1;
     emit_var_aliases(s_a, na, &first);
     emit_var_aliases(s_b, nb, &first);
@@ -435,6 +580,14 @@ static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
     oputs("#endif /* DC_ALIAS_LAYOUT_H */\n");
 }
 
+/**
+ * @brief 读清单、赋 ID、写出 dc_alias_layout.h（内容未变则不写）
+ *
+ * @param argc 参数个数
+ * @param argv argv[1] 为输出路径
+ *
+ * @return 0
+ */
 int main(int argc, char **argv)
 {
     const char *layout_path;
@@ -448,6 +601,7 @@ int main(int argc, char **argv)
     nc = (unsigned)(sizeof s_c / sizeof s_c[0]);
     nd = (unsigned)(sizeof s_d / sizeof s_d[0]);
 
+    /* 变量与参变量分别赋 ID，别名枚举依赖二者 */
     assign_global_var_ids(na, nb, nc, nd);
     load_param_items();
     assign_param_ids(s_nparams);
@@ -457,6 +611,7 @@ int main(int argc, char **argv)
     }
     layout_path = argv[1];
 
+    /* 生成 DC_ALIAS_*；内容未变则不写盘 */
     emit_layout(na, nb, nc, nd);
     write_if_changed(layout_path);
     return 0;

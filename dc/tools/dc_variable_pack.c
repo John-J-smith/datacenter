@@ -1,3 +1,12 @@
+/**
+ * @file dc_variable_pack.c
+ * @brief host 工具：根据 VAR_LIST_A/B/C/D 生成 dc_variable_layout.h，并 upsert dc_layout.md 变量段
+ *
+ * 用法：dc_variable_pack <dc_variable_layout.h>
+ *       dc_variable_pack --dump
+ * pack 只读 port 的 dc_variable_cfg.h，不包含产品 dc_storage_cfg.h。
+ */
+
 #include <stdint.h>
 #include "dc_variable_cfg.h"
 
@@ -33,6 +42,11 @@ static var_item_t s_d[] = { VAR_LIST_D(PACK_D) };
 static char s_out[OUT_CAP];
 static size_t s_out_len;
 
+/**
+ * @brief 打印错误到 stderr 后退出
+ *
+ * @param fmt printf 格式；其后为可变参数
+ */
 static void die(const char *fmt, ...)
 {
     va_list ap;
@@ -44,6 +58,12 @@ static void die(const char *fmt, ...)
     exit(1);
 }
 
+/**
+ * @brief 把字节追加到生成缓冲；Windows 下独立 LF 写成 CRLF
+ *
+ * @param s 源串
+ * @param n 字节数
+ */
 static void oappend(const char *s, size_t n)
 {
     size_t i;
@@ -66,6 +86,15 @@ static void oappend(const char *s, size_t n)
     }
 }
 
+/**
+ * @brief 按 host 换行把缓冲写入文件
+ *
+ * @param fp 已打开的写文件
+ * @param s 源串
+ * @param n 字节数
+ *
+ * @return 0 成功；非 0 失败
+ */
 static int fwrite_host_text(FILE *fp, const char *s, size_t n)
 {
 #ifdef _WIN32
@@ -87,11 +116,21 @@ static int fwrite_host_text(FILE *fp, const char *s, size_t n)
 #endif
 }
 
+/**
+ * @brief 追加 C 字符串到生成缓冲
+ *
+ * @param s 以 NUL 结尾的源串
+ */
 static void oputs(const char *s)
 {
     oappend(s, strlen(s));
 }
 
+/**
+ * @brief 格式化后追加到生成缓冲
+ *
+ * @param fmt printf 格式；其后为可变参数
+ */
 static void oprintf(const char *fmt, ...)
 {
     char buf[1024];
@@ -107,6 +146,15 @@ static void oprintf(const char *fmt, ...)
     oappend(buf, (size_t)n);
 }
 
+/**
+ * @brief 比较磁盘文件与内存缓冲是否完全一致
+ *
+ * @param path 路径
+ * @param data 缓冲
+ * @param len 长度
+ *
+ * @return 非 0 表示相同（文件不存在视为不同）
+ */
 static int file_same(const char *path, const char *data, size_t len)
 {
     FILE *fp;
@@ -142,6 +190,14 @@ static int file_same(const char *path, const char *data, size_t len)
     return same;
 }
 
+/**
+ * @brief 把 src 的扩展名换成 ext，写入 dst
+ *
+ * @param src 原路径
+ * @param ext 新扩展名含点
+ * @param dst 输出缓冲
+ * @param cap dst 容量
+ */
 static void replace_ext(const char *src, const char *ext, char *dst, size_t cap)
 {
     const char *slash;
@@ -169,6 +225,11 @@ static void replace_ext(const char *src, const char *ext, char *dst, size_t cap)
     }
 }
 
+/**
+ * @brief 内容有变才写回 path，避免无意义改时间戳
+ *
+ * @param path 输出路径
+ */
 static void write_if_changed(const char *path)
 {
     FILE *fp;
@@ -187,6 +248,14 @@ static void write_if_changed(const char *path)
     fclose(fp);
 }
 
+/**
+ * @brief 给一类变量赋连续小类 ID，并检查溢出
+ *
+ * @param items 数组
+ * @param nitems 个数
+ * @param base 起始 ID
+ * @param cls 类名，用于报错
+ */
 static void assign_ids(var_item_t *items, unsigned nitems, uint16_t base, const char *cls)
 {
     unsigned i;
@@ -205,6 +274,14 @@ static void assign_ids(var_item_t *items, unsigned nitems, uint16_t base, const 
     }
 }
 
+/**
+ * @brief 按 A→B→C→D 赋全局小类 ID
+ *
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ */
 static void assign_global_ids(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     uint16_t next;
@@ -226,6 +303,12 @@ static void assign_global_ids(unsigned na, unsigned nb, unsigned nc, unsigned nd
     }
 }
 
+/**
+ * @brief 输出一类 SRAM 结构体字段
+ *
+ * @param items 数组
+ * @param nitems 个数
+ */
 static void emit_fields(const var_item_t *items, unsigned nitems)
 {
     unsigned i;
@@ -236,6 +319,13 @@ static void emit_fields(const var_item_t *items, unsigned nitems)
     }
 }
 
+/**
+ * @brief 存储类对应的 VARIABLE_TYPE* 枚举名
+ *
+ * @param stor 0=A … 3=D
+ *
+ * @return 枚举标识符
+ */
 static const char *stor_type_enum(uint8_t stor)
 {
     switch (stor) {
@@ -252,11 +342,25 @@ static const char *stor_type_enum(uint8_t stor)
     }
 }
 
+/**
+ * @brief 字符串显示宽度（字节长度）
+ *
+ * @param s 可为 NULL，视为 0
+ *
+ * @return 宽度
+ */
 static unsigned str_width(const char *s)
 {
     return (unsigned)strlen(s);
 }
 
+/**
+ * @brief 无符号十进制打印宽度
+ *
+ * @param v 值
+ *
+ * @return 宽度
+ */
 static unsigned uint_text_width(unsigned v)
 {
     char buf[16];
@@ -271,6 +375,12 @@ typedef struct {
     unsigned b;
 } var_tbl_cols_t;
 
+/**
+ * @brief 用一条 API 表更新列宽
+ *
+ * @param item 条目
+ * @param c 列宽
+ */
 static void var_col_max_item(const var_item_t *item, var_tbl_cols_t *c)
 {
     unsigned total;
@@ -295,6 +405,13 @@ static void var_col_max_item(const var_item_t *item, var_tbl_cols_t *c)
     }
 }
 
+/**
+ * @brief 用一类清单更新列宽
+ *
+ * @param items 数组
+ * @param nitems 个数
+ * @param c 列宽
+ */
 static void var_col_max_list(const var_item_t *items, unsigned nitems, var_tbl_cols_t *c)
 {
     unsigned i;
@@ -304,6 +421,16 @@ static void var_col_max_list(const var_item_t *items, unsigned nitems, var_tbl_c
     }
 }
 
+/**
+ * @brief 四类清单合计后的 API 表列宽
+ *
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ *
+ * @return 列宽
+ */
 static var_tbl_cols_t var_api_col_widths(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     var_tbl_cols_t c;
@@ -316,6 +443,17 @@ static var_tbl_cols_t var_api_col_widths(unsigned na, unsigned nb, unsigned nc, 
     return c;
 }
 
+/**
+ * @brief 输出一类 API 表行
+ *
+ * @param items     数组
+ * @param nitems    个数
+ * @param layout    该类结构体类型名
+ * @param stor      0=A … 3=D
+ * @param c         列宽
+ * @param row_i     已输出行计数（进出都更新）
+ * @param row_total 总行数，末行不加逗号
+ */
 static void emit_api_rows(const var_item_t *items, unsigned nitems,
                           const char *layout, uint8_t stor,
                           const var_tbl_cols_t *c, unsigned *row_i,
@@ -347,6 +485,14 @@ static void emit_api_rows(const var_item_t *items, unsigned nitems,
     }
 }
 
+/**
+ * @brief 按 A/B/C/D 输出全部 API 表行
+ *
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ */
 static void emit_all_api_rows(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     var_tbl_cols_t c;
@@ -363,6 +509,12 @@ static void emit_all_api_rows(unsigned na, unsigned nb, unsigned nc, unsigned nd
     oputs("\n");
 }
 
+/**
+ * @brief 输出一类 E_VARIABLE_TYPE 枚举行
+ *
+ * @param items 数组
+ * @param nitems 个数
+ */
 static void emit_enum_rows(const var_item_t *items, unsigned nitems)
 {
     unsigned i;
@@ -373,6 +525,14 @@ static void emit_enum_rows(const var_item_t *items, unsigned nitems)
     }
 }
 
+/**
+ * @brief 一类 payload 字节合计（不含 CRC）
+ *
+ * @param items 数组
+ * @param nitems 个数
+ *
+ * @return 字节数
+ */
 static uint16_t class_data_len(const var_item_t *items, unsigned nitems)
 {
     unsigned i;
@@ -385,6 +545,13 @@ static uint16_t class_data_len(const var_item_t *items, unsigned nitems)
     return sum;
 }
 
+/**
+ * @brief 存储类单字母名
+ *
+ * @param stor 0=A … 3=D
+ *
+ * @return "A"/"B"/"C"/"D"
+ */
 static const char *stor_name(uint8_t stor)
 {
     switch (stor) {
@@ -402,6 +569,13 @@ static const char *stor_name(uint8_t stor)
 }
 
 
+/**
+ * @brief 把偏移格式化为 十六进制(十进制)
+ *
+ * @param buf 输出
+ * @param cap 容量
+ * @param off 字节偏移
+ */
 static void fmt_off(char *buf, size_t cap, uint32_t off)
 {
     int n;
@@ -412,6 +586,13 @@ static void fmt_off(char *buf, size_t cap, uint32_t off)
     }
 }
 
+/**
+ * @brief 由 layout 头路径得到同目录 dc_layout.md
+ *
+ * @param h_path layout .h 路径
+ * @param dst 输出
+ * @param cap 容量
+ */
 static void combined_md_path(const char *h_path, char *dst, size_t cap)
 {
     const char *slash;
@@ -443,6 +624,14 @@ static void combined_md_path(const char *h_path, char *dst, size_t cap)
     memcpy(dst + dir_len, "dc_layout.md", 13u);
 }
 
+/**
+ * @brief 在 markdown 中替换 begin/end 标记之间的段；没有则追加
+ *
+ * @param md_path dc_layout.md
+ * @param begin 段起始标记
+ * @param end 段结束标记
+ * @param body 新段正文
+ */
 static void upsert_md_section(const char *md_path, const char *begin, const char *end,
                               const char *body)
 {
@@ -568,6 +757,14 @@ static void upsert_md_section(const char *md_path, const char *begin, const char
     free(out);
 }
 
+/**
+ * @brief 读整文件到堆
+ *
+ * @param path 路径
+ * @param out_len 长度输出
+ *
+ * @return 缓冲区
+ */
 static char *read_section_file(const char *path, size_t *out_len)
 {
     FILE *fp;
@@ -608,6 +805,16 @@ static char *read_section_file(const char *path, size_t *out_len)
     return body;
 }
 
+/**
+ * @brief 抽出 begin～end 标记段
+ *
+ * @param src 全文
+ * @param begin 起始标记
+ * @param end 结束标记
+ * @param out_len 长度输出
+ *
+ * @return 段副本，没有则 NULL
+ */
 static char *dup_marked_section(const char *src, const char *begin, const char *end,
                                 size_t *out_len)
 {
@@ -640,6 +847,15 @@ static char *dup_marked_section(const char *src, const char *begin, const char *
     return d;
 }
 
+/**
+ * @brief 向可增长 markdown 缓冲追加
+ *
+ * @param dst 缓冲指针
+ * @param len 当前长度
+ * @param cap 容量
+ * @param s 源
+ * @param n 字节数
+ */
 static void append_md(char **dst, size_t *len, size_t *cap, const char *s, size_t n)
 {
     if ((s == 0) || (n == 0u)) {
@@ -656,6 +872,11 @@ static void append_md(char **dst, size_t *len, size_t *cap, const char *s, size_
     *len += n;
 }
 
+/**
+ * @brief 把 SUMMARY 段排到 VARIABLE/PARAM 明细之前
+ *
+ * @param md_path dc_layout.md
+ */
 static void reorder_layout_md(const char *md_path)
 {
     char *old;
@@ -727,6 +948,16 @@ static void reorder_layout_md(const char *md_path)
     free(out);
 }
 
+/**
+ * @brief markdown 条目表的一类行
+ *
+ * @param out 输出 FILE
+ * @param items 数组
+ * @param nitems 个数
+ * @param stor 0..3
+ * @param ee_base 该类 EE 起点
+ * @param bank    单槽大小；C 类为 0
+ */
 static void dump_items(FILE *out, const var_item_t *items, unsigned nitems, uint8_t stor,
                        uint32_t ee_base, uint16_t bank)
 {
@@ -767,6 +998,11 @@ static void dump_items(FILE *out, const var_item_t *items, unsigned nitems, uint
     }
 }
 
+/**
+ * @brief A/B 每类 EE 槽数（PWR_ON + PWR_DWN）
+ *
+ * @return 槽数
+ */
 static unsigned var_ee_banks_per_class(void)
 {
 #if (VAR_EE_BACKUP_BANKS >= 2)
@@ -776,6 +1012,12 @@ static unsigned var_ee_banks_per_class(void)
 #endif
 }
 
+/**
+ * @brief 输出一类 EE 槽偏移宏
+ *
+ * @param cls A 或 B
+ * @param end_sym 该类 SRAM end 宏名
+ */
 static void emit_ee_class_map(const char *cls, const char *end_sym)
 {
     oputs("const uint16_t ");
@@ -799,6 +1041,9 @@ static void emit_ee_class_map(const char *cls, const char *end_sym)
 #endif
 }
 
+/**
+ * @brief 输出 VAR_*_EEPROM_BASE 与 VAR_EE_TOTAL
+ */
 static void emit_eeprom_bases(void)
 {
     oputs("const uint32_t VAR_A_EEPROM_BASE = (uint32_t)VAR_EEPROM_BASE;\n");
@@ -813,6 +1058,14 @@ static void emit_eeprom_bases(void)
 #endif
 }
 
+/**
+ * @brief 生成 dc_variable_layout.h 到 s_out
+ *
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ */
 static void emit_layout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     s_out_len = 0u;
@@ -902,6 +1155,15 @@ typedef struct {
     uint32_t d_base;
 } var_sizes_t;
 
+/**
+ * @brief 计算 A/B/C SRAM 长度与 D EE 长度
+ *
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ * @param sz 输出尺寸
+ */
 static void var_compute_sizes(unsigned na, unsigned nb, unsigned nc, unsigned nd,
                               var_sizes_t *sz)
 {
@@ -920,6 +1182,15 @@ static void var_compute_sizes(unsigned na, unsigned nb, unsigned nc, unsigned nd
     sz->d_base = (uint32_t)sz->a_ee_total + (uint32_t)sz->b_ee_total;
 }
 
+/**
+ * @brief 分类消耗表一行
+ *
+ * @param out     FILE
+ * @param name    类名
+ * @param ram     RAM 字节
+ * @param rel_off 相对 VAR_EEPROM_BASE 的起点
+ * @param ee_sz   EE 占用；0 表示无 EE
+ */
 static void dump_ee_rel_row(FILE *out, const char *name, unsigned ram,
                             uint32_t rel_off, uint32_t ee_sz)
 {
@@ -936,6 +1207,15 @@ static void dump_ee_rel_row(FILE *out, const char *name, unsigned ram,
             name, ram, s0, s1, (unsigned)ee_sz);
 }
 
+/**
+ * @brief 写变量分类消耗 markdown
+ *
+ * @param out FILE
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ */
 static void dump_summary(FILE *out, unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     var_sizes_t sz;
@@ -957,6 +1237,15 @@ static void dump_summary(FILE *out, unsigned na, unsigned nb, unsigned nc, unsig
     fprintf(out, "\n");
 }
 
+/**
+ * @brief 写变量布局明细 markdown
+ *
+ * @param out FILE
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ */
 static void dump_layout(FILE *out, unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     var_sizes_t sz;
@@ -1051,12 +1340,29 @@ static void dump_layout(FILE *out, unsigned na, unsigned nb, unsigned nc, unsign
     dump_items(out, s_d, nd, 3u, d_base, 0u);
 }
 
+/**
+ * @brief 把变量布局打到 stdout
+ *
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ */
 static void dump_layout_stdout(unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     dump_summary(stdout, na, nb, nc, nd);
     dump_layout(stdout, na, nb, nc, nd);
 }
 
+/**
+ * @brief upsert 变量段到 dc_layout.md
+ *
+ * @param h_path layout .h 路径
+ * @param na A 个数
+ * @param nb B 个数
+ * @param nc C 个数
+ * @param nd D 个数
+ */
 static void dump_layout_md(const char *h_path, unsigned na, unsigned nb, unsigned nc, unsigned nd)
 {
     char md_path[512];
@@ -1101,6 +1407,14 @@ static void dump_layout_md(const char *h_path, unsigned na, unsigned nb, unsigne
     reorder_layout_md(md_path);
 }
 
+/**
+ * @brief 赋 ID；--dump 只打印；否则写 layout.h 并同步 dc_layout.md
+ *
+ * @param argc 参数个数
+ * @param argv 路径或 --dump
+ *
+ * @return 0
+ */
 int main(int argc, char **argv)
 {
     const char *layout_path;
@@ -1114,8 +1428,10 @@ int main(int argc, char **argv)
     nc = (unsigned)(sizeof s_c / sizeof s_c[0]);
     nd = (unsigned)(sizeof s_d / sizeof s_d[0]);
 
+    /* 按 A→D 赋全局小类 ID */
     assign_global_ids(na, nb, nc, nd);
 
+    /* --dump 只打 stdout，不写文件 */
     if (argc == 2 && strcmp(argv[1], "--dump") == 0) {
         dump_layout_stdout(na, nb, nc, nd);
         return 0;
@@ -1127,9 +1443,11 @@ int main(int argc, char **argv)
     }
     layout_path = argv[1];
 
+    /* 写 layout.h；内容未变则跳过 */
     emit_layout(na, nb, nc, nd);
     write_if_changed(layout_path);
 
+    /* 同步 dc_layout.md 变量段 */
     dump_layout_stdout(na, nb, nc, nd);
     dump_layout_md(layout_path, na, nb, nc, nd);
     return 0;
